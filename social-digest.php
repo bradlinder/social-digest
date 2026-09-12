@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, staging queue, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.1.7
+ * Version: 5.1.9
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -958,6 +958,7 @@ function social_render_settings_page() {
                         <li><strong>Add Custom Per-Article Commentary:</strong> Attach custom lead-in text (before a card) or follow-up takeaways (after a card) to add your own voice to curated updates.</li>
                         <li><strong>Reorder & Pin Lead Stories:</strong> Toggle item inclusion or pin your most important highlight to the lead position.</li>
                         <li><strong>Publish Early:</strong> Clicking <em>Publish Staged Digest Now</em> will immediately assemble the article, update cutoff markers, and clear the staging queue so the next automated schedule starts clean.</li>
+                        <li><strong>Exclude Posts &amp; Feed Cutoff Progression:</strong> Uncheck <em>Include in Digest</em> to exclude specific social updates from the next published post. The feed cutoff cursor automatically advances past ALL posts inspected in that batch, guaranteeing that older excluded items (e.g. #9 and #10) are never re-ingested in future automated roundups.</li>
                     </ol>
                 </div>
 
@@ -1071,11 +1072,47 @@ function social_render_settings_page() {
                 </div>
             </div>
 
+            <!-- ARTICLE HEADER & FOOTER WYSIWYG CUSTOMIZER IN STAGING QUEUE -->
+            <div class="social-diag-card" style="border-left: 5px solid #2271b1; background: #ffffff; margin-top: 20px;">
+                <h3 style="margin-top: 0; color: #1d2327; font-size: 15px; display: flex; align-items: center; justify-content: space-between;">
+                    <span>
+                        <span class="dashicons dashicons-edit" style="vertical-align: -2px; color: #2271b1;"></span> Live Article Header &amp; Footer Framing (WYSIWYG)
+                    </span>
+                    <span style="font-size: 11px; background: #f0f6fc; color: #2271b1; padding: 2px 8px; border-radius: 4px; border: 1px solid #c8d7e6; font-weight: normal;">
+                        Live Sync with Settings
+                    </span>
+                </h3>
+                <p style="font-size: 12px; color: #50575e; margin-bottom: 12px;">
+                    Refine your article's introductory header and outro footer text directly in the staging workspace. Place <code>&lt;!--digest_split--&gt;</code> to separate the header and footer. If no divider is inserted, the entire content is used as the post header and no footer is displayed.
+                </p>
+                
+                <form method="post" action="options.php" style="margin-bottom: 0;">
+                    <?php settings_fields('social_digest_group'); ?>
+                    <div style="max-width: 100%;">
+                        <?php 
+                        wp_editor($unified_editor_value, 'social_digest_staging_unified_content', [
+                            'textarea_name' => 'social_digest_options[unified_content]',
+                            'textarea_rows' => 8,
+                            'media_buttons' => false,
+                            'teeny'         => false,
+                            'quicktags'     => [
+                                'buttons' => 'strong,em,link,close'
+                            ]
+                        ]); 
+                        ?>
+                    </div>
+                    <div style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between;">
+                        <input type="submit" class="button button-secondary" value="Save Framing Changes" />
+                        <span style="font-size: 11px; color: #666;">Header above divider &bull; Footer below divider</span>
+                    </div>
+                </form>
+            </div>
+
             <!-- STAGED DIGEST ARTICLE PREVIEW -->
-            <div class="social-diag-card" style="border-left: 5px solid #2271b1; background: #f8fafc; margin-top: 20px;">
+            <div class="social-diag-card" style="border-left: 5px solid #0284c7; background: #f8fafc; margin-top: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dcdcdc; padding-bottom: 10px; margin-bottom: 15px;">
                     <h3 style="margin: 0; color: #1d2327; font-size: 15px;">
-                        <span class="dashicons dashicons-visibility" style="vertical-align: -2px; color: #2271b1;"></span> Staged Digest Article Preview
+                        <span class="dashicons dashicons-visibility" style="vertical-align: -2px; color: #0284c7;"></span> Staged Digest Article Preview
                     </h3>
                     <span style="background: #e7f5ea; color: #00a32a; font-size: 11px; padding: 3px 10px; border-radius: 12px; font-weight: bold; border: 1px solid #c3e6cb;">
                         Live Post Preview &bull; Refreshes with Queue Edits
@@ -1107,9 +1144,11 @@ function social_render_settings_page() {
                         </div>
 
                         <!-- Header text -->
-                        <div style="font-size: 14px; color: #2c3338; margin-bottom: 20px; line-height: 1.5; padding: 12px; bg-color: #f6f7f7; border-left: 3px solid #2271b1; background: #f6f7f7;">
-                            <?php echo wp_kses_post($opts['header_text'] ?? '<p>Here is what we shared across social channels today:</p>'); ?>
+                        <?php if (!empty($opts['header_text'])): ?>
+                        <div style="font-size: 14px; color: #2c3338; margin-bottom: 20px; line-height: 1.5; padding: 12px; border-left: 3px solid #2271b1; background: #f6f7f7;">
+                            <?php echo wp_kses_post($opts['header_text']); ?>
                         </div>
+                        <?php endif; ?>
 
                         <!-- Staged Embed Item 1 (Pinned) -->
                         <div style="margin-bottom: 24px;">
@@ -1155,10 +1194,12 @@ function social_render_settings_page() {
                             </blockquote>
                         </div>
 
-                        <!-- Footer text -->
-                        <div style="font-size: 13px; color: #50575e; margin-top: 25px; pt-15px; border-top: 1px dashed #dcdcde; padding-top: 15px;">
-                            <?php echo wp_kses_post($opts['footer_text'] ?? '<p>Follow us directly on social media for real-time updates!</p>'); ?>
+                        <!-- Footer text (only if non-empty) -->
+                        <?php if (!empty($opts['footer_text'])): ?>
+                        <div style="font-size: 13px; color: #50575e; margin-top: 25px; border-top: 1px dashed #dcdcde; padding-top: 15px;">
+                            <?php echo wp_kses_post($opts['footer_text']); ?>
                         </div>
+                        <?php endif; ?>
 
                         <!-- Tag Pills -->
                         <div style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 6px;">
