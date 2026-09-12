@@ -1,0 +1,30 @@
+# Development & AI Studio Web App (non-plugin files)
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Web App / Dev Studio Source & Tooling
+src/
+public/
+server.ts
+index.html
+vite.config.ts
+tsconfig.json
+package.json
+package-lock.json
+bun.lock
+metadata.json
+plugin_storage/
+
+# IDE / Editor Files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*~
