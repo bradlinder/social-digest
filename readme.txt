@@ -1,5 +1,5 @@
 === Social Digest ===
-Contributors: wp-plugin-studio
+Contributors: BradLinder, wp-plugin-studio
 Tags: bluesky, mastodon, digest, social media, curation, automation, staging, webp
 Requires at least: 6.0
 Tested up to: 6.7
@@ -22,7 +22,7 @@ Social Digest is a WordPress plugin that automates the aggregation and publicati
 * **Media Optimization & Storage Hygiene**: Automatic WebP/AVIF format conversion, thumbnail compression, responsive image srcset generation, and local asset/avatar caching.
 * **RSS-Only Syndication Mode**: Distribute digests exclusively to RSS feeds and newsletter subscribers without cluttering the main blog stream.
 * **Multi-Network Ingestion**: Native support for Bluesky handles/DIDs and Mastodon profile URLs.
-* **Smart Deduplication**: Identifies cross-posted updates across platforms, deduplicating post text while aggregating media attachments and hashtags.
+* **Smart Deduplication & Resolution Strategies**: Identifies cross-posted updates across platforms with configurable strategies ("Prefer Mastodon if longer, otherwise Bluesky", "Longest text wins", "Always prefer Bluesky", "Always prefer Mastodon"). Calculates clean text length by excluding hashtags and links, and merges tags and media attachments from both versions.
 * **Featured Image Sideloading**: Automatically detects candidate images in social posts, downloads and sideloads them to the WordPress Media Library, and sets them as the article's Featured Image.
 * **Taxonomy & Hashtag Extraction**: Extracts hashtags from imported social posts, formats them with customizable delimiter/enclosure styles, and converts them into WordPress tags.
 * **Rich Header & Footer Framing**: Custom TinyMCE editor with `<!--digest_split-->` visual button for introductory notes, author commentary, and footer disclaimers.
@@ -34,6 +34,20 @@ Social Digest is a WordPress plugin that automates the aggregation and publicati
 1. Upload the `social-digest` folder to the `/wp-content/plugins/` directory (or install via the WordPress Plugin uploader).
 2. Activate the plugin through the 'Plugins' screen in WordPress.
 3. Navigate to **Settings > Social Digest** in your WordPress admin dashboard to configure your social handles, scheduling, and formatting preferences.
+
+== Frequently Asked Questions ==
+
+= How does cross-post deduplication work? =
+When you post the same link or update to both Bluesky and Mastodon, the plugin detects the match via URL extraction or high content similarity (>= 75%). Under the "Prefer Mastodon if longer, otherwise Bluesky" strategy, it strips URLs and hashtags, compares the clean character count, and embeds Mastodon if it contains more text; otherwise it defaults to Bluesky. Hashtags, categories, and thumbnail images from both posts are always merged.
+
+= Can I review digests before they are published live? =
+Yes. You can set the publication status to "Draft" or enable the Editorial Staging Queue in the settings. The Staging Queue tab lets you view pending updates, reorder them, attach custom author notes, pin a story to the top, and publish manually when ready.
+
+= What image formats are supported for sideloaded media? =
+The plugin downloads attached images and converts them to `.webp` or `.avif` formats (if supported by your server's GD or Imagick extension), while generating standard WordPress responsive image sizes (`medium`, `large`, `thumbnail`).
+
+= What license is this plugin distributed under? =
+Social Digest is licensed under the GNU General Public License v2.0 or later (GPLv2+).
 
 == Changelog ==
 

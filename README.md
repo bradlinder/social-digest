@@ -37,7 +37,12 @@
 ### 6. Multi-Network Social Ingestion & Deduplication
 - **Bluesky (AT Protocol)**: Connects directly via public AT Protocol endpoints using your handle or DID.
 - **Mastodon (ActivityPub)**: Connects to any Mastodon or Fediverse instance via public API endpoints.
-- **Smart Cross-Posting Deduplication**: Detects identical posts shared to both Bluesky and Mastodon, embeds the primary platform version, and combines media attachments and hashtags.
+- **Configurable Duplicate Resolution Strategies**: Detects identical posts shared to both networks via shared URLs or text similarity (>= 75%):
+  - **Prefer Mastodon if longer, otherwise Bluesky (Default/Recommended)**: Compares clean character count (excluding hashtags and URLs) and embeds Mastodon when it contains more text; otherwise defaults to Bluesky.
+  - **Longest text wins**: Selects whichever platform wrote more clean commentary.
+  - **Always prefer Bluesky**: Strictly embeds the Bluesky card.
+  - **Always prefer Mastodon**: Strictly embeds the Mastodon card.
+  - **Comprehensive Metadata & Media Merging**: Regardless of the embedded card chosen, hashtags and media thumbnails from both platforms are automatically harvested and combined.
 
 ### 7. Content Framing & Formatting
 - **Visual Header/Footer Editor**: Unified TinyMCE visual editor with a dedicated **Insert Post Splitter** (`<!--digest_split-->`) button.
@@ -49,7 +54,7 @@
 
 1. **Clone or Download**:
    ```bash
-   git clone https://github.com/your-username/social-digest.git
+   git clone https://github.com/BradLinder/social-digest.git
    ```
    Or download the `.zip` archive from the Releases page.
 
@@ -69,7 +74,7 @@
 
 | Tab | Section | Key Settings |
 |---|---|---|
-| **Settings** | **Social Accounts** | Bluesky handle/DID, Mastodon profile URL, Primary platform priority for cross-posts |
+| **Settings** | **Social Accounts** | Bluesky handle/DID, Mastodon profile URL, Duplicate resolution strategy |
 | **Settings** | **Ingestion Rules** | Minimum post threshold, Max post age, Filter replies/boosts, Exclude headline mirrors |
 | **Settings** | **Media Hygiene** | Auto WebP/AVIF conversion, local avatar caching, responsive `srcset` generation |
 | **Settings** | **Featured Media** | Image sideloading toggle, Selection order (1st, 2nd, random), Candidate pool offset |
@@ -88,7 +93,16 @@ social-digest/
 ├── readme.txt                    # WordPress.org plugin standard readme
 ├── README.md                     # GitHub documentation and user guide
 ├── roadmap.txt                   # Completed roadmap features and release log
+├── LICENSE                       # GNU General Public License v2.0
 └── assets/
     └── js/
         └── social-digest-editor.js # TinyMCE editor plugin for digest split markers
 ```
+
+---
+
+## 📄 License & Credits
+
+- **Author**: [Brad Linder](https://github.com/BradLinder)
+- **License**: Distributed under the **GNU General Public License v2.0 or later** (GPLv2+). See the [`LICENSE`](./LICENSE) file for details.
+- **WordPress Compatibility**: WordPress 6.0 to 6.7+; PHP 7.4 to 8.3+.

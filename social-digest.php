@@ -1,10 +1,14 @@
 <?php
 /**
  * Plugin Name: Social Digest
+ * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, staging queue, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
  * Version: 5.1.0
- * Author: Custom
+ * Author: Brad Linder
+ * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain: social-digest
  */
 
 namespace SocialDigest;
