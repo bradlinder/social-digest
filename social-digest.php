@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Social Digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, staging queue, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.0.0
+ * Version: 5.1.0
  * Author: Custom
  * License: GPLv2 or later
  */
@@ -127,7 +127,7 @@ add_action('admin_init', function() {
             'bsky_handle'            => '',
             'masto_handle'           => '',
             'cross_dedup'            => 1,
-            'preferred_platform'     => 'bsky',
+            'preferred_platform'     => 'masto_if_longer',
             'schedule_freq'          => 'interval_days',
             'schedule_interval_days' => 1,
             'schedule_time'          => '17:00',
@@ -200,7 +200,8 @@ function social_sanitize_settings($input) {
     $output['bsky_handle']        = sanitize_text_field($input['bsky_handle'] ?? '');
     $output['masto_handle']       = sanitize_text_field($input['masto_handle'] ?? '');
     $output['cross_dedup']        = !empty($input['cross_dedup']) ? 1 : 0;
-    $output['preferred_platform'] = in_array($input['preferred_platform'] ?? '', ['bsky', 'mastodon']) ? $input['preferred_platform'] : 'bsky';
+    $allowed_strategies           = ['masto_if_longer', 'longest', 'bsky', 'mastodon'];
+    $output['preferred_platform'] = in_array($input['preferred_platform'] ?? '', $allowed_strategies) ? $input['preferred_platform'] : 'masto_if_longer';
 
     $allowed_freqs = ['hourly', 'six_hours', 'twelve_hours', 'interval_days'];
     $output['schedule_freq'] = in_array($input['schedule_freq'] ?? '', $allowed_freqs) ? $input['schedule_freq'] : 'interval_days';
@@ -468,12 +469,15 @@ function social_render_settings_page() {
                                             </tr>
 
                                             <tr class="social-combined-field">
-                                                <th><label for="social_preferred_platform">Preferred Platform for Duplicates</label></th>
+                                                <th><label for="social_preferred_platform">Duplicate Resolution Strategy</label></th>
                                                 <td>
                                                     <select name="social_digest_options[preferred_platform]" id="social_preferred_platform">
-                                                        <option value="bsky" <?php selected($opts['preferred_platform'] ?? 'bsky', 'bsky'); ?>>Prefer Bluesky (Embed Bluesky, harvest Mastodon tags/images)</option>
-                                                        <option value="mastodon" <?php selected($opts['preferred_platform'] ?? '', 'mastodon'); ?>>Prefer Mastodon (Embed Mastodon, harvest Bluesky tags/images)</option>
+                                                        <option value="masto_if_longer" <?php selected($opts['preferred_platform'] ?? 'masto_if_longer', 'masto_if_longer'); ?>>Prefer Mastodon if longer, otherwise Bluesky (Recommended)</option>
+                                                        <option value="longest" <?php selected($opts['preferred_platform'] ?? '', 'longest'); ?>>Longest text wins (Whichever platform wrote more text)</option>
+                                                        <option value="bsky" <?php selected($opts['preferred_platform'] ?? '', 'bsky'); ?>>Always prefer Bluesky (Embed Bluesky, harvest Mastodon tags/images)</option>
+                                                        <option value="mastodon" <?php selected($opts['preferred_platform'] ?? '', 'mastodon'); ?>>Always prefer Mastodon (Embed Mastodon, harvest Bluesky tags/images)</option>
                                                     </select>
+                                                    <p class="description">When identical updates or shared links are detected on both networks, determine which card to embed. Hashtags, taxonomy, and media attachments are always merged from both versions.</p>
                                                 </td>
                                             </tr>
                                         </table>
@@ -1574,6 +1578,21 @@ function social_extract_urls($text) {
 }
 
 /**
+ * Calculates clean text character length excluding hashtags, URLs, and HTML tags.
+ */
+function social_get_clean_text_length($text) {
+    $t = wp_strip_all_tags($text);
+    // Strip URLs
+    $t = preg_replace('/\bhttps?:\/\/\S+/i', '', $t);
+    // Strip hashtags (do not count tags in content comparison)
+    $t = preg_replace('/#[\p{L}\p{N}_]+/u', '', $t);
+    // Decode HTML entities and normalize whitespace
+    $t = trim(html_entity_decode($t, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    $t = preg_replace('/\s+/', ' ', $t);
+    return mb_strlen($t, 'UTF-8');
+}
+
+/**
  * Modern Media Sideloading with WebP conversion & srcsets
  */
 function social_sideload_image_by_mime($url, $post_id, $desc = '') {
@@ -1888,71 +1907,103 @@ function social_run_digest_import($is_dry_run = false) {
     }
 
     if ($mode === 'both' && $cross_dedup) {
-        $primary_network   = $preferred_platform;
-        $secondary_network = ($preferred_platform === 'bsky') ? 'mastodon' : 'bsky';
-
-        $primary_posts   = [];
-        $secondary_posts = [];
+        $bsky_posts  = [];
+        $masto_posts = [];
 
         foreach ($eligible_posts as $p) {
-            if ($p['network'] === $primary_network) {
-                $primary_posts[] = $p;
+            if ($p['network'] === 'bsky') {
+                $bsky_posts[] = $p;
             } else {
-                $secondary_posts[] = $p;
+                $masto_posts[] = $p;
             }
         }
 
         $merged_posts = [];
-        $matched_secondary_keys = [];
+        $matched_masto_indices = [];
 
-        foreach ($primary_posts as $p_post) {
-            $p_norm = social_normalize_for_matching($p_post['text']);
-            $p_urls = social_extract_urls($p_post['text']);
-            $harvested_tags = !empty($p_post['extra_tags']) ? (array)$p_post['extra_tags'] : [];
+        foreach ($bsky_posts as $b_post) {
+            $b_norm = social_normalize_for_matching($b_post['text']);
+            $b_urls = social_extract_urls($b_post['text']);
+            $matched_masto = null;
+            $matched_masto_idx = null;
 
-            foreach ($secondary_posts as $s_idx => $s_post) {
-                if (isset($matched_secondary_keys[$s_idx])) continue;
+            foreach ($masto_posts as $m_idx => $m_post) {
+                if (isset($matched_masto_indices[$m_idx])) continue;
 
-                $s_norm = social_normalize_for_matching($s_post['text']);
-                $s_urls = social_extract_urls($s_post['text']);
+                $m_norm = social_normalize_for_matching($m_post['text']);
+                $m_urls = social_extract_urls($m_post['text']);
 
                 $is_match = false;
-
-                if (!empty($p_urls) && !empty($s_urls) && !empty(array_intersect($p_urls, $s_urls))) {
+                if (!empty($b_urls) && !empty($m_urls) && !empty(array_intersect($b_urls, $m_urls))) {
                     $is_match = true;
                 }
 
-                if (!$is_match && !empty($p_norm) && !empty($s_norm)) {
-                    similar_text($p_norm, $s_norm, $similarity);
+                if (!$is_match && !empty($b_norm) && !empty($m_norm)) {
+                    similar_text($b_norm, $m_norm, $similarity);
                     if ($similarity >= 75) {
                         $is_match = true;
                     }
                 }
 
                 if ($is_match) {
-                    if (preg_match_all('/#(\w+)/u', $s_post['text'], $s_tags)) {
-                        $harvested_tags = array_merge($harvested_tags, $s_tags[1]);
-                    }
-                    if (!empty($s_post['extra_tags'])) {
-                        $harvested_tags = array_merge($harvested_tags, (array)$s_post['extra_tags']);
-                    }
-
-                    if (empty($p_post['thumb_image']) && !empty($s_post['thumb_image'])) {
-                        $p_post['thumb_image'] = $s_post['thumb_image'];
-                    }
-
-                    $matched_secondary_keys[$s_idx] = true;
+                    $matched_masto = $m_post;
+                    $matched_masto_idx = $m_idx;
                     break;
                 }
             }
 
-            $p_post['extra_tags'] = array_values(array_unique($harvested_tags));
-            $merged_posts[] = $p_post;
+            if ($matched_masto !== null) {
+                $matched_masto_indices[$matched_masto_idx] = true;
+
+                // Compare clean text lengths (excluding URLs and hashtags)
+                $b_len = social_get_clean_text_length($b_post['text']);
+                $m_len = social_get_clean_text_length($matched_masto['text']);
+
+                $prefer_mastodon = false;
+                if ($preferred_platform === 'masto_if_longer') {
+                    // Only prefer Mastodon when it has strictly more text; otherwise default to Bluesky
+                    $prefer_mastodon = ($m_len > $b_len);
+                } elseif ($preferred_platform === 'longest') {
+                    $prefer_mastodon = ($m_len > $b_len);
+                } elseif ($preferred_platform === 'mastodon') {
+                    $prefer_mastodon = true;
+                } elseif ($preferred_platform === 'bsky') {
+                    $prefer_mastodon = false;
+                }
+
+                if ($prefer_mastodon) {
+                    $winner    = $matched_masto;
+                    $secondary = $b_post;
+                } else {
+                    $winner    = $b_post;
+                    $secondary = $matched_masto;
+                }
+
+                // Harvest tags and hashtags from secondary post
+                $harvested_tags = !empty($winner['extra_tags']) ? (array)$winner['extra_tags'] : [];
+                if (preg_match_all('/#(\w+)/u', $secondary['text'], $s_tags)) {
+                    $harvested_tags = array_merge($harvested_tags, $s_tags[1]);
+                }
+                if (!empty($secondary['extra_tags'])) {
+                    $harvested_tags = array_merge($harvested_tags, (array)$secondary['extra_tags']);
+                }
+
+                // Harvest thumbnail image if winner lacks one
+                if (empty($winner['thumb_image']) && !empty($secondary['thumb_image'])) {
+                    $winner['thumb_image'] = $secondary['thumb_image'];
+                }
+
+                $winner['extra_tags'] = array_values(array_unique($harvested_tags));
+                $merged_posts[] = $winner;
+            } else {
+                $merged_posts[] = $b_post;
+            }
         }
 
-        foreach ($secondary_posts as $s_idx => $s_post) {
-            if (!isset($matched_secondary_keys[$s_idx])) {
-                $merged_posts[] = $s_post;
+        // Include any remaining unmatched Mastodon posts
+        foreach ($masto_posts as $m_idx => $m_post) {
+            if (!isset($matched_masto_indices[$m_idx])) {
+                $merged_posts[] = $m_post;
             }
         }
 

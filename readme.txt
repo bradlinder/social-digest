@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 5.0.0
+Stable tag: 5.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,12 @@ Social Digest is a WordPress plugin that automates the aggregation and publicati
 3. Navigate to **Settings > Social Digest** in your WordPress admin dashboard to configure your social handles, scheduling, and formatting preferences.
 
 == Changelog ==
+
+= 5.1.0 =
+* Added Duplicate Resolution Strategies: "Prefer Mastodon if longer, otherwise Bluesky", "Longest text wins", and network-specific overrides with clean text length calculation (excluding hashtags and URLs).
+* Integrated interactive Editorial Staging Workbench with real-time commentary framing, story pinning, and manual early publishing.
+* Added live Ephemeral Dry-Run Simulation with post structure validation, cross-post deduplication inspector, and thumbnail extraction preview.
+* Unified WordPress administration simulation and live preview rendering for v5.1.
 
 = 5.0.0 =
 * Added Tabbed Admin Navigation dividing Settings, Staging Queue, and Diagnostics.

@@ -1,6 +1,6 @@
 # Social Digest for WordPress
 
-[![Version](https://img.shields.io/badge/version-5.0.0-blue.svg)](https://github.com)
+[![Version](https://img.shields.io/badge/version-5.1.0-blue.svg)](https://github.com)
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)](https://wordpress.org)
 [![PHP](https://img.shields.io/badge/PHP-7.4%2B-indigo.svg)](https://php.net)
 [![License: GPL v2+](https://img.shields.io/badge/License-GPLv2%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -84,7 +84,7 @@
 
 ```text
 social-digest/
-├── social-digest.php             # Main plugin bootstrap and orchestration file (v5.0.0)
+├── social-digest.php             # Main plugin bootstrap and orchestration file (v5.1.0)
 ├── readme.txt                    # WordPress.org plugin standard readme
 ├── README.md                     # GitHub documentation and user guide
 ├── roadmap.txt                   # Completed roadmap features and release log
