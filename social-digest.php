@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, staging queue, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.1.4
+ * Version: 5.1.5
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -176,16 +176,28 @@ add_action('admin_init', function() {
     // Operational Handlers
     if (isset($_POST['social_manual_run']) && check_admin_referer('social_manual_run_action', 'social_manual_nonce')) {
         if (current_user_can('manage_options')) {
-            $result = social_run_digest_import(false);
-            add_settings_error('general', 'social_manual_status', $result['message'], $result['success'] ? 'updated' : 'error');
+            try {
+                $result = social_run_digest_import(false);
+            } catch (\Throwable $e) {
+                $result = ['success' => false, 'message' => 'Manual run error: ' . $e->getMessage()];
+            }
+            add_settings_error('general', 'social_manual_status', $result['message'] ?? 'Import failed.', !empty($result['success']) ? 'updated' : 'error');
         }
     }
 
     if (isset($_POST['social_simulate_run']) && check_admin_referer('social_simulate_action', 'social_simulate_nonce')) {
         if (current_user_can('manage_options')) {
-            $sim_result = social_run_digest_import(true);
+            try {
+                $sim_result = social_run_digest_import(true);
+            } catch (\Throwable $e) {
+                $sim_result = ['success' => false, 'message' => 'Simulation error: ' . $e->getMessage()];
+            }
             set_transient('social_digest_simulation_data', $sim_result, 300);
-            add_settings_error('general', 'social_sim_status', 'Dry Run Simulation completed. Review preview below.', 'updated');
+            if (!empty($sim_result['success'])) {
+                add_settings_error('general', 'social_sim_status', 'Dry Run Simulation completed. Review preview below.', 'updated');
+            } else {
+                add_settings_error('general', 'social_sim_status', $sim_result['message'] ?? 'Simulation failed.', 'error');
+            }
         }
     }
 
@@ -1331,6 +1343,7 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
     $newest_timestamp = $last_check;
 
     foreach ($body['feed'] as $item) {
+        if (!isset($item['post']) || !is_array($item['post'])) continue;
         $post = $item['post'];
         $is_repost = isset($item['reason']);
 
@@ -1338,10 +1351,14 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
             continue;
         }
 
-        if ($is_repost && isset($item['reason']['indexedAt'])) {
+        if ($is_repost && !empty($item['reason']['indexedAt'])) {
             $created_at = strtotime($item['reason']['indexedAt']);
-        } else {
+        } elseif (!empty($post['record']['createdAt'])) {
             $created_at = strtotime($post['record']['createdAt']);
+        } elseif (!empty($post['indexedAt'])) {
+            $created_at = strtotime($post['indexedAt']);
+        } else {
+            $created_at = time();
         }
 
         if ($created_at <= $last_check) continue;
@@ -1480,12 +1497,14 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
     $newest_timestamp = $last_check;
 
     foreach ($statuses as $st) {
-        $created_at = strtotime($st['created_at']);
+        if (!is_array($st)) continue;
+        $created_at = !empty($st['created_at']) ? strtotime($st['created_at']) : time();
         if ($created_at <= $last_check) continue;
         if ($created_at > $newest_timestamp) $newest_timestamp = $created_at;
 
-        $is_reblog = !empty($st['reblog']);
+        $is_reblog = !empty($st['reblog']) && is_array($st['reblog']);
         $post_data = $is_reblog ? $st['reblog'] : $st;
+        if (!is_array($post_data)) continue;
 
         if (!$is_reblog && !empty($post_data['in_reply_to_id'])) {
             if (!$keep_threads) continue;
@@ -1637,8 +1656,16 @@ function social_check_posts_match($p1, $p2) {
     $urls1 = !empty($p1['urls']) ? (array)$p1['urls'] : social_extract_urls($p1['text'] ?? '');
     $urls2 = !empty($p2['urls']) ? (array)$p2['urls'] : social_extract_urls($p2['text'] ?? '');
 
-    $clean1 = array_values(array_filter(array_map('social_clean_url', $urls1)));
-    $clean2 = array_values(array_filter(array_map('social_clean_url', $urls2)));
+    $clean1 = [];
+    foreach ($urls1 as $u) {
+        $c = social_clean_url($u);
+        if ($c !== '') $clean1[] = $c;
+    }
+    $clean2 = [];
+    foreach ($urls2 as $u) {
+        $c = social_clean_url($u);
+        if ($c !== '') $clean2[] = $c;
+    }
 
     if (!empty($clean1) && !empty($clean2)) {
         if (!empty(array_intersect($clean1, $clean2))) {
@@ -1799,7 +1826,10 @@ function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $
         $defaults = array_filter(array_map('trim', explode(',', $default_tags_str)));
         if (empty($defaults)) return '';
         $top_raw = array_slice($defaults, 0, 3);
-        $formatted_defaults = array_map(__NAMESPACE__ . '\\social_split_camelcase_tag', $top_raw);
+        $formatted_defaults = [];
+        foreach ($top_raw as $raw_d) {
+            $formatted_defaults[] = social_split_camelcase_tag($raw_d);
+        }
         return social_apply_enclosure_and_delimiters($formatted_defaults, $enclosure, $delimiter);
     }
 
@@ -1928,8 +1958,9 @@ function social_log_run($success, $message, $post_id = 0) {
  * Main Digest Runner / Dry Run Simulator
  */
 function social_run_digest_import($is_dry_run = false) {
-    global $wpdb;
-    $opts = get_option('social_digest_options', []);
+    try {
+        global $wpdb;
+        $opts = get_option('social_digest_options', []);
     $mode = $opts['network_mode'] ?? 'both';
 
     $cross_dedup           = !empty($opts['cross_dedup']);
@@ -2387,4 +2418,11 @@ function social_run_digest_import($is_dry_run = false) {
 
     social_log_run(true, $success_msg, $post_id);
     return ['success' => true, 'message' => 'Success: ' . $success_msg];
+    } catch (\Throwable $e) {
+        $err = 'Runtime Exception in Social Digest: ' . $e->getMessage();
+        if (!$is_dry_run) {
+            social_log_run(false, $err);
+        }
+        return ['success' => false, 'message' => $err];
+    }
 }

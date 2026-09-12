@@ -1,6 +1,6 @@
 # Social Digest for WordPress
 
-[![Version](https://img.shields.io/badge/version-5.1.4-blue.svg)](https://github.com)
+[![Version](https://img.shields.io/badge/version-5.1.5-blue.svg)](https://github.com)
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)](https://wordpress.org)
 [![PHP](https://img.shields.io/badge/PHP-7.4%2B-indigo.svg)](https://php.net)
 [![License: GPL v2+](https://img.shields.io/badge/License-GPLv2%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
