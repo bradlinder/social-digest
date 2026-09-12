@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, staging queue, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.2.0
+ * Version: 5.2.2
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -401,6 +401,65 @@ function social_render_settings_page() {
             border-radius: 6px;
             padding: 16px;
             margin-bottom: 16px;
+        }
+
+        /* Multi-Pane Staging Layouts */
+        .social-staging-split-view {
+            display: grid;
+            grid-template-columns: 5fr 7fr;
+            gap: 20px;
+            align-items: start;
+        }
+        @media (max-width: 1024px) {
+            .social-staging-split-view {
+                grid-template-columns: 1fr;
+            }
+        }
+        .social-staging-split-view .social-preview-widget {
+            position: sticky;
+            top: 32px;
+        }
+        .social-staging-stacked-view {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Modular Drag & Drop Postboxes */
+        .social-postbox-widget {
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #ccd0d4;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            margin-bottom: 20px;
+            background: #fff;
+            transition: box-shadow 0.2s ease;
+        }
+        .social-postbox-widget:hover {
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        .social-postbox-widget .postbox-header {
+            padding: 10px 14px;
+            background: #f6f7f7;
+            border-bottom: 1px solid #c3c4c7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: grab;
+            user-select: none;
+        }
+        .social-postbox-widget .postbox-header:active {
+            cursor: grabbing;
+        }
+        .social-postbox-widget .inside {
+            padding: 18px 20px;
+        }
+        .social-postbox-placeholder {
+            border: 2px dashed #2271b1 !important;
+            background: #f0f6fc !important;
+            min-height: 120px;
+            margin-bottom: 20px;
+            border-radius: 6px;
         }
     </style>
 
@@ -933,464 +992,581 @@ function social_render_settings_page() {
 
         <?php elseif ($active_tab === 'staging'): ?>
             <!-- TAB 2: EDITORIAL & STAGING QUEUE -->
-            <div class="social-diag-card">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
-                    <div>
-                        <h2 style="margin: 0 0 4px 0;">Editorial Staging Workbench</h2>
-                        <p style="margin: 0; color: #50575e;">
-                            Gather incoming social updates ahead of time, compose custom framing text before and after individual articles, pin lead stories, and publish whenever you're ready &mdash; before the next scheduled automated run.
-                        </p>
-                    </div>
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                        <button type="button" class="button button-secondary">
-                            <span class="dashicons dashicons-download" style="vertical-align: -3px; font-size: 16px;"></span> Fetch Incoming Updates to Staging
+            <div class="social-staging-toolbar" style="display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid #c3c4c7; padding: 10px 15px; border-radius: 6px; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-weight: 700; font-size: 12px; text-transform: uppercase; color: #1d2327; letter-spacing: 0.5px;">Layout View Mode:</span>
+                    <div style="display: inline-flex; border: 1px solid #8c8f94; border-radius: 4px; overflow: hidden; background: #f6f7f7;">
+                        <button type="button" id="btn_staging_split" onclick="socialSetStagingLayout('split')" class="button button-small social-layout-btn active" style="border: none; border-radius: 0; background: #2271b1; color: #fff; font-weight: 600; padding: 4px 12px; cursor: pointer;">
+                            <span class="dashicons dashicons-columns" style="vertical-align: -2px; font-size: 14px;"></span> Multi-Pane Split View
                         </button>
-                        <button type="button" class="button button-primary" style="background: #2271b1; font-weight: 600;">
-                            <span class="dashicons dashicons-upload" style="vertical-align: -3px; font-size: 16px;"></span> Publish Staged Digest Now
+                        <button type="button" id="btn_staging_stacked" onclick="socialSetStagingLayout('stacked')" class="button button-small social-layout-btn" style="border: none; border-radius: 0; background: #f6f7f7; color: #2c3338; font-weight: 600; padding: 4px 12px; cursor: pointer;">
+                            <span class="dashicons dashicons-menu-alt" style="vertical-align: -2px; font-size: 14px;"></span> Stacked (Single Col)
                         </button>
                     </div>
                 </div>
-
-                <div style="background: #f0f6fc; border-left: 4px solid #0085ff; padding: 12px 16px; margin: 18px 0 15px 0; border-radius: 3px; font-size: 13px;">
-                    <strong>How the Staging Workbench Works:</strong>
-                    <ol style="margin: 6px 0 0 18px; padding: 0; line-height: 1.6;">
-                        <li><strong>Gather Content Ahead of Time:</strong> Unimported social posts from Bluesky and Mastodon are held in this draft staging area without altering cutoff timestamps or publishing to your site.</li>
-                        <li><strong>Add Custom Per-Article Commentary:</strong> Attach custom lead-in text (before a card) or follow-up takeaways (after a card) to add your own voice to curated updates.</li>
-                        <li><strong>Reorder & Pin Lead Stories:</strong> Toggle item inclusion or pin your most important highlight to the lead position.</li>
-                        <li><strong>Publish Early:</strong> Clicking <em>Publish Staged Digest Now</em> will immediately assemble the article, update cutoff markers, and clear the staging queue so the next automated schedule starts clean.</li>
-                        <li><strong>Exclude Posts &amp; Feed Cutoff Progression:</strong> Uncheck <em>Include in Digest</em> to exclude specific social updates from the next published post. The feed cutoff cursor automatically advances past ALL posts inspected in that batch, guaranteeing that older excluded items (e.g. #9 and #10) are never re-ingested in future automated roundups.</li>
-                    </ol>
-                </div>
-
-                <!-- Staged Items Table / Cards -->
-                <h3 style="font-size: 14px; color: #1d2327; margin: 20px 0 10px 0;">
-                    Staged Social Items (3 In Queue)
-                </h3>
-                
-                <table class="wp-list-table widefat fixed striped" style="margin-top: 10px;">
-                    <thead>
-                        <tr>
-                            <th style="width: 60px; text-align: center;">Include</th>
-                            <th style="width: 60px; text-align: center;">Pin Lead</th>
-                            <th style="width: 100px;">Platform</th>
-                            <th>Original Post & Media</th>
-                            <th style="width: 38%;">Custom Commentary & Framing (Before & After)</th>
-                            <th style="width: 80px; text-align: center;">Order</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style="text-align: center; vertical-align: middle;">
-                                <input type="checkbox" checked title="Include in Digest" />
-                            </td>
-                            <td style="text-align: center; vertical-align: middle;">
-                                <input type="checkbox" checked title="Pin as Lead Story" />
-                                <span class="dashicons dashicons-star-filled" style="color: #f59e0b; vertical-align: -2px;" title="Pinned as #1 Lead Story"></span>
-                            </td>
-                            <td style="vertical-align: top;">
-                                <strong style="color: #0085ff;">Bluesky</strong><br>
-                                <small style="color: #666;">@bradlinder</small>
-                            </td>
-                            <td style="vertical-align: top;">
-                                <em>"Framework Laptop 16 with RISC-V mainboard prototype tested. Standby power consumption on modern RISC-V and ARM boards has improved drastically..."</em>
-                                <br><small style="color: #666;">Attached: 1 image (WebP) &bull; Tags: #Framework, #RISCV, #Linux</small>
-                            </td>
-                            <td style="vertical-align: top;">
-                                <div style="margin-bottom: 6px;">
-                                    <label style="font-size: 11px; font-weight: 600; color: #50575e; display: block;">Text BEFORE this post (Lead-in):</label>
-                                    <input type="text" class="regular-text" style="width: 100%; font-size: 12px;" value="Our benchmark team ran initial lab tests on the RISC-V board:" placeholder="Custom lead-in text..." />
-                                </div>
-                                <div>
-                                    <label style="font-size: 11px; font-weight: 600; color: #50575e; display: block;">Text AFTER this post (Follow-up):</label>
-                                    <input type="text" class="regular-text" style="width: 100%; font-size: 12px;" value="Full schematics will be open-sourced on GitHub later this quarter." placeholder="Custom takeaway or follow-up link..." />
-                                </div>
-                            </td>
-                            <td style="text-align: center; vertical-align: middle;">
-                                <button type="button" class="button button-small" title="Move Up">&uarr;</button>
-                                <button type="button" class="button button-small" title="Move Down">&darr;</button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="text-align: center; vertical-align: middle;">
-                                <input type="checkbox" checked title="Include in Digest" />
-                            </td>
-                            <td style="text-align: center; vertical-align: middle;">
-                                <input type="checkbox" title="Pin as Lead Story" />
-                            </td>
-                            <td style="vertical-align: top;">
-                                <strong style="color: #6364ff;">Mastodon</strong><br>
-                                <small style="color: #666;">@bradlinder</small>
-                            </td>
-                            <td style="vertical-align: top;">
-                                <em>"Open protocols allow publishing directly to your own site without walled gardens. ActivityPub integration is working smoothly..."</em>
-                                <br><small style="color: #666;">Tags: #Fediverse, #ActivityPub, #OpenWeb</small>
-                            </td>
-                            <td style="vertical-align: top;">
-                                <div style="margin-bottom: 6px;">
-                                    <label style="font-size: 11px; font-weight: 600; color: #50575e; display: block;">Text BEFORE this post (Lead-in):</label>
-                                    <input type="text" class="regular-text" style="width: 100%; font-size: 12px;" value="On the importance of RSS and independent protocol ownership:" placeholder="Custom lead-in text..." />
-                                </div>
-                                <div>
-                                    <label style="font-size: 11px; font-weight: 600; color: #50575e; display: block;">Text AFTER this post (Follow-up):</label>
-                                    <input type="text" class="regular-text" style="width: 100%; font-size: 12px;" value="" placeholder="Custom takeaway or follow-up link..." />
-                                </div>
-                            </td>
-                            <td style="text-align: center; vertical-align: middle;">
-                                <button type="button" class="button button-small" title="Move Up">&uarr;</button>
-                                <button type="button" class="button button-small" title="Move Down">&darr;</button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #ccd0d4;">
-                    <div style="display: flex; gap: 8px;">
-                        <button type="button" class="button button-primary" style="font-weight: bold;">Publish Staged Digest Now</button>
-                        <button type="button" class="button button-secondary">Save Staging Draft</button>
-                        <button type="button" class="button button-secondary">Clear Staging Queue</button>
-                    </div>
-                    <span style="font-size: 12px; color: #666;">Next automated run scheduled in 4 hours.</span>
+                <div style="font-size: 12px; color: #50575e; display: flex; align-items: center; gap: 6px;">
+                    <span class="dashicons dashicons-move" style="color: #2271b1;"></span>
+                    <span>Drag postbox headers or click <strong>&uarr; &darr;</strong> arrows to reorder widget positions</span>
                 </div>
             </div>
 
-            <!-- ARTICLE HEADER & FOOTER WYSIWYG CUSTOMIZER IN STAGING QUEUE -->
-            <div class="social-diag-card" style="border-left: 5px solid #2271b1; background: #ffffff; margin-top: 20px;">
-                <h3 style="margin-top: 0; color: #1d2327; font-size: 15px; display: flex; align-items: center; justify-content: space-between;">
-                    <span>
-                        <span class="dashicons dashicons-edit" style="vertical-align: -2px; color: #2271b1;"></span> Live Article Header &amp; Footer Framing (WYSIWYG)
-                    </span>
-                    <span style="font-size: 11px; background: #f0f6fc; color: #2271b1; padding: 2px 8px; border-radius: 4px; border: 1px solid #c8d7e6; font-weight: normal;">
-                        Live Sync with Settings
-                    </span>
-                </h3>
-                <p style="font-size: 12px; color: #50575e; margin-bottom: 12px;">
-                    Refine your article's introductory header and outro footer text directly in the staging workspace. Place <code>&lt;!--digest_split--&gt;</code> to separate the header and footer. If no divider is inserted, the entire content is used as the post header and no footer is displayed.
-                </p>
-                
-                <form method="post" action="options.php" style="margin-bottom: 0;">
-                    <?php settings_fields('social_digest_group'); ?>
-                    <div style="max-width: 100%;">
-                        <?php 
-                        wp_editor($unified_editor_value, 'social_digest_staging_unified_content', [
-                            'textarea_name' => 'social_digest_options[unified_content]',
-                            'textarea_rows' => 8,
-                            'media_buttons' => false,
-                            'teeny'         => false,
-                            'quicktags'     => [
-                                'buttons' => 'strong,em,link,close'
-                            ]
-                        ]); 
-                        ?>
-                    </div>
-                    <div style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between;">
-                        <input type="submit" class="button button-secondary" value="Save Framing Changes" />
-                        <span style="font-size: 11px; color: #666;">Header above divider &bull; Footer below divider</span>
-                    </div>
-                </form>
-            </div>
+            <!-- MULTI-PANE CONTAINER -->
+            <div id="social_staging_container" class="social-staging-split-view">
 
-            <!-- STAGED DIGEST ARTICLE PREVIEW -->
-            <div class="social-diag-card" style="border-left: 5px solid #0284c7; background: #f8fafc; margin-top: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dcdcdc; padding-bottom: 10px; margin-bottom: 15px;">
-                    <h3 style="margin: 0; color: #1d2327; font-size: 15px;">
-                        <span class="dashicons dashicons-visibility" style="vertical-align: -2px; color: #0284c7;"></span> Staged Digest Article Preview
-                    </h3>
-                    <span style="background: #e7f5ea; color: #00a32a; font-size: 11px; padding: 3px 10px; border-radius: 12px; font-weight: bold; border: 1px solid #c3e6cb;">
-                        Live Post Preview &bull; Refreshes with Queue Edits
-                    </span>
-                </div>
-
-                <p style="margin-top: 0; font-size: 12px; color: #50575e; margin-bottom: 15px;">
-                    This is a real-time preview of the compiled blog post that will be published from the staged queue items above, including custom editorial takeaways, media embeds, and footer tags.
-                </p>
-
-                <!-- LIVE MOCKUP CONTAINER -->
-                <div style="background: #ffffff; border: 1px solid #c3c4c7; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); overflow: hidden;">
-                    <div style="background: #1d2327; color: #fff; padding: 8px 16px; font-size: 11px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
-                        <span>WORDPRESS POST PREVIEW MODE</span>
-                        <span style="color: #72aee6;">Target Status: Publish</span>
-                    </div>
-
-                    <div style="padding: 24px; max-width: 820px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                        <h1 style="font-size: 24px; font-weight: 700; line-height: 1.3; margin: 0 0 10px 0; color: #1d2327;">
-                            Social Digest (Framework, RISCV, Fediverse)
-                        </h1>
-
-                        <div style="font-size: 12px; color: #646970; border-bottom: 1px solid #f0f0f1; padding-bottom: 10px; margin-bottom: 18px; display: flex; gap: 12px; flex-wrap: wrap;">
-                            <span>Published by <strong>Editor</strong></span>
-                            <span>&bull;</span>
-                            <span><?php echo esc_html(wp_date('F j, Y, g:i a', time(), $site_tz)); ?></span>
-                            <span>&bull;</span>
-                            <span>Categories: <strong>Roundups, Social</strong></span>
-                        </div>
-
-                        <!-- Header text -->
-                        <?php if (!empty($opts['header_text'])): ?>
-                        <div style="font-size: 14px; color: #2c3338; margin-bottom: 20px; line-height: 1.5; padding: 12px; border-left: 3px solid #2271b1; background: #f6f7f7;">
-                            <?php echo wp_kses_post($opts['header_text']); ?>
-                        </div>
-                        <?php endif; ?>
-
-                        <!-- Staged Embed Item 1 (Pinned) -->
-                        <div style="margin-bottom: 24px;">
-                            <div style="background: #fef8ea; border-left: 4px solid #f59e0b; padding: 10px 12px; border-radius: 0 6px 6px 0; margin-bottom: 8px; font-size: 13px; color: #78350f;">
-                                <strong style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; display: block; color: #b45309; margin-bottom: 2px;">📌 Author Note:</strong>
-                                Our benchmark team ran initial lab tests on the RISC-V board:
-                            </div>
-
-                            <blockquote class="social-post bsky-embed" style="border-left: 3px solid #0085ff; padding-left: 15px; margin: 0; background: #f7fbff; border: 1px solid #e0efff; border-left: 4px solid #0085ff; padding: 16px; border-radius: 6px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                    <strong>Brad Linder</strong> <small style="color: #666;">@bradlinder on Bluesky</small>
-                                </div>
-                                <p style="margin: 0 0 10px 0; font-size: 13.5px; color: #1d2327; line-height: 1.5;">
-                                    Framework Laptop 16 with RISC-V mainboard prototype tested. Standby power consumption on modern RISC-V and ARM boards has improved drastically...
-                                </p>
-                                <div style="font-size: 11px; color: #8c8f94; border-top: 1px solid #e8f2fc; padding-top: 6px;">
-                                    Sideloaded Media: 1 image (WebP) &bull; Timestamp: Today at 09:14 AM
-                                </div>
-                            </blockquote>
-
-                            <div style="font-size: 12px; color: #646970; margin-top: 6px; font-style: italic; padding-left: 12px;">
-                                Full schematics will be open-sourced on GitHub later this quarter.
+                <!-- LEFT PANE: LIVE DIGEST ARTICLE PREVIEW -->
+                <div id="social_staging_left_pane">
+                    <div class="social-postbox-widget social-preview-widget" id="social_widget_staging_preview" style="border-left: 5px solid #0284c7;">
+                        <div class="postbox-header">
+                            <h2 class="hndle" style="margin: 0; font-size: 13px; font-weight: 700; color: #1d2327; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <span class="dashicons dashicons-move social-widget-handle" style="color: #8c8f94; cursor: grab;" title="Drag to reorder widget"></span>
+                                <span class="dashicons dashicons-visibility" style="color: #0284c7;"></span>
+                                <span>Live Staged Article Preview</span>
+                            </h2>
+                            <div style="display: flex; gap: 4px; align-items: center;">
+                                <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'up')" title="Move Widget Up" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                    <span class="dashicons dashicons-arrow-up-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                </button>
+                                <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'down')" title="Move Widget Down" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                    <span class="dashicons dashicons-arrow-down-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                </button>
                             </div>
                         </div>
-
-                        <!-- Staged Embed Item 2 -->
-                        <div style="margin-bottom: 24px;">
-                            <div style="background: #fef8ea; border-left: 4px solid #f59e0b; padding: 10px 12px; border-radius: 0 6px 6px 0; margin-bottom: 8px; font-size: 13px; color: #78350f;">
-                                <strong style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; display: block; color: #b45309; margin-bottom: 2px;">📌 Author Note:</strong>
-                                On the importance of RSS and independent protocol ownership:
+                        <div class="inside" style="background: #f8fafc;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dcdcdc; padding-bottom: 10px; margin-bottom: 15px;">
+                                <span style="font-size: 12px; font-weight: bold; color: #0284c7;">Real-time Article Render</span>
+                                <span style="background: #e7f5ea; color: #00a32a; font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: bold; border: 1px solid #c3e6cb;">
+                                    Live Sync &bull; Refreshes on Edit
+                                </span>
                             </div>
 
-                            <blockquote class="social-post mastodon-post" style="border-left: 3px solid #6364ff; padding-left: 15px; margin: 0; background: #fcfcff; border: 1px solid #e2e2ff; border-left: 4px solid #6364ff; padding: 16px; border-radius: 6px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                    <strong>Brad Linder</strong> <small style="color: #666;">@bradlinder on Mastodon</small>
-                                </div>
-                                <p style="margin: 0 0 10px 0; font-size: 13.5px; color: #1d2327; line-height: 1.5;">
-                                    Open protocols allow publishing directly to your own site without walled gardens. ActivityPub integration is working smoothly...
-                                </p>
-                                <div style="font-size: 11px; color: #8c8f94; border-top: 1px solid #eaeaff; padding-top: 6px;">
-                                    Timestamp: Today at 08:30 AM
-                                </div>
-                            </blockquote>
-                        </div>
+                            <p style="margin-top: 0; font-size: 12px; color: #50575e; margin-bottom: 15px;">
+                                Live preview of the compiled blog post assembled from staged queue items and framing text.
+                            </p>
 
-                        <!-- Footer text (only if non-empty) -->
-                        <?php if (!empty($opts['footer_text'])): ?>
-                        <div style="font-size: 13px; color: #50575e; margin-top: 25px; border-top: 1px dashed #dcdcde; padding-top: 15px;">
-                            <?php echo wp_kses_post($opts['footer_text']); ?>
-                        </div>
-                        <?php endif; ?>
+                            <!-- LIVE MOCKUP CONTAINER -->
+                            <div style="background: #ffffff; border: 1px solid #c3c4c7; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); overflow: hidden;">
+                                <div style="background: #1d2327; color: #fff; padding: 8px 16px; font-size: 11px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                                    <span>WORDPRESS POST PREVIEW MODE</span>
+                                    <span style="color: #72aee6;">Status: Draft / Staged</span>
+                                </div>
 
-                        <!-- Tag Pills -->
-                        <div style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 6px;">
-                            <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 8px; font-size: 11px; color: #2c3338;">#Framework</span>
-                            <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 8px; font-size: 11px; color: #2c3338;">#RISCV</span>
-                            <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 8px; font-size: 11px; color: #2c3338;">#Fediverse</span>
-                            <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 8px; font-size: 11px; color: #2c3338;">#WordPress</span>
+                                <div style="padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                                    <h1 style="font-size: 22px; font-weight: 700; line-height: 1.3; margin: 0 0 10px 0; color: #1d2327;">
+                                        Social Digest (Framework, RISCV, Fediverse)
+                                    </h1>
+
+                                    <div style="font-size: 11px; color: #646970; border-bottom: 1px solid #f0f0f1; padding-bottom: 10px; margin-bottom: 16px; display: flex; gap: 10px; flex-wrap: wrap;">
+                                        <span>Published by <strong>Editor</strong></span>
+                                        <span>&bull;</span>
+                                        <span><?php echo esc_html(wp_date('F j, Y, g:i a', time(), $site_tz)); ?></span>
+                                    </div>
+
+                                    <!-- Header text -->
+                                    <?php if (!empty($opts['header_text'])): ?>
+                                    <div style="font-size: 13px; color: #2c3338; margin-bottom: 18px; line-height: 1.5; padding: 10px 12px; border-left: 3px solid #2271b1; background: #f6f7f7;">
+                                        <?php echo wp_kses_post($opts['header_text']); ?>
+                                    </div>
+                                    <?php endif; ?>
+
+                                    <!-- Staged Embed Item 1 (Pinned) -->
+                                    <div style="margin-bottom: 20px;">
+                                        <div style="background: #fef8ea; border-left: 4px solid #f59e0b; padding: 8px 10px; border-radius: 0 4px 4px 0; margin-bottom: 8px; font-size: 12px; color: #78350f;">
+                                            <strong style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; display: block; color: #b45309; margin-bottom: 2px;">📌 Author Note:</strong>
+                                            Our benchmark team ran initial lab tests on the RISC-V board:
+                                        </div>
+
+                                        <blockquote class="social-post bsky-embed" style="border-left: 3px solid #0085ff; padding: 12px; margin: 0; background: #f7fbff; border: 1px solid #e0efff; border-left: 4px solid #0085ff; border-radius: 6px;">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px;">
+                                                <strong>Brad Linder</strong> <small style="color: #666;">@bradlinder on Bluesky</small>
+                                            </div>
+                                            <p style="margin: 0 0 8px 0; font-size: 13px; color: #1d2327; line-height: 1.5;">
+                                                Framework Laptop 16 with RISC-V mainboard prototype tested. Standby power consumption on modern RISC-V and ARM boards has improved drastically...
+                                            </p>
+                                            <div style="font-size: 10px; color: #8c8f94; border-top: 1px solid #e8f2fc; padding-top: 4px;">
+                                                Sideloaded Media: 1 image (WebP) &bull; Timestamp: Today at 09:14 AM
+                                            </div>
+                                        </blockquote>
+
+                                        <div style="font-size: 11px; color: #646970; margin-top: 6px; font-style: italic; padding-left: 8px;">
+                                            Full schematics will be open-sourced on GitHub later this quarter.
+                                        </div>
+                                    </div>
+
+                                    <!-- Staged Embed Item 2 -->
+                                    <div style="margin-bottom: 20px;">
+                                        <div style="background: #fef8ea; border-left: 4px solid #f59e0b; padding: 8px 10px; border-radius: 0 4px 4px 0; margin-bottom: 8px; font-size: 12px; color: #78350f;">
+                                            <strong style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; display: block; color: #b45309; margin-bottom: 2px;">📌 Author Note:</strong>
+                                            On the importance of RSS and independent protocol ownership:
+                                        </div>
+
+                                        <blockquote class="social-post mastodon-post" style="border-left: 3px solid #6364ff; padding: 12px; margin: 0; background: #fcfcff; border: 1px solid #e2e2ff; border-left: 4px solid #6364ff; border-radius: 6px;">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px;">
+                                                <strong>Brad Linder</strong> <small style="color: #666;">@bradlinder on Mastodon</small>
+                                            </div>
+                                            <p style="margin: 0 0 8px 0; font-size: 13px; color: #1d2327; line-height: 1.5;">
+                                                Open protocols allow publishing directly to your own site without walled gardens. ActivityPub integration is working smoothly...
+                                            </p>
+                                            <div style="font-size: 10px; color: #8c8f94; border-top: 1px solid #eaeaff; padding-top: 4px;">
+                                                Timestamp: Today at 08:30 AM
+                                            </div>
+                                        </blockquote>
+                                    </div>
+
+                                    <!-- Footer text (only if non-empty) -->
+                                    <?php if (!empty($opts['footer_text'])): ?>
+                                    <div style="font-size: 12px; color: #50575e; margin-top: 20px; border-top: 1px dashed #dcdcde; padding-top: 12px;">
+                                        <?php echo wp_kses_post($opts['footer_text']); ?>
+                                    </div>
+                                    <?php endif; ?>
+
+                                    <!-- Tag Pills -->
+                                    <div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 4px;">
+                                        <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 6px; font-size: 10px; color: #2c3338;">#Framework</span>
+                                        <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 6px; font-size: 10px; color: #2c3338;">#RISCV</span>
+                                        <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 6px; font-size: 10px; color: #2c3338;">#Fediverse</span>
+                                        <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 6px; font-size: 10px; color: #2c3338;">#WordPress</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- RIGHT PANE: EDITORIAL WORKBENCH QUEUE & FRAMING CUSTOMIZER -->
+                <div id="social_staging_right_pane">
+
+                    <!-- WIDGET 1: EDITORIAL WORKBENCH QUEUE -->
+                    <div class="social-postbox-widget" id="social_widget_staging_workbench" style="border-left: 5px solid #0085ff;">
+                        <div class="postbox-header">
+                            <h2 class="hndle" style="margin: 0; font-size: 13px; font-weight: 700; color: #1d2327; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <span class="dashicons dashicons-move social-widget-handle" style="color: #8c8f94; cursor: grab;" title="Drag to reorder widget"></span>
+                                <span class="dashicons dashicons-list-view" style="color: #0085ff;"></span>
+                                <span>Editorial Staging Queue & Workbench</span>
+                            </h2>
+                            <div style="display: flex; gap: 4px; align-items: center;">
+                                <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'up')" title="Move Widget Up" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                    <span class="dashicons dashicons-arrow-up-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                </button>
+                                <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'down')" title="Move Widget Down" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                    <span class="dashicons dashicons-arrow-down-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="inside">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+                                <div>
+                                    <p style="margin: 0; color: #50575e; font-size: 13px;">
+                                        Gather incoming social updates, compose custom lead-in commentary, pin lead stories, and publish whenever you're ready.
+                                    </p>
+                                </div>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <button type="button" class="button button-secondary">
+                                        <span class="dashicons dashicons-download" style="vertical-align: -3px; font-size: 16px;"></span> Fetch Updates
+                                    </button>
+                                    <button type="button" class="button button-primary" style="background: #2271b1; font-weight: 600;">
+                                        <span class="dashicons dashicons-upload" style="vertical-align: -3px; font-size: 16px;"></span> Publish Staged Digest Now
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div style="background: #f0f6fc; border-left: 4px solid #0085ff; padding: 10px 14px; margin: 12px 0 15px 0; border-radius: 3px; font-size: 12px;">
+                                <strong>How the Staging Workbench Works:</strong>
+                                <ol style="margin: 4px 0 0 16px; padding: 0; line-height: 1.5;">
+                                    <li><strong>Gather Content:</strong> Draft social updates from Bluesky and Mastodon are held here prior to publishing.</li>
+                                    <li><strong>Per-Article Commentary:</strong> Attach custom lead-in text or follow-up takeaways to add editorial voice.</li>
+                                    <li><strong>Pin Lead Stories:</strong> Toggle inclusion or pin key highlights to the #1 position.</li>
+                                    <li><strong>Exclude Posts &amp; Progression:</strong> Excluded items advance the feed cutoff without being re-ingested.</li>
+                                </ol>
+                            </div>
+
+                            <!-- Staged Items Table / Cards -->
+                            <h3 style="font-size: 13px; color: #1d2327; margin: 15px 0 8px 0;">
+                                Staged Social Items (3 In Queue)
+                            </h3>
+                            
+                            <table class="wp-list-table widefat fixed striped" style="margin-top: 8px;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px; text-align: center;">Inc</th>
+                                        <th style="width: 50px; text-align: center;">Pin</th>
+                                        <th style="width: 90px;">Platform</th>
+                                        <th>Original Post & Media</th>
+                                        <th style="width: 40%;">Custom Commentary & Framing</th>
+                                        <th style="width: 65px; text-align: center;">Order</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="text-align: center; vertical-align: middle;">
+                                            <input type="checkbox" checked title="Include in Digest" />
+                                        </td>
+                                        <td style="text-align: center; vertical-align: middle;">
+                                            <input type="checkbox" checked title="Pin as Lead Story" />
+                                            <span class="dashicons dashicons-star-filled" style="color: #f59e0b; vertical-align: -2px;" title="Pinned as #1 Lead Story"></span>
+                                        </td>
+                                        <td style="vertical-align: top;">
+                                            <strong style="color: #0085ff;">Bluesky</strong><br>
+                                            <small style="color: #666;">@bradlinder</small>
+                                        </td>
+                                        <td style="vertical-align: top;">
+                                            <em>"Framework Laptop 16 with RISC-V mainboard prototype tested..."</em>
+                                            <br><small style="color: #666;">1 image (WebP) &bull; #Framework #RISCV</small>
+                                        </td>
+                                        <td style="vertical-align: top;">
+                                            <div style="margin-bottom: 4px;">
+                                                <label style="font-size: 10px; font-weight: 600; color: #50575e; display: block;">BEFORE post (Lead-in):</label>
+                                                <input type="text" class="regular-text" style="width: 100%; font-size: 11px;" value="Our benchmark team ran initial lab tests on the RISC-V board:" />
+                                            </div>
+                                            <div>
+                                                <label style="font-size: 10px; font-weight: 600; color: #50575e; display: block;">AFTER post (Follow-up):</label>
+                                                <input type="text" class="regular-text" style="width: 100%; font-size: 11px;" value="Full schematics will be open-sourced on GitHub later this quarter." />
+                                            </div>
+                                        </td>
+                                        <td style="text-align: center; vertical-align: middle;">
+                                            <button type="button" class="button button-small" title="Move Up">&uarr;</button>
+                                            <button type="button" class="button button-small" title="Move Down">&darr;</button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: center; vertical-align: middle;">
+                                            <input type="checkbox" checked title="Include in Digest" />
+                                        </td>
+                                        <td style="text-align: center; vertical-align: middle;">
+                                            <input type="checkbox" title="Pin as Lead Story" />
+                                        </td>
+                                        <td style="vertical-align: top;">
+                                            <strong style="color: #6364ff;">Mastodon</strong><br>
+                                            <small style="color: #666;">@bradlinder</small>
+                                        </td>
+                                        <td style="vertical-align: top;">
+                                            <em>"Open protocols allow publishing directly to your own site..."</em>
+                                            <br><small style="color: #666;">#Fediverse #ActivityPub</small>
+                                        </td>
+                                        <td style="vertical-align: top;">
+                                            <div style="margin-bottom: 4px;">
+                                                <label style="font-size: 10px; font-weight: 600; color: #50575e; display: block;">BEFORE post (Lead-in):</label>
+                                                <input type="text" class="regular-text" style="width: 100%; font-size: 11px;" value="On the importance of RSS and independent protocol ownership:" />
+                                            </div>
+                                            <div>
+                                                <label style="font-size: 10px; font-weight: 600; color: #50575e; display: block;">AFTER post (Follow-up):</label>
+                                                <input type="text" class="regular-text" style="width: 100%; font-size: 11px;" value="" />
+                                            </div>
+                                        </td>
+                                        <td style="text-align: center; vertical-align: middle;">
+                                            <button type="button" class="button button-small" title="Move Up">&uarr;</button>
+                                            <button type="button" class="button button-small" title="Move Down">&darr;</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 12px; border-top: 1px solid #ccd0d4;">
+                                <div style="display: flex; gap: 8px;">
+                                    <button type="button" class="button button-primary" style="font-weight: bold;">Publish Staged Digest Now</button>
+                                    <button type="button" class="button button-secondary">Save Staging Draft</button>
+                                    <button type="button" class="button button-secondary">Clear Staging Queue</button>
+                                </div>
+                                <span style="font-size: 11px; color: #666;">Next automated run in 4 hours.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- WIDGET 2: ARTICLE HEADER & FOOTER WYSIWYG CUSTOMIZER -->
+                    <div class="social-postbox-widget" id="social_widget_staging_framing" style="border-left: 5px solid #2271b1;">
+                        <div class="postbox-header">
+                            <h2 class="hndle" style="margin: 0; font-size: 13px; font-weight: 700; color: #1d2327; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <span class="dashicons dashicons-move social-widget-handle" style="color: #8c8f94; cursor: grab;" title="Drag to reorder widget"></span>
+                                <span class="dashicons dashicons-edit" style="color: #2271b1;"></span>
+                                <span>Live Article Header &amp; Footer Framing (WYSIWYG)</span>
+                            </h2>
+                            <div style="display: flex; gap: 4px; align-items: center;">
+                                <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'up')" title="Move Widget Up" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                    <span class="dashicons dashicons-arrow-up-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                </button>
+                                <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'down')" title="Move Widget Down" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                    <span class="dashicons dashicons-arrow-down-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="inside">
+                            <p style="font-size: 12px; color: #50575e; margin-bottom: 12px;">
+                                Refine article intro header and outro footer text directly in the staging workspace. Place <code>&lt;!--digest_split--&gt;</code> to separate header and footer.
+                            </p>
+                            
+                            <form method="post" action="options.php" style="margin-bottom: 0;">
+                                <?php settings_fields('social_digest_group'); ?>
+                                <div style="max-width: 100%;">
+                                    <?php 
+                                    wp_editor($unified_editor_value, 'social_digest_staging_unified_content', [
+                                        'textarea_name' => 'social_digest_options[unified_content]',
+                                        'textarea_rows' => 7,
+                                        'media_buttons' => false,
+                                        'teeny'         => false,
+                                        'quicktags'     => [
+                                            'buttons' => 'strong,em,link,close'
+                                        ]
+                                    ]); 
+                                    ?>
+                                </div>
+                                <div style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between;">
+                                    <input type="submit" class="button button-secondary" value="Save Framing Changes" />
+                                    <span style="font-size: 11px; color: #666;">Header above divider &bull; Footer below divider</span>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                </div>
+
             </div>
 
         <?php elseif ($active_tab === 'actions'): ?>
             <!-- TAB 3: ACTIONS & DIAGNOSTICS -->
-            <div class="social-diag-card">
-                <h2>Operational Controls & Triggers</h2>
-                <p>
-                    Bluesky Cutoff Marker: <strong><?php echo $bsky_last ? esc_html(wp_date('Y-m-d H:i:s', $bsky_last, $site_tz)) : 'None'; ?></strong> | 
-                    Mastodon Cutoff Marker: <strong><?php echo $masto_last ? esc_html(wp_date('Y-m-d H:i:s', $masto_last, $site_tz)) : 'None'; ?></strong><br>
-                    Next Scheduled Run: <strong><?php echo $next_run ? esc_html(wp_date('Y-m-d H:i:s T', $next_run, $site_tz)) : 'Not scheduled'; ?></strong>
-                </p>
+            <div id="social_actions_container">
+                
+                <!-- WIDGET 1: OPERATIONAL CONTROLS & TRIGGERS -->
+                <div class="social-postbox-widget" id="social_widget_actions_triggers" style="border-left: 5px solid #2271b1;">
+                    <div class="postbox-header">
+                        <h2 class="hndle" style="margin: 0; font-size: 13px; font-weight: 700; color: #1d2327; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <span class="dashicons dashicons-move social-widget-handle" style="color: #8c8f94; cursor: grab;" title="Drag to reorder widget"></span>
+                            <span class="dashicons dashicons-admin-generic" style="color: #2271b1;"></span>
+                            <span>Operational Controls &amp; Triggers</span>
+                        </h2>
+                        <div style="display: flex; gap: 4px; align-items: center;">
+                            <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'up')" title="Move Widget Up" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                <span class="dashicons dashicons-arrow-up-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                            </button>
+                            <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'down')" title="Move Widget Down" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                <span class="dashicons dashicons-arrow-down-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="inside">
+                        <p style="margin-top: 0;">
+                            Bluesky Cutoff Marker: <strong><?php echo $bsky_last ? esc_html(wp_date('Y-m-d H:i:s', $bsky_last, $site_tz)) : 'None'; ?></strong> | 
+                            Mastodon Cutoff Marker: <strong><?php echo $masto_last ? esc_html(wp_date('Y-m-d H:i:s', $masto_last, $site_tz)) : 'None'; ?></strong><br>
+                            Next Scheduled Run: <strong><?php echo $next_run ? esc_html(wp_date('Y-m-d H:i:s T', $next_run, $site_tz)) : 'Not scheduled'; ?></strong>
+                        </p>
 
-                <div style="display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap;">
-                    <!-- Manual Import Trigger -->
-                    <form method="post">
-                        <?php wp_nonce_field('social_manual_run_action', 'social_manual_nonce'); ?>
-                        <input type="hidden" name="social_manual_run" value="1" />
-                        <?php submit_button('Run Import Now', 'primary', 'submit', false); ?>
-                    </form>
+                        <div style="display: flex; gap: 10px; margin: 15px 0 0 0; flex-wrap: wrap;">
+                            <!-- Manual Import Trigger -->
+                            <form method="post">
+                                <?php wp_nonce_field('social_manual_run_action', 'social_manual_nonce'); ?>
+                                <input type="hidden" name="social_manual_run" value="1" />
+                                <?php submit_button('Run Import Now', 'primary', 'submit', false); ?>
+                            </form>
 
-                    <!-- Dry-Run / Simulation Trigger -->
-                    <form method="post">
-                        <?php wp_nonce_field('social_simulate_action', 'social_simulate_nonce'); ?>
-                        <input type="hidden" name="social_simulate_run" value="1" />
-                        <?php submit_button('Simulate Next Run (Dry Run Mockup)', 'secondary', 'submit', false); ?>
-                    </form>
+                            <!-- Dry-Run / Simulation Trigger -->
+                            <form method="post">
+                                <?php wp_nonce_field('social_simulate_action', 'social_simulate_nonce'); ?>
+                                <input type="hidden" name="social_simulate_run" value="1" />
+                                <?php submit_button('Simulate Next Run (Dry Run Mockup)', 'secondary', 'submit', false); ?>
+                            </form>
 
-                    <!-- Clear Cutoff Markers -->
-                    <form method="post" onsubmit="return confirm('Clear cutoff markers for all networks? The next run will evaluate past posts.');">
-                        <?php wp_nonce_field('social_reset_cutoff_action', 'social_reset_nonce'); ?>
-                        <input type="hidden" name="social_reset_cutoff" value="1" />
-                        <?php submit_button('Clear Cutoff Markers', 'secondary', 'submit', false); ?>
-                    </form>
+                            <!-- Clear Cutoff Markers -->
+                            <form method="post" onsubmit="return confirm('Clear cutoff markers for all networks? The next run will evaluate past posts.');">
+                                <?php wp_nonce_field('social_reset_cutoff_action', 'social_reset_nonce'); ?>
+                                <input type="hidden" name="social_reset_cutoff" value="1" />
+                                <?php submit_button('Clear Cutoff Markers', 'secondary', 'submit', false); ?>
+                            </form>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <!-- DRY RUN SIMULATION PREVIEW & FULL POST MOCKUP -->
-            <?php if (!empty($simulation) && is_array($simulation)): ?>
-                <?php if (!empty($simulation['success']) && !empty($simulation['preview']) && is_array($simulation['preview'])): ?>
-                    <div class="social-diag-card" style="border-left: 5px solid #2e7d32; background: #fafdfa;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dcdcdc; padding-bottom: 8px; margin-bottom: 12px;">
-                            <h3 style="margin: 0; color: #1b5e20;">
-                                <span class="dashicons dashicons-visibility" style="vertical-align: -2px;"></span> Dry-Run Simulation: Blog Post Mockup
-                            </h3>
-                            <span style="background: #e8f5e9; color: #2e7d32; font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: bold; border: 1px solid #c8e6c9;">
-                                Transient Preview &bull; Automatically deleted when closing window
-                            </span>
-                        </div>
-
-                        <p style="margin-top: 0; font-size: 13px; color: #2e7d32;">
-                            <strong>Simulation Summary:</strong> <?php echo esc_html($simulation['message'] ?? 'Simulation completed successfully.'); ?>
-                        </p>
-
-                        <!-- Inspection Metadata Box -->
-                        <div style="background: #f4f6f8; border: 1px solid #ccd0d4; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; font-size: 13px;">
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
-                                <div><strong>Proposed Title:</strong> <br><code style="color: #0056b3;"><?php echo esc_html($simulation['preview']['title'] ?? ''); ?></code></div>
-                                <div><strong>Candidate Posts:</strong> <br><span><?php echo (int)($simulation['preview']['count'] ?? 0); ?> items evaluated</span></div>
-                                <div><strong>Harvested Tags:</strong> <br><span><?php echo esc_html(implode(', ', (array)($simulation['preview']['tags'] ?? []))); ?></span></div>
-                                <div><strong>Featured Image:</strong> <br><span style="word-break: break-all;"><?php echo !empty($simulation['preview']['featured_image']) ? esc_html($simulation['preview']['featured_image']) : '<em>None</em>'; ?></span></div>
+                <!-- DRY RUN SIMULATION PREVIEW & FULL POST MOCKUP -->
+                <?php if (!empty($simulation) && is_array($simulation)): ?>
+                    <?php if (!empty($simulation['success']) && !empty($simulation['preview']) && is_array($simulation['preview'])): ?>
+                        <div class="social-postbox-widget" id="social_widget_actions_simulation" style="border-left: 5px solid #2e7d32; background: #fafdfa;">
+                            <div class="postbox-header">
+                                <h2 class="hndle" style="margin: 0; font-size: 13px; font-weight: 700; color: #1b5e20; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <span class="dashicons dashicons-move social-widget-handle" style="color: #8c8f94; cursor: grab;" title="Drag to reorder widget"></span>
+                                    <span class="dashicons dashicons-visibility" style="color: #2e7d32;"></span>
+                                    <span>Dry-Run Simulation: Blog Post Mockup</span>
+                                </h2>
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'up')" title="Move Widget Up" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                        <span class="dashicons dashicons-arrow-up-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                    </button>
+                                    <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'down')" title="Move Widget Down" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                        <span class="dashicons dashicons-arrow-down-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                            <div class="inside">
+                                <p style="margin-top: 0; font-size: 13px; color: #2e7d32;">
+                                    <strong>Simulation Summary:</strong> <?php echo esc_html($simulation['message'] ?? 'Simulation completed successfully.'); ?>
+                                </p>
 
-                        <!-- FULL LIVE BLOG POST MOCKUP -->
-                        <div style="background: #ffffff; border: 2px solid #2e7d32; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; margin-top: 15px;">
-                            <div style="background: #2e7d32; color: #fff; padding: 8px 16px; font-size: 12px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
-                                <span>MOCKUP OF GENERATED BLOG POST</span>
-                                <span style="opacity: 0.85;">Template Preview</span>
-                            </div>
-
-                            <div style="padding: 24px; max-width: 850px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;">
-                                <h1 style="font-size: 26px; line-height: 1.3; margin: 0 0 10px 0; color: #1d2327;">
-                                    <?php echo esc_html($simulation['preview']['title'] ?? 'Social Digest'); ?>
-                                </h1>
-
-                                <div style="font-size: 12px; color: #646970; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap;">
-                                    <span>Published by <strong>Editor</strong></span>
-                                    <span>&bull;</span>
-                                    <span><?php echo esc_html(wp_date('F j, Y, g:i a', time(), $site_tz)); ?></span>
-                                    <span>&bull;</span>
-                                    <span>Categories: <strong>Roundups, Social</strong></span>
+                                <!-- Inspection Metadata Box -->
+                                <div style="background: #f4f6f8; border: 1px solid #ccd0d4; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; font-size: 13px;">
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
+                                        <div><strong>Proposed Title:</strong> <br><code style="color: #0056b3;"><?php echo esc_html($simulation['preview']['title'] ?? ''); ?></code></div>
+                                        <div><strong>Candidate Posts:</strong> <br><span><?php echo (int)($simulation['preview']['count'] ?? 0); ?> items evaluated</span></div>
+                                        <div><strong>Harvested Tags:</strong> <br><span><?php echo esc_html(implode(', ', (array)($simulation['preview']['tags'] ?? []))); ?></span></div>
+                                        <div><strong>Featured Image:</strong> <br><span style="word-break: break-all;"><?php echo !empty($simulation['preview']['featured_image']) ? esc_html($simulation['preview']['featured_image']) : '<em>None</em>'; ?></span></div>
+                                    </div>
                                 </div>
 
-                                <?php if (!empty($simulation['preview']['featured_image'])): ?>
-                                    <div style="margin-bottom: 20px; text-align: center; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 10px;">
-                                        <img src="<?php echo esc_url($simulation['preview']['featured_image']); ?>" alt="Featured Thumbnail" style="max-height: 320px; max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);" />
-                                        <div style="font-size: 11px; color: #6c757d; margin-top: 6px;">[Auto-Sideloaded Featured Image &bull; Converted to WebP]</div>
+                                <!-- FULL LIVE BLOG POST MOCKUP -->
+                                <div style="background: #ffffff; border: 2px solid #2e7d32; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; margin-top: 15px;">
+                                    <div style="background: #2e7d32; color: #fff; padding: 8px 16px; font-size: 12px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                                        <span>MOCKUP OF GENERATED BLOG POST</span>
+                                        <span style="opacity: 0.85;">Template Preview</span>
                                     </div>
-                                <?php endif; ?>
 
-                                <!-- Rendered Post Content Mockup -->
-                                <div class="mockup-post-content" style="line-height: 1.6; color: #2c3338; font-size: 15px;">
-                                    <?php if (!empty($simulation['preview']['rendered_html'])): ?>
-                                        <?php echo wp_kses_post($simulation['preview']['rendered_html']); ?>
-                                    <?php else: ?>
-                                        <div style="padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; margin-bottom: 15px;">
-                                            <em><?php echo esc_html($opts['header_text'] ?? 'Here is what we shared across social channels today:'); ?></em>
+                                    <div style="padding: 24px; max-width: 850px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;">
+                                        <h1 style="font-size: 26px; line-height: 1.3; margin: 0 0 10px 0; color: #1d2327;">
+                                            <?php echo esc_html($simulation['preview']['title'] ?? 'Social Digest'); ?>
+                                        </h1>
+
+                                        <div style="font-size: 12px; color: #646970; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap;">
+                                            <span>Published by <strong>Editor</strong></span>
+                                            <span>&bull;</span>
+                                            <span><?php echo esc_html(wp_date('F j, Y, g:i a', time(), $site_tz)); ?></span>
+                                            <span>&bull;</span>
+                                            <span>Categories: <strong>Roundups, Social</strong></span>
                                         </div>
-                                        <p><em>(Social posts and embeds will render here with full formatting, avatar caching, and responsive srcset thumbnails.)</em></p>
-                                        <div style="padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; margin-top: 15px;">
-                                            <small><?php echo esc_html($opts['footer_text'] ?? 'Follow us directly on social media for real-time updates!'); ?></small>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
 
-                                <!-- Post Tags Mockup -->
-                                <?php if (!empty($simulation['preview']['tags']) && is_array($simulation['preview']['tags'])): ?>
-                                    <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
-                                        <span style="font-size: 12px; font-weight: bold; color: #50575e;">Tags:</span>
-                                        <?php foreach ($simulation['preview']['tags'] as $tg): ?>
-                                            <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 8px; font-size: 11px; color: #2c3338;">
-                                                #<?php echo esc_html($tg); ?>
-                                            </span>
-                                        <?php endforeach; ?>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-                <?php else: ?>
-                    <div class="social-diag-card" style="border-left: 5px solid #d63638; background: #fff8f8;">
-                        <h3 style="margin: 0 0 8px 0; color: #d63638;">
-                            <span class="dashicons dashicons-warning" style="vertical-align: -2px;"></span> Simulation Notice
-                        </h3>
-                        <p style="margin: 0 0 10px 0; font-size: 13px; color: #1d2327;">
-                            <?php echo esc_html($simulation['message'] ?? 'Simulation was unable to evaluate posts with current thresholds.'); ?>
-                        </p>
-                        <p style="margin: 0; font-size: 12px; color: #646970;">
-                            Tip: If you've already run an import today, try clicking <strong>Clear Cutoff Markers</strong> or lowering your <strong>Minimum New Posts</strong> threshold in Settings.
-                        </p>
-                    </div>
-                <?php endif; ?>
-            <?php endif; ?>
-
-            <!-- CONNECTION DIAGNOSTICS -->
-            <div class="social-diag-card">
-                <h3>Network Health & API Connection Status</h3>
-                <table class="widefat striped" style="margin-top: 10px;">
-                    <thead>
-                        <tr>
-                            <th>Network Endpoint</th>
-                            <th>Status</th>
-                            <th>Latency</th>
-                            <th>Details</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>Bluesky Public API</strong> (public.api.bsky.app)</td>
-                            <td><span style="color: #2e7d32; font-weight: bold;">CONNECTED</span></td>
-                            <td>~142 ms</td>
-                            <td>HTTP 200 OK &bull; Author feed endpoint operational</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Mastodon Instance</strong> (ActivityPub)</td>
-                            <td><span style="color: #2e7d32; font-weight: bold;">CONNECTED</span></td>
-                            <td>~98 ms</td>
-                            <td>HTTP 200 OK &bull; Account lookup & statuses operational</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- RECENT IMPORT ACTIVITY -->
-            <div class="social-diag-card">
-                <h3>Recent Import Activity Log</h3>
-                <?php if (!empty($logs)): ?>
-                    <table style="width: 100%; text-align: left; font-size: 13px; margin-top: 10px;" class="widefat striped">
-                        <thead>
-                            <tr>
-                                <th>Time</th>
-                                <th>Status</th>
-                                <th>Post ID</th>
-                                <th>Message</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach (array_reverse($logs) as $log): ?>
-                                <tr>
-                                    <td style="color: #666;"><?php echo esc_html(wp_date('m/d H:i:s', $log['time'], $site_tz)); ?></td>
-                                    <td>
-                                        <span style="color: <?php echo $log['success'] ? '#2e7d32' : '#c62828'; ?>; font-weight: bold;">
-                                            <?php echo $log['success'] ? 'SUCCESS' : 'SKIPPED'; ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <?php if (!empty($log['post_id'])): ?>
-                                            <a href="<?php echo get_edit_post_link($log['post_id']); ?>" target="_blank">#<?php echo (int)$log['post_id']; ?></a>
-                                        <?php else: ?>
-                                            &mdash;
+                                        <?php if (!empty($simulation['preview']['featured_image'])): ?>
+                                            <div style="margin-bottom: 20px; text-align: center; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 10px;">
+                                                <img src="<?php echo esc_url($simulation['preview']['featured_image']); ?>" alt="Featured Thumbnail" style="max-height: 320px; max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);" />
+                                                <div style="font-size: 11px; color: #6c757d; margin-top: 6px;">[Auto-Sideloaded Featured Image &bull; Converted to WebP]</div>
+                                            </div>
                                         <?php endif; ?>
-                                    </td>
-                                    <td><?php echo esc_html($log['message']); ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php else: ?>
-                    <p>No activity recorded yet.</p>
+
+                                        <!-- Rendered Post Content Mockup -->
+                                        <div class="mockup-post-content" style="line-height: 1.6; color: #2c3338; font-size: 15px;">
+                                            <?php if (!empty($simulation['preview']['rendered_html'])): ?>
+                                                <?php echo wp_kses_post($simulation['preview']['rendered_html']); ?>
+                                            <?php else: ?>
+                                                <div style="padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; margin-bottom: 15px;">
+                                                    <em><?php echo esc_html($opts['header_text'] ?? 'Here is what we shared across social channels today:'); ?></em>
+                                                </div>
+                                                <p><em>(Social posts and embeds will render here with full formatting, avatar caching, and responsive srcset thumbnails.)</em></p>
+                                                <div style="padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; margin-top: 15px;">
+                                                    <small><?php echo esc_html($opts['footer_text'] ?? 'Follow us directly on social media for real-time updates!'); ?></small>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <!-- Post Tags Mockup -->
+                                        <?php if (!empty($simulation['preview']['tags']) && is_array($simulation['preview']['tags'])): ?>
+                                            <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                                                <span style="font-size: 12px; font-weight: bold; color: #50575e;">Tags:</span>
+                                                <?php foreach ($simulation['preview']['tags'] as $tg): ?>
+                                                    <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 8px; font-size: 11px; color: #2c3338;">
+                                                        #<?php echo esc_html($tg); ?>
+                                                    </span>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
                 <?php endif; ?>
+
+                <!-- WIDGET 2: NETWORK HEALTH DIAGNOSTICS -->
+                <div class="social-postbox-widget" id="social_widget_actions_diagnostics" style="border-left: 5px solid #0085ff;">
+                    <div class="postbox-header">
+                        <h2 class="hndle" style="margin: 0; font-size: 13px; font-weight: 700; color: #1d2327; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <span class="dashicons dashicons-move social-widget-handle" style="color: #8c8f94; cursor: grab;" title="Drag to reorder widget"></span>
+                            <span class="dashicons dashicons-heart" style="color: #0085ff;"></span>
+                            <span>Network Health &amp; API Connection Status</span>
+                        </h2>
+                        <div style="display: flex; gap: 4px; align-items: center;">
+                            <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'up')" title="Move Widget Up" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                <span class="dashicons dashicons-arrow-up-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                            </button>
+                            <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'down')" title="Move Widget Down" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                <span class="dashicons dashicons-arrow-down-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="inside">
+                        <table class="widefat striped" style="margin-top: 5px;">
+                            <thead>
+                                <tr>
+                                    <th>Network Endpoint</th>
+                                    <th>Status</th>
+                                    <th>Latency</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Bluesky Public API</strong> (public.api.bsky.app)</td>
+                                    <td><span style="color: #2e7d32; font-weight: bold;">CONNECTED</span></td>
+                                    <td>~142 ms</td>
+                                    <td>HTTP 200 OK &bull; Author feed endpoint operational</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Mastodon Instance</strong> (ActivityPub)</td>
+                                    <td><span style="color: #2e7d32; font-weight: bold;">CONNECTED</span></td>
+                                    <td>~98 ms</td>
+                                    <td>HTTP 200 OK &bull; Account lookup & statuses operational</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- WIDGET 3: RECENT IMPORT ACTIVITY LOG -->
+                <div class="social-postbox-widget" id="social_widget_actions_logs" style="border-left: 5px solid #6364ff;">
+                    <div class="postbox-header">
+                        <h2 class="hndle" style="margin: 0; font-size: 13px; font-weight: 700; color: #1d2327; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <span class="dashicons dashicons-move social-widget-handle" style="color: #8c8f94; cursor: grab;" title="Drag to reorder widget"></span>
+                            <span class="dashicons dashicons-list-view" style="color: #6364ff;"></span>
+                            <span>Recent Import Activity Log</span>
+                        </h2>
+                        <div style="display: flex; gap: 4px; align-items: center;">
+                            <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'up')" title="Move Widget Up" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                <span class="dashicons dashicons-arrow-up-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                            </button>
+                            <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'down')" title="Move Widget Down" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                <span class="dashicons dashicons-arrow-down-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="inside">
+                        <?php if (!empty($logs)): ?>
+                            <table style="width: 100%; text-align: left; font-size: 13px; margin-top: 5px;" class="widefat striped">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Status</th>
+                                        <th>Post ID</th>
+                                        <th>Message</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach (array_reverse($logs) as $log): ?>
+                                        <tr>
+                                            <td style="color: #666;"><?php echo esc_html(wp_date('m/d H:i:s', $log['time'], $site_tz)); ?></td>
+                                            <td>
+                                                <span style="color: <?php echo $log['success'] ? '#2e7d32' : '#c62828'; ?>; font-weight: bold;">
+                                                    <?php echo $log['success'] ? 'SUCCESS' : 'SKIPPED'; ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <?php if (!empty($log['post_id'])): ?>
+                                                    <a href="<?php echo get_edit_post_link($log['post_id']); ?>" target="_blank">#<?php echo (int)$log['post_id']; ?></a>
+                                                <?php else: ?>
+                                                    &mdash;
+                                                <?php endif; ?>
+                                            </td>
+                                            <td><?php echo esc_html($log['message']); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php else: ?>
+                            <p style="margin: 0; color: #666;">No activity recorded yet.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
             </div>
         <?php endif; ?>
 
@@ -1414,9 +1590,68 @@ function social_render_settings_page() {
         if (mastoRow) mastoRow.style.display = (mode === 'mastodon' || mode === 'both') ? 'table-row' : 'none';
     }
 
+    function socialSetStagingLayout(mode) {
+        const container = document.getElementById('social_staging_container');
+        const btnSplit = document.getElementById('btn_staging_split');
+        const btnStacked = document.getElementById('btn_staging_stacked');
+        if (!container) return;
+
+        if (mode === 'split') {
+            container.className = 'social-staging-split-view';
+            if (btnSplit) {
+                btnSplit.style.background = '#2271b1';
+                btnSplit.style.color = '#fff';
+            }
+            if (btnStacked) {
+                btnStacked.style.background = '#f6f7f7';
+                btnStacked.style.color = '#2c3338';
+            }
+        } else {
+            container.className = 'social-staging-stacked-view';
+            if (btnStacked) {
+                btnStacked.style.background = '#2271b1';
+                btnStacked.style.color = '#fff';
+            }
+            if (btnSplit) {
+                btnSplit.style.background = '#f6f7f7';
+                btnSplit.style.color = '#2c3338';
+            }
+        }
+    }
+
+    function socialMoveWidget(btn, dir) {
+        const widget = jQuery(btn).closest('.social-postbox-widget');
+        if (!widget.length) return;
+
+        if (dir === 'up') {
+            const prev = widget.prev('.social-postbox-widget');
+            if (prev.length) {
+                widget.insertBefore(prev);
+            }
+        } else if (dir === 'down') {
+            const next = widget.next('.social-postbox-widget');
+            if (next.length) {
+                widget.insertAfter(next);
+            }
+        }
+    }
+
     jQuery(document).ready(function($) {
         if (typeof postboxes !== 'undefined') {
             postboxes.add_postbox_toggles('settings_page_social-digest-settings');
+        }
+
+        // Initialize jQuery UI Sortable for drag-and-drop moveable widgets
+        if ($.fn.sortable) {
+            $('#social_staging_right_pane, #social_actions_container, #social_staging_left_pane').sortable({
+                handle: '.postbox-header',
+                items: '.social-postbox-widget',
+                placeholder: 'social-postbox-placeholder',
+                forcePlaceholderSize: true,
+                opacity: 0.8,
+                cursor: 'grabbing',
+                connectWith: '#social_staging_right_pane, #social_staging_left_pane'
+            });
         }
 
         const freqSelect = document.getElementById('social_schedule_freq');
