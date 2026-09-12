@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, staging queue, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.1.3
+ * Version: 5.1.4
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -1094,87 +1094,101 @@ function social_render_settings_page() {
             </div>
 
             <!-- DRY RUN SIMULATION PREVIEW & FULL POST MOCKUP -->
-            <?php if (!empty($simulation)): ?>
-                <div class="social-diag-card" style="border-left: 5px solid #2e7d32; background: #fafdfa;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dcdcdc; padding-bottom: 8px; margin-bottom: 12px;">
-                        <h3 style="margin: 0; color: #1b5e20;">
-                            <span class="dashicons dashicons-visibility" style="vertical-align: -2px;"></span> Dry-Run Simulation: Blog Post Mockup
-                        </h3>
-                        <span style="background: #e8f5e9; color: #2e7d32; font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: bold; border: 1px solid #c8e6c9;">
-                            Transient Preview &bull; Automatically deleted when closing window
-                        </span>
-                    </div>
-
-                    <p style="margin-top: 0; font-size: 13px; color: #2e7d32;">
-                        <strong>Simulation Summary:</strong> <?php echo esc_html($simulation['message']); ?>
-                    </p>
-
-                    <!-- Inspection Metadata Box -->
-                    <div style="background: #f4f6f8; border: 1px solid #ccd0d4; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; font-size: 13px;">
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
-                            <div><strong>Proposed Title:</strong> <br><code style="color: #0056b3;"><?php echo esc_html($simulation['preview']['title'] ?? ''); ?></code></div>
-                            <div><strong>Candidate Posts:</strong> <br><span><?php echo (int)($simulation['preview']['count'] ?? 0); ?> items evaluated</span></div>
-                            <div><strong>Harvested Tags:</strong> <br><span><?php echo esc_html(implode(', ', $simulation['preview']['tags'] ?? [])); ?></span></div>
-                            <div><strong>Featured Image:</strong> <br><span style="word-break: break-all;"><?php echo !empty($simulation['preview']['featured_image']) ? esc_html($simulation['preview']['featured_image']) : '<em>None</em>'; ?></span></div>
-                        </div>
-                    </div>
-
-                    <!-- FULL LIVE BLOG POST MOCKUP -->
-                    <div style="background: #ffffff; border: 2px solid #2e7d32; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; margin-top: 15px;">
-                        <div style="background: #2e7d32; color: #fff; padding: 8px 16px; font-size: 12px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
-                            <span>MOCKUP OF GENERATED BLOG POST</span>
-                            <span style="opacity: 0.85;">Template Preview</span>
+            <?php if (!empty($simulation) && is_array($simulation)): ?>
+                <?php if (!empty($simulation['success']) && !empty($simulation['preview']) && is_array($simulation['preview'])): ?>
+                    <div class="social-diag-card" style="border-left: 5px solid #2e7d32; background: #fafdfa;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dcdcdc; padding-bottom: 8px; margin-bottom: 12px;">
+                            <h3 style="margin: 0; color: #1b5e20;">
+                                <span class="dashicons dashicons-visibility" style="vertical-align: -2px;"></span> Dry-Run Simulation: Blog Post Mockup
+                            </h3>
+                            <span style="background: #e8f5e9; color: #2e7d32; font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: bold; border: 1px solid #c8e6c9;">
+                                Transient Preview &bull; Automatically deleted when closing window
+                            </span>
                         </div>
 
-                        <div style="padding: 24px; max-width: 850px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;">
-                            <h1 style="font-size: 26px; line-height: 1.3; margin: 0 0 10px 0; color: #1d2327;">
-                                <?php echo esc_html($simulation['preview']['title'] ?? 'Social Digest'); ?>
-                            </h1>
+                        <p style="margin-top: 0; font-size: 13px; color: #2e7d32;">
+                            <strong>Simulation Summary:</strong> <?php echo esc_html($simulation['message'] ?? 'Simulation completed successfully.'); ?>
+                        </p>
 
-                            <div style="font-size: 12px; color: #646970; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap;">
-                                <span>Published by <strong>Editor</strong></span>
-                                <span>&bull;</span>
-                                <span><?php echo esc_html(wp_date('F j, Y, g:i a', time(), $site_tz)); ?></span>
-                                <span>&bull;</span>
-                                <span>Categories: <strong>Roundups, Social</strong></span>
+                        <!-- Inspection Metadata Box -->
+                        <div style="background: #f4f6f8; border: 1px solid #ccd0d4; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; font-size: 13px;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
+                                <div><strong>Proposed Title:</strong> <br><code style="color: #0056b3;"><?php echo esc_html($simulation['preview']['title'] ?? ''); ?></code></div>
+                                <div><strong>Candidate Posts:</strong> <br><span><?php echo (int)($simulation['preview']['count'] ?? 0); ?> items evaluated</span></div>
+                                <div><strong>Harvested Tags:</strong> <br><span><?php echo esc_html(implode(', ', (array)($simulation['preview']['tags'] ?? []))); ?></span></div>
+                                <div><strong>Featured Image:</strong> <br><span style="word-break: break-all;"><?php echo !empty($simulation['preview']['featured_image']) ? esc_html($simulation['preview']['featured_image']) : '<em>None</em>'; ?></span></div>
+                            </div>
+                        </div>
+
+                        <!-- FULL LIVE BLOG POST MOCKUP -->
+                        <div style="background: #ffffff; border: 2px solid #2e7d32; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; margin-top: 15px;">
+                            <div style="background: #2e7d32; color: #fff; padding: 8px 16px; font-size: 12px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                                <span>MOCKUP OF GENERATED BLOG POST</span>
+                                <span style="opacity: 0.85;">Template Preview</span>
                             </div>
 
-                            <?php if (!empty($simulation['preview']['featured_image'])): ?>
-                                <div style="margin-bottom: 20px; text-align: center; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 10px;">
-                                    <img src="<?php echo esc_url($simulation['preview']['featured_image']); ?>" alt="Featured Thumbnail" style="max-height: 320px; max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);" />
-                                    <div style="font-size: 11px; color: #6c757d; margin-top: 6px;">[Auto-Sideloaded Featured Image &bull; Converted to WebP]</div>
-                                </div>
-                            <?php endif; ?>
+                            <div style="padding: 24px; max-width: 850px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;">
+                                <h1 style="font-size: 26px; line-height: 1.3; margin: 0 0 10px 0; color: #1d2327;">
+                                    <?php echo esc_html($simulation['preview']['title'] ?? 'Social Digest'); ?>
+                                </h1>
 
-                            <!-- Rendered Post Content Mockup -->
-                            <div class="mockup-post-content" style="line-height: 1.6; color: #2c3338; font-size: 15px;">
-                                <?php if (!empty($simulation['preview']['rendered_html'])): ?>
-                                    <?php echo wp_kses_post($simulation['preview']['rendered_html']); ?>
-                                <?php else: ?>
-                                    <div style="padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; margin-bottom: 15px;">
-                                        <em><?php echo esc_html($opts['header_text'] ?? 'Here is what we shared across social channels today:'); ?></em>
+                                <div style="font-size: 12px; color: #646970; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap;">
+                                    <span>Published by <strong>Editor</strong></span>
+                                    <span>&bull;</span>
+                                    <span><?php echo esc_html(wp_date('F j, Y, g:i a', time(), $site_tz)); ?></span>
+                                    <span>&bull;</span>
+                                    <span>Categories: <strong>Roundups, Social</strong></span>
+                                </div>
+
+                                <?php if (!empty($simulation['preview']['featured_image'])): ?>
+                                    <div style="margin-bottom: 20px; text-align: center; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 10px;">
+                                        <img src="<?php echo esc_url($simulation['preview']['featured_image']); ?>" alt="Featured Thumbnail" style="max-height: 320px; max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);" />
+                                        <div style="font-size: 11px; color: #6c757d; margin-top: 6px;">[Auto-Sideloaded Featured Image &bull; Converted to WebP]</div>
                                     </div>
-                                    <p><em>(Social posts and embeds will render here with full formatting, avatar caching, and responsive srcset thumbnails.)</em></p>
-                                    <div style="padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; margin-top: 15px;">
-                                        <small><?php echo esc_html($opts['footer_text'] ?? 'Follow us directly on social media for real-time updates!'); ?></small>
+                                <?php endif; ?>
+
+                                <!-- Rendered Post Content Mockup -->
+                                <div class="mockup-post-content" style="line-height: 1.6; color: #2c3338; font-size: 15px;">
+                                    <?php if (!empty($simulation['preview']['rendered_html'])): ?>
+                                        <?php echo wp_kses_post($simulation['preview']['rendered_html']); ?>
+                                    <?php else: ?>
+                                        <div style="padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; margin-bottom: 15px;">
+                                            <em><?php echo esc_html($opts['header_text'] ?? 'Here is what we shared across social channels today:'); ?></em>
+                                        </div>
+                                        <p><em>(Social posts and embeds will render here with full formatting, avatar caching, and responsive srcset thumbnails.)</em></p>
+                                        <div style="padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; margin-top: 15px;">
+                                            <small><?php echo esc_html($opts['footer_text'] ?? 'Follow us directly on social media for real-time updates!'); ?></small>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+
+                                <!-- Post Tags Mockup -->
+                                <?php if (!empty($simulation['preview']['tags']) && is_array($simulation['preview']['tags'])): ?>
+                                    <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                                        <span style="font-size: 12px; font-weight: bold; color: #50575e;">Tags:</span>
+                                        <?php foreach ($simulation['preview']['tags'] as $tg): ?>
+                                            <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 8px; font-size: 11px; color: #2c3338;">
+                                                #<?php echo esc_html($tg); ?>
+                                            </span>
+                                        <?php endforeach; ?>
                                     </div>
                                 <?php endif; ?>
                             </div>
-
-                            <!-- Post Tags Mockup -->
-                            <?php if (!empty($simulation['preview']['tags'])): ?>
-                                <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
-                                    <span style="font-size: 12px; font-weight: bold; color: #50575e;">Tags:</span>
-                                    <?php foreach ($simulation['preview']['tags'] as $tg): ?>
-                                        <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 8px; font-size: 11px; color: #2c3338;">
-                                            #<?php echo esc_html($tg); ?>
-                                        </span>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php endif; ?>
                         </div>
                     </div>
-                </div>
+                <?php else: ?>
+                    <div class="social-diag-card" style="border-left: 5px solid #d63638; background: #fff8f8;">
+                        <h3 style="margin: 0 0 8px 0; color: #d63638;">
+                            <span class="dashicons dashicons-warning" style="vertical-align: -2px;"></span> Simulation Notice
+                        </h3>
+                        <p style="margin: 0 0 10px 0; font-size: 13px; color: #1d2327;">
+                            <?php echo esc_html($simulation['message'] ?? 'Simulation was unable to evaluate posts with current thresholds.'); ?>
+                        </p>
+                        <p style="margin: 0; font-size: 12px; color: #646970;">
+                            Tip: If you've already run an import today, try clicking <strong>Clear Cutoff Markers</strong> or lowering your <strong>Minimum New Posts</strong> threshold in Settings.
+                        </p>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
 
             <!-- CONNECTION DIAGNOSTICS -->
@@ -1962,8 +1976,21 @@ function social_run_digest_import($is_dry_run = false) {
         $new_masto_ts = $masto_res['newest_timestamp'];
     }
 
+    // In dry-run simulation mode, if cutoff markers yield no posts, evaluate recent posts (cutoff = 0)
+    // so the admin can always preview digest rendering without clearing live cutoff state.
+    if ($is_dry_run && empty($raw_posts)) {
+        if ($mode === 'bsky' || $mode === 'both') {
+            $bsky_res = social_fetch_bluesky($opts['bsky_handle'] ?? '', 0, $keep_threads, $include_reposts);
+            $raw_posts = array_merge($raw_posts, $bsky_res['posts']);
+        }
+        if ($mode === 'mastodon' || $mode === 'both') {
+            $masto_res = social_fetch_mastodon($opts['masto_handle'] ?? '', 0, $keep_threads, $include_reposts);
+            $raw_posts = array_merge($raw_posts, $masto_res['posts']);
+        }
+    }
+
     if (empty($raw_posts)) {
-        $msg = 'No new posts returned from the configured network(s).';
+        $msg = 'No posts returned from the configured network(s). Please verify your account handles and network status.';
         if (!$is_dry_run) social_log_run(false, $msg);
         return ['success' => false, 'message' => $msg];
     }
@@ -2118,9 +2145,15 @@ function social_run_digest_import($is_dry_run = false) {
         $force_by_age = true;
     }
 
-    if ($count < $min_posts && !$force_by_age) {
-        $msg = "Threshold not met: Found {$count} valid new posts (minimum required: {$min_posts}).";
+    if ($count === 0) {
+        $msg = "No eligible posts available to generate a digest after filtering and deduplication.";
         if (!$is_dry_run) social_log_run(false, $msg);
+        return ['success' => false, 'message' => $msg];
+    }
+
+    if (!$is_dry_run && $count < $min_posts && !$force_by_age) {
+        $msg = "Threshold not met: Found {$count} valid new posts (minimum required: {$min_posts}).";
+        social_log_run(false, $msg);
         return ['success' => false, 'message' => $msg];
     }
 
@@ -2293,9 +2326,13 @@ function social_run_digest_import($is_dry_run = false) {
 
     // DRY RUN RETURN: Do not insert post, do not sideload, do not advance cutoff timestamps
     if ($is_dry_run) {
+        $sim_msg = "Dry run simulation successful: Would create digest with {$count} post" . ($count === 1 ? '' : 's') . ".";
+        if ($count < $min_posts) {
+            $sim_msg .= " (Note: Minimum required for automated publishing is {$min_posts}).";
+        }
         return [
             'success' => true,
-            'message' => "Dry run simulation successful: Would create digest with {$count} posts.",
+            'message' => $sim_msg,
             'preview' => [
                 'title'          => $title,
                 'count'          => $count,

@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 5.1.3
+Stable tag: 5.1.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -50,6 +50,11 @@ The plugin downloads attached images and converts them to `.webp` or `.avif` for
 Social Digest is licensed under the GNU General Public License v2.0 or later (GPLv2+).
 
 == Changelog ==
+
+= 5.1.4 =
+* Resolved PHP 8 critical error when executing Dry-Run Simulation: fixed array offset access on null simulation preview structures and hardened simulation error rendering.
+* Enhanced Dry-Run simulation engine to evaluate recent posts without requiring manual cutoff resets, ensuring immediate preview generation even after recent live runs.
+* Refined dry-run threshold validation to render transient blog post mockups regardless of minimum post counts while clearly flagging live production thresholds.
 
 = 5.1.3 =
 * Resolved cross-post detection failure for truncated posts and link cards by implementing multi-signal matching (URL stem containment, common prefix/substring matching, and relative text similarity).
