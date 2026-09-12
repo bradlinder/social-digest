@@ -1,14 +1,14 @@
 === Social Digest ===
 Contributors: wp-plugin-studio
-Tags: bluesky, mastodon, digest, social media, curation, automation
+Tags: bluesky, mastodon, digest, social media, curation, automation, staging, webp
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 4.7.0
+Stable tag: 5.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Automated digest builder for Bluesky and Mastodon with cross-posting deduplication, media sideloading, smart taxonomy tagging, and custom header/footer editors.
+Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, staging queue, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
 
 == Description ==
 
@@ -16,6 +16,11 @@ Social Digest is a WordPress plugin that automates the aggregation and publicati
 
 = Key Features =
 
+* **Tabbed Admin Interface**: Clear workflow separation between Settings, Editorial Staging Queue, and Actions & Diagnostics.
+* **Editorial Staging Queue**: Review draft digests prior to publishing, attach inline custom author commentary, pin lead stories, or reorder updates.
+* **Dry-Run / Simulation Preview**: Test imports instantly without creating posts, sideloading media, or advancing timestamps.
+* **Media Optimization & Storage Hygiene**: Automatic WebP/AVIF format conversion, thumbnail compression, responsive image srcset generation, and local asset/avatar caching.
+* **RSS-Only Syndication Mode**: Distribute digests exclusively to RSS feeds and newsletter subscribers without cluttering the main blog stream.
 * **Multi-Network Ingestion**: Native support for Bluesky handles/DIDs and Mastodon profile URLs.
 * **Smart Deduplication**: Identifies cross-posted updates across platforms, deduplicating post text while aggregating media attachments and hashtags.
 * **Featured Image Sideloading**: Automatically detects candidate images in social posts, downloads and sideloads them to the WordPress Media Library, and sets them as the article's Featured Image.
@@ -31,6 +36,14 @@ Social Digest is a WordPress plugin that automates the aggregation and publicati
 3. Navigate to **Settings > Social Digest** in your WordPress admin dashboard to configure your social handles, scheduling, and formatting preferences.
 
 == Changelog ==
+
+= 5.0.0 =
+* Added Tabbed Admin Navigation dividing Settings, Staging Queue, and Diagnostics.
+* Added Editorial Staging Queue with custom per-item author commentary and post pinning.
+* Added Dry-Run Simulation Preview tool to test imports non-destructively.
+* Added Media Optimization: automatic WebP/AVIF conversion, local avatar caching, and responsive thumbnail srcsets.
+* Added RSS-Only Syndication Mode for newsletter-exclusive distribution.
+* Added Inline Excerpt Fold setting to prevent long threads from dominating article layouts.
 
 = 4.7.0 =
 * Initial public release with unified header/footer TinyMCE editor, custom visual splitter, and comprehensive Bluesky + Mastodon deduplication pipeline.

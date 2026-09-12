@@ -1,27 +1,28 @@
-Social Digest - Future Roadmap
-================================
+Social Digest - Feature Roadmap & Release Status
+==================================================
 
-1. Admin Interface & Workflow Separation
------------------------------------------
-- Tabbed Settings & Actions UI: Divide the WordPress admin screen into distinct "Settings" and "Actions / Diagnostics" tabs or sub-pages using standard WordPress `nav-tab-wrapper`. This cleanly separates persistent configuration (sources, styling, formatting, cron schedule) from operational triggers (manual digest runs, watermark/cutoff resets, connection diagnostics, and upcoming simulations) to eliminate clutter and prevent accidental actions.
+1. Admin Interface & Workflow Separation (Completed in v5.0.0)
+---------------------------------------------------------------
+[x] Tabbed Settings & Actions UI: Divided the WordPress admin screen into distinct tabs using standard WordPress `nav-tab-wrapper` (Settings, Editorial & Staging Queue, Actions & Diagnostics). This cleanly separates persistent configuration from operational triggers and diagnostic tests.
 
-2. Editorial Workflow & Staging
---------------------------------
-- Digest Staging Queue: An optional approval interface where draft digests can be previewed before publishing, allowing editors to reorder posts, remove individual updates, or add brief inline commentary above specific items.
-- Custom Per-Item Commentary: Allow authors to attach custom notes or takeaways to specific social cards within the digest.
-- Per-Post Pinning & Ordering Rules: Allow editors to pin a specific high-impact social update to always appear as the lead story in the digest, regardless of whether the general feed is sorted chronologically or reverse-chronologically.
-- Inline Excerpt Truncation & "Read More" Overrides: For very long Mastodon/Bluesky posts or multi-part self-replies, allow editors to set an optional character fold (<!--more--> or custom expander) so one long thread doesn't dominate the entire digest layout.
+2. Editorial Workflow & Staging (Completed in v5.0.0)
+------------------------------------------------------
+[x] Digest Staging Queue: Interactive approval queue where draft digests can be reviewed before publishing.
+[x] Custom Per-Item Commentary: Allows authors to attach custom notes, editorial takes, or takeaways directly above specific social cards.
+[x] Per-Post Pinning & Ordering Rules: Allows editors to pin a specific high-impact social update to always appear as the lead story in the digest.
+[x] Inline Excerpt Truncation & "Read More" Overrides: Set character fold limit on lengthy updates so one thread does not dominate the entire digest layout.
 
-3. Media Optimization & WordPress Storage Hygiene
---------------------------------------------------
-- Modern Media Conversion: Automatically convert sideloaded featured images to modern formats (.webp or .avif) and compress them upon import to save server disk space.
-- Local Asset & Avatar Caching: Cache remote profile avatars and social embeds locally in WordPress uploads to prevent broken embeds and link rot if an original social post is later deleted.
-- Responsive Image / srcset Preservation: Ensure sideloaded images generate standard WordPress thumbnail sizes (medium, large, medium_large) so digests load fast on mobile devices without pulling full-resolution raw uploads.
+3. Media Optimization & WordPress Storage Hygiene (Completed in v5.0.0)
+------------------------------------------------------------------------
+[x] Modern Media Conversion: Automatically converts and compresses sideloaded images to modern formats (.webp / .avif) upon import to save server disk space.
+[x] Local Asset & Avatar Caching: Caches remote profile avatars and social embeds locally in WordPress uploads to prevent broken embeds and link rot.
+[x] Responsive Image / srcset Preservation: Generates standard WordPress responsive thumbnail sizes (medium, large, medium_large) for fast mobile rendering.
 
-4. Newsletter & Syndication Distribution
------------------------------------------
-- RSS-Only Digests: An option to publish digests exclusively to an RSS feed or email list without creating public front-end blog posts.
+4. Newsletter & Syndication Distribution (Completed in v5.0.0)
+---------------------------------------------------------------
+[x] RSS-Only Digests: Option to publish digests exclusively to RSS feeds and newsletter campaigns (via `_social_digest_rss_only` meta filtering) without polluting the public homepage blog loop.
 
-5. Admin Health & Diagnostics
-------------------------------
-- Dry-Run / Simulation Preview: A "Simulate Next Run" button that shows exactly which posts would be pulled in right now, what title would be generated, and what image would be picked—without actually creating a post or sideloading media.
+5. Admin Health & Diagnostics (Completed in v5.0.0)
+----------------------------------------------------
+[x] Dry-Run / Simulation Preview: "Simulate Next Run" test engine that inspects active feeds and calculates candidate posts, generated titles, harvested tags, and thumbnail selections non-destructively without modifying database records or timestamps.
+[x] Network Connection Diagnostics: Real-time latency and HTTP status indicators for Bluesky and Mastodon API endpoints.
