@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 5.1.5
+Stable tag: 5.1.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -50,6 +50,9 @@ The plugin downloads attached images and converts them to `.webp` or `.avif` for
 Social Digest is licensed under the GNU General Public License v2.0 or later (GPLv2+).
 
 == Changelog ==
+
+= 5.1.6 =
+* Refined title hashtag camelCase formatting: hashtags with a leading single lowercase letter followed by uppercase letters (e.g. #iPhone, #eReader, #iPad, #eBay, #iOS, #eBook) are now kept intact rather than erroneously splitting into separate words ("i Phone", "e Reader").
 
 = 5.1.5 =
 * Hardened Dry-Run Simulation and background ingestion against PHP runtime exceptions: wrapped runner and operational triggers in top-level Throwable handlers with actionable admin error notices.

@@ -27,13 +27,14 @@ Social Digest - Feature Roadmap & Release Status
 [x] Dry-Run / Simulation Preview: "Simulate Next Run" test engine that inspects active feeds and calculates candidate posts, generated titles, harvested tags, and thumbnail selections non-destructively without modifying database records or timestamps.
 [x] Network Connection Diagnostics: Real-time latency and HTTP status indicators for Bluesky and Mastodon API endpoints.
 
-6. Version 5.1 Release Milestone (Completed in v5.1.0, v5.1.1, v5.1.2, v5.1.3, v5.1.4 & v5.1.5)
+6. Version 5.1 Release Milestone (Completed in v5.1.0, v5.1.1, v5.1.2, v5.1.3, v5.1.4, v5.1.5 & v5.1.6)
 -------------------------------------------------------
 [x] Duplicate Resolution Strategies: Configurable cross-posting resolution supporting "Prefer Mastodon if longer, otherwise Bluesky", "Longest text wins", and static network preferences. Compares clean text character lengths excluding hashtags and URLs.
 [x] Strict Single-Post Exclusive Resolution (v5.1.2 & v5.1.3): Guarantees that when a duplicate is resolved, ONLY the winning platform's post is embedded in the WordPress post body; the secondary post is completely excluded.
 [x] Multi-Signal Detection & Tag Harvesting (v5.1.3): Resolved cross-post detection for truncated posts and link cards via URL stem matching, prefix/substring containment, and relative text similarity. Intelligently harvests tags from the losing post to enrich WordPress taxonomy if the winning post lacks them.
 [x] Dry-Run Simulation Null-Safety & Fallback Resilience (v5.1.4): Hardened simulation preview rendering to prevent PHP 8 null-offset TypeError exceptions and enabled automatic recent post inspection during dry-runs.
 [x] Runtime Exception Hardening & Schema Validation (v5.1.5): Wrapped dry-run simulation and background ingestion in top-level Throwable handlers with actionable admin notices, fixed callback compatibility in URL cleaners and tag formatters, and added null-safety validation across API payloads.
+[x] CamelCase Title Tag Preservation (v5.1.6): Refined tag formatting regex to preserve words with single lowercase character prefixes (e.g. #iPhone, #eReader, #iPad, #eBay, #iOS, #eBook) rather than splitting them into separate words in post titles.
 [x] Real-Time Staging Workbench: Interactive editorial review workspace with inline commentary framing, priority reordering, and immediate early publish capability.
 [x] Ephemeral Post Mockup Inspection: Interactive simulation inspector that renders full card mockups, tag taxonomy rankings, deduplication badges, and media selections on demand.
 [x] Full WordPress 6.x UI Fidelity: Synchronized Admin Bar, settings tab navigation, and live published post preview across both Admin and Front-End views.

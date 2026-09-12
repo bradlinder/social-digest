@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, staging queue, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.1.5
+ * Version: 5.1.6
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -1816,7 +1816,8 @@ function social_sideload_image_by_mime($url, $post_id, $desc = '') {
 
 function social_split_camelcase_tag($tag) {
     $t = ltrim(trim($tag), '#');
-    $t = preg_replace('/([a-z])([A-Z0-9])/u', '$1 $2', $t);
+    // Preserve words starting with a single lowercase prefix followed by uppercase (e.g. iPhone, eReader, iPad, eBay, iOS, eBook)
+    $t = preg_replace('/([a-z]{2,})([A-Z0-9])/u', '$1 $2', $t);
     $t = preg_replace('/([A-Z]+)([A-Z][a-z])/u', '$1 $2', $t);
     return trim(preg_replace('/\s+/', ' ', $t));
 }
