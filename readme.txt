@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 5.1.9
+Stable tag: 5.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -50,6 +50,11 @@ The plugin downloads attached images and converts them to `.webp` or `.avif` for
 Social Digest is licensed under the GNU General Public License v2.0 or later (GPLv2+).
 
 == Changelog ==
+
+= 5.2.0 =
+* Added drag-and-drop moveable widgets (postboxes) to the Editorial & Staging Queue and Actions & Diagnostics tabs, matching standard WordPress admin postbox interaction patterns.
+* Streamlined the Editorial & Staging Queue by removing the redundant custom framing box in favor of the unified Live Article Header & Footer WYSIWYG editor.
+* Added a Multi-Pane View mode toggle to the Editorial Staging Queue workspace, enabling side-by-side split pane inspection (e.g. Live Article Preview on one side and Queue items/Framing controls on the other).
 
 = 5.1.9 =
 * Added item-level post exclusion checkboxes to the Editorial Staging Queue and Live Article Preview, allowing editors to skip specific social updates from the next manually created digest post.

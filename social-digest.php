@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, staging queue, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.1.9
+ * Version: 5.2.0
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -960,25 +960,6 @@ function social_render_settings_page() {
                         <li><strong>Publish Early:</strong> Clicking <em>Publish Staged Digest Now</em> will immediately assemble the article, update cutoff markers, and clear the staging queue so the next automated schedule starts clean.</li>
                         <li><strong>Exclude Posts &amp; Feed Cutoff Progression:</strong> Uncheck <em>Include in Digest</em> to exclude specific social updates from the next published post. The feed cutoff cursor automatically advances past ALL posts inspected in that batch, guaranteeing that older excluded items (e.g. #9 and #10) are never re-ingested in future automated roundups.</li>
                     </ol>
-                </div>
-
-                <!-- Custom Header & Footer Overrides for This Staging Edition -->
-                <div style="background: #fff; border: 1px solid #ccd0d4; border-radius: 4px; padding: 15px; margin: 15px 0;">
-                    <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #1d2327;">
-                        <span class="dashicons dashicons-edit" style="vertical-align: -2px;"></span> Custom Framing for this Staged Edition (Optional)
-                    </h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div>
-                            <label style="font-weight: 600; display: block; margin-bottom: 4px;">One-Time Introductory Header:</label>
-                            <input type="text" class="large-text" placeholder="e.g. Here are today's top hardware breakthroughs from our team..." style="width: 100%;" />
-                            <small style="color: #666;">Overrides the default intro header for this specific digest edition.</small>
-                        </div>
-                        <div>
-                            <label style="font-weight: 600; display: block; margin-bottom: 4px;">One-Time Concluding / Outro Note:</label>
-                            <input type="text" class="large-text" placeholder="e.g. Catch us live tomorrow on our weekly podcast stream!" style="width: 100%;" />
-                            <small style="color: #666;">Overrides the default footer disclaimer for this specific digest edition.</small>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Staged Items Table / Cards -->
