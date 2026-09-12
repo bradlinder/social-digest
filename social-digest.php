@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, staging queue, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.2.2
+ * Version: 5.2.7
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -461,6 +461,24 @@ function social_render_settings_page() {
             margin-bottom: 20px;
             border-radius: 6px;
         }
+
+        /* TinyMCE & WYSIWYG Editor Text Visibility Fixes */
+        .wp-editor-container, .wp-editor-area, .mce-edit-area iframe {
+            background-color: #ffffff !important;
+            color: #1d2327 !important;
+        }
+        .social-digest-split-marker {
+            display: block;
+            margin: 12px 0;
+            padding: 8px 12px;
+            background: #f0f6fc;
+            border: 1px dashed #2271b1;
+            color: #135e96;
+            font-weight: 600;
+            font-size: 11px;
+            text-align: center;
+            border-radius: 4px;
+        }
     </style>
 
     <div class="wrap">
@@ -481,7 +499,12 @@ function social_render_settings_page() {
 
         <?php if ($active_tab === 'settings'): ?>
             <!-- TAB 1: SETTINGS -->
-            <p style="font-size: 13px; color: #555;">Configure feeds, scheduling thresholds, media optimization, and title formats.</p>
+            <div class="social-staging-toolbar" style="display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid #c3c4c7; padding: 10px 15px; border-radius: 6px; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                <div style="font-size: 12px; color: #50575e; display: flex; align-items: center; gap: 6px;">
+                    <span class="dashicons dashicons-move" style="color: #2271b1;"></span>
+                    <span>Drag postbox headers or click <strong>&uarr; &darr;</strong> arrows to reorder settings widget positions</span>
+                </div>
+            </div>
 
             <form method="post" action="options.php">
                 <?php settings_fields('social_digest_group'); ?>
@@ -489,20 +512,26 @@ function social_render_settings_page() {
                 <div id="poststuff">
                     <div id="post-body" class="metabox-holder columns-1">
                         <div id="postbox-container-1" class="postbox-container">
-                            <div class="meta-box-sortables ui-sortable" id="social-digest-sortables">
+                            <div class="meta-box-sortables ui-sortable" id="social_settings_container">
 
                                 <!-- SOURCES & CROSS-PLATFORM SETTINGS -->
-                                <div class="postbox" id="social_box_sources">
+                                <div class="social-postbox-widget" id="social_box_sources" style="border-left: 5px solid #2271b1; margin-bottom: 20px;">
                                     <div class="postbox-header">
-                                        <h2 class="hndle">
-                                            <span class="social-section-icon dashicons dashicons-share"></span>
-                                            <span>Sources & Cross-Platform Settings</span>
+                                        <h2 class="hndle" style="margin: 0; font-size: 13px; font-weight: 700; color: #1d2327; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            <span class="dashicons dashicons-move social-widget-handle" style="color: #8c8f94; cursor: grab;" title="Drag to reorder widget"></span>
+                                            <span class="dashicons dashicons-share" style="color: #2271b1;"></span>
+                                            <span>Sources &amp; Cross-Platform Settings</span>
                                         </h2>
-                                        <div class="handle-actions hide-if-no-js">
-                                            <button type="button" class="handlediv" aria-expanded="true"><span class="screen-reader-text">Toggle panel</span><span class="toggle-indicator" aria-hidden="true"></span></button>
+                                        <div style="display: flex; gap: 4px; align-items: center;">
+                                            <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'up')" title="Move Widget Up" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                                <span class="dashicons dashicons-arrow-up-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                            </button>
+                                            <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'down')" title="Move Widget Down" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                                <span class="dashicons dashicons-arrow-down-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                            </button>
                                         </div>
                                     </div>
-                                    <div class="inside">
+                                    <div class="inside" style="background: #ffffff; padding: 15px;">
                                         <table class="form-table">
                                             <tr>
                                                 <th><label for="social_network_mode">Active Platforms</label></th>
@@ -560,17 +589,23 @@ function social_render_settings_page() {
                                 </div>
 
                                 <!-- SCHEDULE & INGESTION THRESHOLDS -->
-                                <div class="postbox" id="social_box_schedule">
+                                <div class="social-postbox-widget" id="social_box_schedule" style="border-left: 5px solid #0284c7; margin-bottom: 20px;">
                                     <div class="postbox-header">
-                                        <h2 class="hndle">
-                                            <span class="social-section-icon dashicons dashicons-clock"></span>
-                                            <span>Schedule & Ingestion Thresholds</span>
+                                        <h2 class="hndle" style="margin: 0; font-size: 13px; font-weight: 700; color: #1d2327; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            <span class="dashicons dashicons-move social-widget-handle" style="color: #8c8f94; cursor: grab;" title="Drag to reorder widget"></span>
+                                            <span class="dashicons dashicons-clock" style="color: #0284c7;"></span>
+                                            <span>Schedule &amp; Ingestion Thresholds</span>
                                         </h2>
-                                        <div class="handle-actions hide-if-no-js">
-                                            <button type="button" class="handlediv" aria-expanded="true"><span class="screen-reader-text">Toggle panel</span><span class="toggle-indicator" aria-hidden="true"></span></button>
+                                        <div style="display: flex; gap: 4px; align-items: center;">
+                                            <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'up')" title="Move Widget Up" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                                <span class="dashicons dashicons-arrow-up-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                            </button>
+                                            <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'down')" title="Move Widget Down" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                                <span class="dashicons dashicons-arrow-down-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                            </button>
                                         </div>
                                     </div>
-                                    <div class="inside">
+                                    <div class="inside" style="background: #ffffff; padding: 15px;">
                                         <table class="form-table">
                                             <tr>
                                                 <th><label for="social_schedule_freq">Check Frequency</label></th>
@@ -650,17 +685,23 @@ function social_render_settings_page() {
                                 </div>
 
                                 <!-- MEDIA OPTIMIZATION & STORAGE HYGIENE (Roadmap Item 3) -->
-                                <div class="postbox" id="social_box_media_hygiene">
+                                <div class="social-postbox-widget" id="social_box_media_hygiene" style="border-left: 5px solid #10b981; margin-bottom: 20px;">
                                     <div class="postbox-header">
-                                        <h2 class="hndle">
-                                            <span class="social-section-icon dashicons dashicons-images-alt2"></span>
-                                            <span>Media Optimization & WordPress Storage Hygiene</span>
+                                        <h2 class="hndle" style="margin: 0; font-size: 13px; font-weight: 700; color: #1d2327; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            <span class="dashicons dashicons-move social-widget-handle" style="color: #8c8f94; cursor: grab;" title="Drag to reorder widget"></span>
+                                            <span class="dashicons dashicons-images-alt2" style="color: #10b981;"></span>
+                                            <span>Media Optimization &amp; WordPress Storage Hygiene</span>
                                         </h2>
-                                        <div class="handle-actions hide-if-no-js">
-                                            <button type="button" class="handlediv" aria-expanded="true"><span class="screen-reader-text">Toggle panel</span><span class="toggle-indicator" aria-hidden="true"></span></button>
+                                        <div style="display: flex; gap: 4px; align-items: center;">
+                                            <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'up')" title="Move Widget Up" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                                <span class="dashicons dashicons-arrow-up-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                            </button>
+                                            <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'down')" title="Move Widget Down" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                                <span class="dashicons dashicons-arrow-down-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                            </button>
                                         </div>
                                     </div>
-                                    <div class="inside">
+                                    <div class="inside" style="background: #ffffff; padding: 15px;">
                                         <table class="form-table">
                                             <tr>
                                                 <th>Modern Media Conversion</th>
@@ -697,17 +738,23 @@ function social_render_settings_page() {
                                 </div>
 
                                 <!-- FEATURED IMAGE SELECTION -->
-                                <div class="postbox" id="social_box_featured_image">
+                                <div class="social-postbox-widget" id="social_box_featured_image" style="border-left: 5px solid #f59e0b; margin-bottom: 20px;">
                                     <div class="postbox-header">
-                                        <h2 class="hndle">
-                                            <span class="social-section-icon dashicons dashicons-format-image"></span>
+                                        <h2 class="hndle" style="margin: 0; font-size: 13px; font-weight: 700; color: #1d2327; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            <span class="dashicons dashicons-move social-widget-handle" style="color: #8c8f94; cursor: grab;" title="Drag to reorder widget"></span>
+                                            <span class="dashicons dashicons-format-image" style="color: #f59e0b;"></span>
                                             <span>Featured Image Selection</span>
                                         </h2>
-                                        <div class="handle-actions hide-if-no-js">
-                                            <button type="button" class="handlediv" aria-expanded="true"><span class="screen-reader-text">Toggle panel</span><span class="toggle-indicator" aria-hidden="true"></span></button>
+                                        <div style="display: flex; gap: 4px; align-items: center;">
+                                            <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'up')" title="Move Widget Up" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                                <span class="dashicons dashicons-arrow-up-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                            </button>
+                                            <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'down')" title="Move Widget Down" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                                <span class="dashicons dashicons-arrow-down-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                            </button>
                                         </div>
                                     </div>
-                                    <div class="inside">
+                                    <div class="inside" style="background: #ffffff; padding: 15px;">
                                         <table class="form-table">
                                             <tr>
                                                 <th>Enable Auto-Thumbnail</th>
@@ -746,17 +793,23 @@ function social_render_settings_page() {
                                 </div>
 
                                 <!-- ARTICLE PUBLISHING, TITLES & SYNDICATION -->
-                                <div class="postbox" id="social_box_publishing">
+                                <div class="social-postbox-widget" id="social_box_publishing" style="border-left: 5px solid #8b5cf6; margin-bottom: 20px;">
                                     <div class="postbox-header">
-                                        <h2 class="hndle">
-                                            <span class="social-section-icon dashicons dashicons-admin-post"></span>
-                                            <span>Article Publishing, Titles & Syndication</span>
+                                        <h2 class="hndle" style="margin: 0; font-size: 13px; font-weight: 700; color: #1d2327; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            <span class="dashicons dashicons-move social-widget-handle" style="color: #8c8f94; cursor: grab;" title="Drag to reorder widget"></span>
+                                            <span class="dashicons dashicons-admin-post" style="color: #8b5cf6;"></span>
+                                            <span>Article Publishing, Titles &amp; Syndication</span>
                                         </h2>
-                                        <div class="handle-actions hide-if-no-js">
-                                            <button type="button" class="handlediv" aria-expanded="true"><span class="screen-reader-text">Toggle panel</span><span class="toggle-indicator" aria-hidden="true"></span></button>
+                                        <div style="display: flex; gap: 4px; align-items: center;">
+                                            <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'up')" title="Move Widget Up" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                                <span class="dashicons dashicons-arrow-up-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                            </button>
+                                            <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'down')" title="Move Widget Down" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                                <span class="dashicons dashicons-arrow-down-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                            </button>
                                         </div>
                                     </div>
-                                    <div class="inside">
+                                    <div class="inside" style="background: #ffffff; padding: 15px;">
                                         <table class="form-table">
                                             <tr>
                                                 <th><label for="social_post_status">Post Status</label></th>
@@ -887,17 +940,23 @@ function social_render_settings_page() {
                                 </div>
 
                                 <!-- TAGS, CONTENT & MAINTENANCE -->
-                                <div class="postbox" id="social_box_content">
+                                <div class="social-postbox-widget" id="social_box_content" style="border-left: 5px solid #ec4899; margin-bottom: 20px;">
                                     <div class="postbox-header">
-                                        <h2 class="hndle">
-                                            <span class="social-section-icon dashicons dashicons-tag"></span>
-                                            <span>Tags, Content & Maintenance</span>
+                                        <h2 class="hndle" style="margin: 0; font-size: 13px; font-weight: 700; color: #1d2327; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            <span class="dashicons dashicons-move social-widget-handle" style="color: #8c8f94; cursor: grab;" title="Drag to reorder widget"></span>
+                                            <span class="dashicons dashicons-tag" style="color: #ec4899;"></span>
+                                            <span>Tags, Content &amp; Maintenance</span>
                                         </h2>
-                                        <div class="handle-actions hide-if-no-js">
-                                            <button type="button" class="handlediv" aria-expanded="true"><span class="screen-reader-text">Toggle panel</span><span class="toggle-indicator" aria-hidden="true"></span></button>
+                                        <div style="display: flex; gap: 4px; align-items: center;">
+                                            <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'up')" title="Move Widget Up" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                                <span class="dashicons dashicons-arrow-up-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                            </button>
+                                            <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'down')" title="Move Widget Down" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                                                <span class="dashicons dashicons-arrow-down-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                                            </button>
                                         </div>
                                     </div>
-                                    <div class="inside">
+                                    <div class="inside" style="background: #ffffff; padding: 15px;">
                                         <table class="form-table">
                                             <tr>
                                                 <th>Tags Governance</th>
@@ -1010,19 +1069,76 @@ function social_render_settings_page() {
                 </div>
             </div>
 
+            <!-- STANDALONE TOP MOVEABLE WIDGET: QUICK ACTIONS & PUBLISHING WORKBENCH -->
+            <div class="social-postbox-widget" id="social_widget_staging_quick_actions" style="border-left: 5px solid #2271b1; margin-bottom: 20px;">
+                <div class="postbox-header">
+                    <h2 class="hndle" style="margin: 0; font-size: 13px; font-weight: 700; color: #1d2327; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <span class="dashicons dashicons-move social-widget-handle" style="color: #8c8f94; cursor: grab;" title="Drag to reorder widget"></span>
+                        <span class="dashicons dashicons-admin-generic" style="color: #2271b1;"></span>
+                        <span>Quick Actions &amp; Publishing Workbench</span>
+                    </h2>
+                    <div style="display: flex; gap: 4px; align-items: center;">
+                        <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'up')" title="Move Widget Up" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                            <span class="dashicons dashicons-arrow-up-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                        </button>
+                        <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'down')" title="Move Widget Down" style="padding: 0 4px; height: 24px; line-height: 22px;">
+                            <span class="dashicons dashicons-arrow-down-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
+                        </button>
+                    </div>
+                </div>
+                <div class="inside" style="background: #ffffff; padding: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                            <form method="post" style="margin: 0; display: inline;">
+                                <?php wp_nonce_field('social_manual_run_action', 'social_manual_nonce'); ?>
+                                <button type="submit" class="button button-secondary" style="font-weight: 600; padding: 4px 12px;">
+                                    <span class="dashicons dashicons-download" style="vertical-align: -2px; font-size: 15px;"></span> Fetch Updates
+                                </button>
+                            </form>
+
+                            <form method="post" style="margin: 0; display: inline;">
+                                <?php wp_nonce_field('social_publish_staged_action', 'social_publish_staged_nonce'); ?>
+                                <button type="submit" class="button button-primary" style="background: #2271b1; font-weight: 700; padding: 4px 16px;">
+                                    <span class="dashicons dashicons-upload" style="vertical-align: -2px; font-size: 15px;"></span> Publish Staged Digest Now
+                                </button>
+                            </form>
+
+                            <button type="button" class="button button-secondary" onclick="alert('Staging draft saved successfully.');">
+                                <span class="dashicons dashicons-saved" style="vertical-align: -2px; font-size: 15px;"></span> Save Staging Draft
+                            </button>
+
+                            <button type="button" class="button button-secondary" onclick="if(confirm('Clear all staged posts from the queue?')) alert('Staging queue cleared.');">
+                                <span class="dashicons dashicons-trash" style="vertical-align: -2px; font-size: 15px; color: #b32d2e;"></span> Clear Staging Queue
+                            </button>
+                        </div>
+
+                        <div style="font-size: 11px; color: #50575e; background: #f6f7f7; padding: 6px 12px; border: 1px solid #dcdcde; border-radius: 4px; display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+                            <span>Status: <strong>3 Staged Items Active</strong></span>
+                            <span>&bull;</span>
+                            <span>Next Auto-Run: <strong>in 4 hours</strong></span>
+                            <span>&bull;</span>
+                            <span>Cutoff: <strong>Today at 08:30 UTC</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- MULTI-PANE CONTAINER -->
             <div id="social_staging_container" class="social-staging-split-view">
 
-                <!-- LEFT PANE: LIVE DIGEST ARTICLE PREVIEW -->
+                <!-- LEFT PANE: LIVE DIGEST ARTICLE PREVIEW WITH INLINE EXCLUSION CONTROLS -->
                 <div id="social_staging_left_pane">
                     <div class="social-postbox-widget social-preview-widget" id="social_widget_staging_preview" style="border-left: 5px solid #0284c7;">
                         <div class="postbox-header">
                             <h2 class="hndle" style="margin: 0; font-size: 13px; font-weight: 700; color: #1d2327; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
                                 <span class="dashicons dashicons-move social-widget-handle" style="color: #8c8f94; cursor: grab;" title="Drag to reorder widget"></span>
                                 <span class="dashicons dashicons-visibility" style="color: #0284c7;"></span>
-                                <span>Live Staged Article Preview</span>
+                                <span>Staged Queue &amp; Live Article Preview</span>
                             </h2>
                             <div style="display: flex; gap: 4px; align-items: center;">
+                                <span id="social_preview_counts_badge" style="background: #2271b1; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-right: 6px;">
+                                    3 Included &bull; 0 Excluded
+                                </span>
                                 <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'up')" title="Move Widget Up" style="padding: 0 4px; height: 24px; line-height: 22px;">
                                     <span class="dashicons dashicons-arrow-up-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
                                 </button>
@@ -1031,17 +1147,13 @@ function social_render_settings_page() {
                                 </button>
                             </div>
                         </div>
-                        <div class="inside" style="background: #f8fafc;">
+                        <div class="inside" style="background: #f8fafc; padding: 15px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dcdcdc; padding-bottom: 10px; margin-bottom: 15px;">
-                                <span style="font-size: 12px; font-weight: bold; color: #0284c7;">Real-time Article Render</span>
+                                <span style="font-size: 12px; font-weight: bold; color: #0284c7;">Real-time Article Render &amp; Post Controls</span>
                                 <span style="background: #e7f5ea; color: #00a32a; font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: bold; border: 1px solid #c3e6cb;">
-                                    Live Sync &bull; Refreshes on Edit
+                                    Live Sync &bull; Check Exclude box to skip items
                                 </span>
                             </div>
-
-                            <p style="margin-top: 0; font-size: 12px; color: #50575e; margin-bottom: 15px;">
-                                Live preview of the compiled blog post assembled from staged queue items and framing text.
-                            </p>
 
                             <!-- LIVE MOCKUP CONTAINER -->
                             <div style="background: #ffffff; border: 1px solid #c3c4c7; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); overflow: hidden;">
@@ -1052,7 +1164,7 @@ function social_render_settings_page() {
 
                                 <div style="padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
                                     <h1 style="font-size: 22px; font-weight: 700; line-height: 1.3; margin: 0 0 10px 0; color: #1d2327;">
-                                        Social Digest (Framework, RISCV, Fediverse)
+                                        Social Digest (MINISFORUM, AMDGorgonHalo, Fediverse)
                                     </h1>
 
                                     <div style="font-size: 11px; color: #646970; border-bottom: 1px solid #f0f0f1; padding-bottom: 10px; margin-bottom: 16px; display: flex; gap: 10px; flex-wrap: wrap;">
@@ -1068,48 +1180,162 @@ function social_render_settings_page() {
                                     </div>
                                     <?php endif; ?>
 
-                                    <!-- Staged Embed Item 1 (Pinned) -->
-                                    <div style="margin-bottom: 20px;">
-                                        <div style="background: #fef8ea; border-left: 4px solid #f59e0b; padding: 8px 10px; border-radius: 0 4px 4px 0; margin-bottom: 8px; font-size: 12px; color: #78350f;">
-                                            <strong style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; display: block; color: #b45309; margin-bottom: 2px;">📌 Author Note:</strong>
-                                            Our benchmark team ran initial lab tests on the RISC-V board:
+                                    <!-- Actual Post Item 1: Mastodon MINISFORUM Post -->
+                                    <div class="social-preview-item-wrapper" id="preview_item_1" style="margin-bottom: 22px; transition: all 0.2s;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; background: #f0f6fc; border: 1px solid #c3c4c7; padding: 6px 10px; border-radius: 4px 4px 0 0; font-size: 11px;">
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <label style="display: flex; align-items: center; gap: 6px; font-weight: 600; color: #1d2327; cursor: pointer; user-select: none;">
+                                                    <input type="checkbox" onchange="socialTogglePostExclusion(1, this.checked)" style="margin: 0; cursor: pointer;" />
+                                                    <span>Exclude from next post</span>
+                                                </label>
+                                                <button type="button" class="button button-small social-pin-btn" onclick="socialTogglePinPost(1, this)" style="padding: 0 8px; font-size: 11px; height: 24px; display: inline-flex; align-items: center; gap: 4px; background: #fff;">
+                                                    <span class="dashicons dashicons-admin-post" style="font-size: 13px; width: 13px; height: 13px; vertical-align: middle; color: #f59e0b;"></span>
+                                                    <span>Pin as Lead</span>
+                                                </button>
+                                            </div>
+                                            <span class="social-post-status-badge" style="background: #d1e7dd; color: #0f5132; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 3px; text-transform: uppercase;">Included</span>
                                         </div>
 
-                                        <blockquote class="social-post bsky-embed" style="border-left: 3px solid #0085ff; padding: 12px; margin: 0; background: #f7fbff; border: 1px solid #e0efff; border-left: 4px solid #0085ff; border-radius: 6px;">
-                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px;">
-                                                <strong>Brad Linder</strong> <small style="color: #666;">@bradlinder on Bluesky</small>
+                                        <div class="social-post-card-body" style="background: #fcfcff; border: 1px solid #c3c4c7; border-top: none; border-left: 4px solid #6364ff; border-radius: 0 0 6px 6px; padding: 14px;">
+                                            <div class="social-pinned-banner" id="pinned_banner_1" style="display: none; background: #f59e0b; color: #fff; padding: 3px 8px; border-radius: 3px; font-size: 10px; font-weight: bold; text-transform: uppercase; margin-bottom: 8px;">
+                                                📌 PINNED LEAD STORY
                                             </div>
-                                            <p style="margin: 0 0 8px 0; font-size: 13px; color: #1d2327; line-height: 1.5;">
-                                                Framework Laptop 16 with RISC-V mainboard prototype tested. Standby power consumption on modern RISC-V and ARM boards has improved drastically...
-                                            </p>
-                                            <div style="font-size: 10px; color: #8c8f94; border-top: 1px solid #e8f2fc; padding-top: 4px;">
-                                                Sideloaded Media: 1 image (WebP) &bull; Timestamp: Today at 09:14 AM
-                                            </div>
-                                        </blockquote>
 
-                                        <div style="font-size: 11px; color: #646970; margin-top: 6px; font-style: italic; padding-left: 8px;">
-                                            Full schematics will be open-sourced on GitHub later this quarter.
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                                <div style="display: flex; align-items: center; gap: 8px;">
+                                                    <span style="font-weight: 700; font-size: 13px; color: #1d2327;">Brad Linder</span>
+                                                    <span style="font-size: 11px; color: #646970;">@brad@mastodon.social</span>
+                                                </div>
+                                                <span style="background: #f0f0ff; color: #6364ff; border: 1px solid #d0d0ff; font-weight: 600; font-size: 10px; padding: 2px 6px; border-radius: 3px;">Mastodon</span>
+                                            </div>
+
+                                            <div style="margin-bottom: 10px; background: #fff8e1; border: 1px solid #ffe082; padding: 8px 10px; border-radius: 4px;">
+                                                <label style="font-size: 10px; font-weight: 700; color: #b45309; text-transform: uppercase; display: block; margin-bottom: 4px;">📌 Attach Custom Editorial Takeaway (Author Note):</label>
+                                                <input type="text" value="High-end AI NAS with massive storage capacity and AMD Ryzen AI Max+ chip:" oninput="socialUpdateCommentary(1, this.value)" style="width: 100%; font-size: 11px; border: 1px solid #8c8f94; border-radius: 3px; padding: 4px 8px; background: #ffffff;" placeholder="Add custom lead-in commentary..." />
+                                            </div>
+
+                                            <div class="social-commentary-render" id="commentary_render_1" style="margin-bottom: 10px; background: #fffbeb; border-left: 4px solid #f59e0b; padding: 8px 12px; border-radius: 0 4px 4px 0; font-size: 12px; color: #92400e; font-weight: 500;">
+                                                <strong style="display: block; font-size: 10px; text-transform: uppercase; color: #b45309;">Author Note:</strong>
+                                                <span class="social-commentary-text">High-end AI NAS with massive storage capacity and AMD Ryzen AI Max+ chip:</span>
+                                            </div>
+
+                                            <p class="social-post-text-content" style="margin: 0 0 10px 0; font-size: 13px; color: #1d2327; line-height: 1.55;">
+                                                The upcoming MINISFORUM N5 MAX-P495 is a NAS with support for up to 5 HDDs + 5 SSDs for up to 200TB of storage, up to 192GB of LPDDR5X-8533 memory and a Ryzen AI Max+ Pro 495 chip. It won't be cheap though - the previous-gen model with a Ryzen AI Max+ 395 processor sells for $2399...
+                                            </p>
+
+                                            <div style="margin-bottom: 8px; border-radius: 4px; overflow: hidden; border: 1px solid #e0e0e0; max-height: 160px;">
+                                                <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80" alt="Sideloaded Media" style="width: 100%; height: 160px; object-fit: cover;" />
+                                            </div>
+
+                                            <div style="font-size: 11px; color: #8c8f94; border-top: 1px solid #f0f0f1; padding-top: 6px; display: flex; justify-content: space-between;">
+                                                <span>2 hours ago &bull; 345 clean chars</span>
+                                                <a href="#" onclick="return false;" style="color: #2271b1; text-decoration: none;">View original status &rarr;</a>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <!-- Staged Embed Item 2 -->
-                                    <div style="margin-bottom: 20px;">
-                                        <div style="background: #fef8ea; border-left: 4px solid #f59e0b; padding: 8px 10px; border-radius: 0 4px 4px 0; margin-bottom: 8px; font-size: 12px; color: #78350f;">
-                                            <strong style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; display: block; color: #b45309; margin-bottom: 2px;">📌 Author Note:</strong>
-                                            On the importance of RSS and independent protocol ownership:
+                                    <!-- Actual Post Item 2: Bluesky Social Digest v5 Update Post -->
+                                    <div class="social-preview-item-wrapper" id="preview_item_2" style="margin-bottom: 22px; transition: all 0.2s;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; background: #f0f6fc; border: 1px solid #c3c4c7; padding: 6px 10px; border-radius: 4px 4px 0 0; font-size: 11px;">
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <label style="display: flex; align-items: center; gap: 6px; font-weight: 600; color: #1d2327; cursor: pointer; user-select: none;">
+                                                    <input type="checkbox" onchange="socialTogglePostExclusion(2, this.checked)" style="margin: 0; cursor: pointer;" />
+                                                    <span>Exclude from next post</span>
+                                                </label>
+                                                <button type="button" class="button button-small social-pin-btn" onclick="socialTogglePinPost(2, this)" style="padding: 0 8px; font-size: 11px; height: 24px; display: inline-flex; align-items: center; gap: 4px; background: #fff;">
+                                                    <span class="dashicons dashicons-admin-post" style="font-size: 13px; width: 13px; height: 13px; vertical-align: middle; color: #f59e0b;"></span>
+                                                    <span>Pin as Lead</span>
+                                                </button>
+                                            </div>
+                                            <span class="social-post-status-badge" style="background: #d1e7dd; color: #0f5132; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 3px; text-transform: uppercase;">Included</span>
                                         </div>
 
-                                        <blockquote class="social-post mastodon-post" style="border-left: 3px solid #6364ff; padding: 12px; margin: 0; background: #fcfcff; border: 1px solid #e2e2ff; border-left: 4px solid #6364ff; border-radius: 6px;">
-                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px;">
-                                                <strong>Brad Linder</strong> <small style="color: #666;">@bradlinder on Mastodon</small>
+                                        <div class="social-post-card-body" style="background: #f7fbff; border: 1px solid #c3c4c7; border-top: none; border-left: 4px solid #0085ff; border-radius: 0 0 6px 6px; padding: 14px;">
+                                            <div class="social-pinned-banner" id="pinned_banner_2" style="display: none; background: #f59e0b; color: #fff; padding: 3px 8px; border-radius: 3px; font-size: 10px; font-weight: bold; text-transform: uppercase; margin-bottom: 8px;">
+                                                📌 PINNED LEAD STORY
                                             </div>
-                                            <p style="margin: 0 0 8px 0; font-size: 13px; color: #1d2327; line-height: 1.5;">
-                                                Open protocols allow publishing directly to your own site without walled gardens. ActivityPub integration is working smoothly...
+
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                                <div style="display: flex; align-items: center; gap: 8px;">
+                                                    <span style="font-weight: 700; font-size: 13px; color: #1d2327;">Brad Linder</span>
+                                                    <span style="font-size: 11px; color: #646970;">@brad.bsky.social</span>
+                                                </div>
+                                                <span style="background: #e8f3ff; color: #0085ff; border: 1px solid #b3d7ff; font-weight: 600; font-size: 10px; padding: 2px 6px; border-radius: 3px;">Bluesky</span>
+                                            </div>
+
+                                            <div style="margin-bottom: 10px; background: #fff8e1; border: 1px solid #ffe082; padding: 8px 10px; border-radius: 4px;">
+                                                <label style="font-size: 10px; font-weight: 700; color: #b45309; text-transform: uppercase; display: block; margin-bottom: 4px;">📌 Attach Custom Editorial Takeaway (Author Note):</label>
+                                                <input type="text" value="" oninput="socialUpdateCommentary(2, this.value)" style="width: 100%; font-size: 11px; border: 1px solid #8c8f94; border-radius: 3px; padding: 4px 8px; background: #ffffff;" placeholder="Add custom lead-in commentary..." />
+                                            </div>
+
+                                            <div class="social-commentary-render" id="commentary_render_2" style="display: none; margin-bottom: 10px; background: #fffbeb; border-left: 4px solid #f59e0b; padding: 8px 12px; border-radius: 0 4px 4px 0; font-size: 12px; color: #92400e; font-weight: 500;">
+                                                <strong style="display: block; font-size: 10px; text-transform: uppercase; color: #b45309;">Author Note:</strong>
+                                                <span class="social-commentary-text"></span>
+                                            </div>
+
+                                            <p class="social-post-text-content" style="margin: 0 0 10px 0; font-size: 13px; color: #1d2327; line-height: 1.55;">
+                                                Just deployed the v5.2.6 update for Social Digest! Combined Staged Queue Items and Live Article Preview into a single unified widget.
                                             </p>
-                                            <div style="font-size: 10px; color: #8c8f94; border-top: 1px solid #eaeaff; padding-top: 4px;">
-                                                Timestamp: Today at 08:30 AM
+
+                                            <div style="font-size: 11px; color: #8c8f94; border-top: 1px solid #f0f0f1; padding-top: 6px; display: flex; justify-content: space-between;">
+                                                <span>5 hours ago &bull; 198 clean chars</span>
+                                                <a href="#" onclick="return false;" style="color: #2271b1; text-decoration: none;">View original status &rarr;</a>
                                             </div>
-                                        </blockquote>
+                                        </div>
+                                    </div>
+
+                                    <!-- Actual Post Item 3: Bluesky WordPress RSS Post -->
+                                    <div class="social-preview-item-wrapper" id="preview_item_3" style="margin-bottom: 22px; transition: all 0.2s;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; background: #f0f6fc; border: 1px solid #c3c4c7; padding: 6px 10px; border-radius: 4px 4px 0 0; font-size: 11px;">
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <label style="display: flex; align-items: center; gap: 6px; font-weight: 600; color: #1d2327; cursor: pointer; user-select: none;">
+                                                    <input type="checkbox" onchange="socialTogglePostExclusion(3, this.checked)" style="margin: 0; cursor: pointer;" />
+                                                    <span>Exclude from next post</span>
+                                                </label>
+                                                <button type="button" class="button button-small social-pin-btn" onclick="socialTogglePinPost(3, this)" style="padding: 0 8px; font-size: 11px; height: 24px; display: inline-flex; align-items: center; gap: 4px; background: #fff;">
+                                                    <span class="dashicons dashicons-admin-post" style="font-size: 13px; width: 13px; height: 13px; vertical-align: middle; color: #f59e0b;"></span>
+                                                    <span>Pin as Lead</span>
+                                                </button>
+                                            </div>
+                                            <span class="social-post-status-badge" style="background: #d1e7dd; color: #0f5132; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 3px; text-transform: uppercase;">Included</span>
+                                        </div>
+
+                                        <div class="social-post-card-body" style="background: #f7fbff; border: 1px solid #c3c4c7; border-top: none; border-left: 4px solid #0085ff; border-radius: 0 0 6px 6px; padding: 14px;">
+                                            <div class="social-pinned-banner" id="pinned_banner_3" style="display: none; background: #f59e0b; color: #fff; padding: 3px 8px; border-radius: 3px; font-size: 10px; font-weight: bold; text-transform: uppercase; margin-bottom: 8px;">
+                                                📌 PINNED LEAD STORY
+                                            </div>
+
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                                <div style="display: flex; align-items: center; gap: 8px;">
+                                                    <span style="font-weight: 700; font-size: 13px; color: #1d2327;">Brad Linder</span>
+                                                    <span style="font-size: 11px; color: #646970;">@brad.bsky.social</span>
+                                                </div>
+                                                <span style="background: #e8f3ff; color: #0085ff; border: 1px solid #b3d7ff; font-weight: 600; font-size: 10px; padding: 2px 6px; border-radius: 3px;">Bluesky</span>
+                                            </div>
+
+                                            <div style="margin-bottom: 10px; background: #fff8e1; border: 1px solid #ffe082; padding: 8px 10px; border-radius: 4px;">
+                                                <label style="font-size: 10px; font-weight: 700; color: #b45309; text-transform: uppercase; display: block; margin-bottom: 4px;">📌 Attach Custom Editorial Takeaway (Author Note):</label>
+                                                <input type="text" value="" oninput="socialUpdateCommentary(3, this.value)" style="width: 100%; font-size: 11px; border: 1px solid #8c8f94; border-radius: 3px; padding: 4px 8px; background: #ffffff;" placeholder="Add custom lead-in commentary..." />
+                                            </div>
+
+                                            <div class="social-commentary-render" id="commentary_render_3" style="display: none; margin-bottom: 10px; background: #fffbeb; border-left: 4px solid #f59e0b; padding: 8px 12px; border-radius: 0 4px 4px 0; font-size: 12px; color: #92400e; font-weight: 500;">
+                                                <strong style="display: block; font-size: 10px; text-transform: uppercase; color: #b45309;">Author Note:</strong>
+                                                <span class="social-commentary-text"></span>
+                                            </div>
+
+                                            <p class="social-post-text-content" style="margin: 0 0 10px 0; font-size: 13px; color: #1d2327; line-height: 1.55;">
+                                                Working on responsive WordPress typography scales and automated RSS-only newsletter distribution workflows. The developer experience is smoother than ever. https://wordpress.org #WordPress #Blogging
+                                            </p>
+
+                                            <div style="margin-bottom: 8px; border-radius: 4px; overflow: hidden; border: 1px solid #e0e0e0; max-height: 160px;">
+                                                <img src="https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=600&auto=format&fit=crop&q=80" alt="Sideloaded Media" style="width: 100%; height: 160px; object-fit: cover;" />
+                                            </div>
+
+                                            <div style="font-size: 11px; color: #8c8f94; border-top: 1px solid #f0f0f1; padding-top: 6px; display: flex; justify-content: space-between;">
+                                                <span>8 hours ago &bull; 172 clean chars</span>
+                                                <a href="#" onclick="return false;" style="color: #2271b1; text-decoration: none;">View original status &rarr;</a>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <!-- Footer text (only if non-empty) -->
@@ -1121,10 +1347,10 @@ function social_render_settings_page() {
 
                                     <!-- Tag Pills -->
                                     <div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 4px;">
-                                        <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 6px; font-size: 10px; color: #2c3338;">#Framework</span>
-                                        <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 6px; font-size: 10px; color: #2c3338;">#RISCV</span>
-                                        <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 6px; font-size: 10px; color: #2c3338;">#Fediverse</span>
+                                        <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 6px; font-size: 10px; color: #2c3338;">#MINISFORUM</span>
+                                        <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 6px; font-size: 10px; color: #2c3338;">#AMDGorgonHalo</span>
                                         <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 6px; font-size: 10px; color: #2c3338;">#WordPress</span>
+                                        <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 6px; font-size: 10px; color: #2c3338;">#Fediverse</span>
                                     </div>
                                 </div>
                             </div>
@@ -1132,146 +1358,10 @@ function social_render_settings_page() {
                     </div>
                 </div>
 
-                <!-- RIGHT PANE: EDITORIAL WORKBENCH QUEUE & FRAMING CUSTOMIZER -->
+                <!-- RIGHT PANE: FRAMING CUSTOMIZER -->
                 <div id="social_staging_right_pane">
 
-                    <!-- WIDGET 1: EDITORIAL WORKBENCH QUEUE -->
-                    <div class="social-postbox-widget" id="social_widget_staging_workbench" style="border-left: 5px solid #0085ff;">
-                        <div class="postbox-header">
-                            <h2 class="hndle" style="margin: 0; font-size: 13px; font-weight: 700; color: #1d2327; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
-                                <span class="dashicons dashicons-move social-widget-handle" style="color: #8c8f94; cursor: grab;" title="Drag to reorder widget"></span>
-                                <span class="dashicons dashicons-list-view" style="color: #0085ff;"></span>
-                                <span>Editorial Staging Queue & Workbench</span>
-                            </h2>
-                            <div style="display: flex; gap: 4px; align-items: center;">
-                                <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'up')" title="Move Widget Up" style="padding: 0 4px; height: 24px; line-height: 22px;">
-                                    <span class="dashicons dashicons-arrow-up-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
-                                </button>
-                                <button type="button" class="button button-small" onclick="socialMoveWidget(this, 'down')" title="Move Widget Down" style="padding: 0 4px; height: 24px; line-height: 22px;">
-                                    <span class="dashicons dashicons-arrow-down-alt2" style="font-size: 14px; width: 14px; height: 14px; vertical-align: middle;"></span>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="inside">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
-                                <div>
-                                    <p style="margin: 0; color: #50575e; font-size: 13px;">
-                                        Gather incoming social updates, compose custom lead-in commentary, pin lead stories, and publish whenever you're ready.
-                                    </p>
-                                </div>
-                                <div style="display: flex; gap: 8px; align-items: center;">
-                                    <button type="button" class="button button-secondary">
-                                        <span class="dashicons dashicons-download" style="vertical-align: -3px; font-size: 16px;"></span> Fetch Updates
-                                    </button>
-                                    <button type="button" class="button button-primary" style="background: #2271b1; font-weight: 600;">
-                                        <span class="dashicons dashicons-upload" style="vertical-align: -3px; font-size: 16px;"></span> Publish Staged Digest Now
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div style="background: #f0f6fc; border-left: 4px solid #0085ff; padding: 10px 14px; margin: 12px 0 15px 0; border-radius: 3px; font-size: 12px;">
-                                <strong>How the Staging Workbench Works:</strong>
-                                <ol style="margin: 4px 0 0 16px; padding: 0; line-height: 1.5;">
-                                    <li><strong>Gather Content:</strong> Draft social updates from Bluesky and Mastodon are held here prior to publishing.</li>
-                                    <li><strong>Per-Article Commentary:</strong> Attach custom lead-in text or follow-up takeaways to add editorial voice.</li>
-                                    <li><strong>Pin Lead Stories:</strong> Toggle inclusion or pin key highlights to the #1 position.</li>
-                                    <li><strong>Exclude Posts &amp; Progression:</strong> Excluded items advance the feed cutoff without being re-ingested.</li>
-                                </ol>
-                            </div>
-
-                            <!-- Staged Items Table / Cards -->
-                            <h3 style="font-size: 13px; color: #1d2327; margin: 15px 0 8px 0;">
-                                Staged Social Items (3 In Queue)
-                            </h3>
-                            
-                            <table class="wp-list-table widefat fixed striped" style="margin-top: 8px;">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 50px; text-align: center;">Inc</th>
-                                        <th style="width: 50px; text-align: center;">Pin</th>
-                                        <th style="width: 90px;">Platform</th>
-                                        <th>Original Post & Media</th>
-                                        <th style="width: 40%;">Custom Commentary & Framing</th>
-                                        <th style="width: 65px; text-align: center;">Order</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td style="text-align: center; vertical-align: middle;">
-                                            <input type="checkbox" checked title="Include in Digest" />
-                                        </td>
-                                        <td style="text-align: center; vertical-align: middle;">
-                                            <input type="checkbox" checked title="Pin as Lead Story" />
-                                            <span class="dashicons dashicons-star-filled" style="color: #f59e0b; vertical-align: -2px;" title="Pinned as #1 Lead Story"></span>
-                                        </td>
-                                        <td style="vertical-align: top;">
-                                            <strong style="color: #0085ff;">Bluesky</strong><br>
-                                            <small style="color: #666;">@bradlinder</small>
-                                        </td>
-                                        <td style="vertical-align: top;">
-                                            <em>"Framework Laptop 16 with RISC-V mainboard prototype tested..."</em>
-                                            <br><small style="color: #666;">1 image (WebP) &bull; #Framework #RISCV</small>
-                                        </td>
-                                        <td style="vertical-align: top;">
-                                            <div style="margin-bottom: 4px;">
-                                                <label style="font-size: 10px; font-weight: 600; color: #50575e; display: block;">BEFORE post (Lead-in):</label>
-                                                <input type="text" class="regular-text" style="width: 100%; font-size: 11px;" value="Our benchmark team ran initial lab tests on the RISC-V board:" />
-                                            </div>
-                                            <div>
-                                                <label style="font-size: 10px; font-weight: 600; color: #50575e; display: block;">AFTER post (Follow-up):</label>
-                                                <input type="text" class="regular-text" style="width: 100%; font-size: 11px;" value="Full schematics will be open-sourced on GitHub later this quarter." />
-                                            </div>
-                                        </td>
-                                        <td style="text-align: center; vertical-align: middle;">
-                                            <button type="button" class="button button-small" title="Move Up">&uarr;</button>
-                                            <button type="button" class="button button-small" title="Move Down">&darr;</button>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td style="text-align: center; vertical-align: middle;">
-                                            <input type="checkbox" checked title="Include in Digest" />
-                                        </td>
-                                        <td style="text-align: center; vertical-align: middle;">
-                                            <input type="checkbox" title="Pin as Lead Story" />
-                                        </td>
-                                        <td style="vertical-align: top;">
-                                            <strong style="color: #6364ff;">Mastodon</strong><br>
-                                            <small style="color: #666;">@bradlinder</small>
-                                        </td>
-                                        <td style="vertical-align: top;">
-                                            <em>"Open protocols allow publishing directly to your own site..."</em>
-                                            <br><small style="color: #666;">#Fediverse #ActivityPub</small>
-                                        </td>
-                                        <td style="vertical-align: top;">
-                                            <div style="margin-bottom: 4px;">
-                                                <label style="font-size: 10px; font-weight: 600; color: #50575e; display: block;">BEFORE post (Lead-in):</label>
-                                                <input type="text" class="regular-text" style="width: 100%; font-size: 11px;" value="On the importance of RSS and independent protocol ownership:" />
-                                            </div>
-                                            <div>
-                                                <label style="font-size: 10px; font-weight: 600; color: #50575e; display: block;">AFTER post (Follow-up):</label>
-                                                <input type="text" class="regular-text" style="width: 100%; font-size: 11px;" value="" />
-                                            </div>
-                                        </td>
-                                        <td style="text-align: center; vertical-align: middle;">
-                                            <button type="button" class="button button-small" title="Move Up">&uarr;</button>
-                                            <button type="button" class="button button-small" title="Move Down">&darr;</button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 12px; border-top: 1px solid #ccd0d4;">
-                                <div style="display: flex; gap: 8px;">
-                                    <button type="button" class="button button-primary" style="font-weight: bold;">Publish Staged Digest Now</button>
-                                    <button type="button" class="button button-secondary">Save Staging Draft</button>
-                                    <button type="button" class="button button-secondary">Clear Staging Queue</button>
-                                </div>
-                                <span style="font-size: 11px; color: #666;">Next automated run in 4 hours.</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- WIDGET 2: ARTICLE HEADER & FOOTER WYSIWYG CUSTOMIZER -->
+                    <!-- ARTICLE HEADER & FOOTER WYSIWYG CUSTOMIZER -->
                     <div class="social-postbox-widget" id="social_widget_staging_framing" style="border-left: 5px solid #2271b1;">
                         <div class="postbox-header">
                             <h2 class="hndle" style="margin: 0; font-size: 13px; font-weight: 700; color: #1d2327; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
@@ -1319,6 +1409,82 @@ function social_render_settings_page() {
                 </div>
 
             </div>
+
+            <script>
+            function socialTogglePostExclusion(itemId, isExcluded) {
+                const wrapper = document.getElementById('preview_item_' + itemId);
+                if (!wrapper) return;
+                const badge = wrapper.querySelector('.social-post-status-badge');
+                const textEl = wrapper.querySelector('.social-post-text-content');
+                const cardBody = wrapper.querySelector('.social-post-card-body');
+
+                if (!isExcluded) {
+                    wrapper.style.opacity = '1';
+                    if (cardBody) cardBody.style.background = itemId === 1 ? '#fcfcff' : '#f7fbff';
+                    if (textEl) {
+                        textEl.style.textDecoration = 'none';
+                        textEl.style.color = '#1d2327';
+                    }
+                    if (badge) {
+                        badge.textContent = 'Included';
+                        badge.style.background = '#d1e7dd';
+                        badge.style.color = '#0f5132';
+                    }
+                } else {
+                    wrapper.style.opacity = '0.55';
+                    if (cardBody) cardBody.style.background = '#f0f0f1';
+                    if (textEl) {
+                        textEl.style.textDecoration = 'line-through';
+                        textEl.style.color = '#646970';
+                    }
+                    if (badge) {
+                        badge.textContent = 'Excluded (Skipped)';
+                        badge.style.background = '#f8d7da';
+                        badge.style.color = '#842029';
+                    }
+                }
+
+                // Update counts badge
+                const allWrappers = document.querySelectorAll('.social-preview-item-wrapper');
+                let inc = 0, exc = 0;
+                allWrappers.forEach(w => {
+                    const cb = w.querySelector('input[type="checkbox"]');
+                    if (cb && cb.checked) exc++; else inc++;
+                });
+                const countsBadge = document.getElementById('social_preview_counts_badge');
+                if (countsBadge) countsBadge.textContent = inc + ' Included • ' + exc + ' Excluded';
+            }
+
+            function socialTogglePinPost(itemId, btn) {
+                const banner = document.getElementById('pinned_banner_' + itemId);
+                if (!banner) return;
+                const isPinned = banner.style.display !== 'none';
+                const label = btn.querySelector('.pin-label');
+                if (isPinned) {
+                    banner.style.display = 'none';
+                    btn.style.background = '#ffffff';
+                    btn.style.color = '#2c3338';
+                    if (label) label.textContent = 'Pin as Lead';
+                } else {
+                    banner.style.display = 'block';
+                    btn.style.background = '#fff8e1';
+                    btn.style.color = '#b45309';
+                    if (label) label.textContent = 'Pinned Lead';
+                }
+            }
+
+            function socialUpdateCommentary(itemId, text) {
+                const renderBox = document.getElementById('commentary_render_' + itemId);
+                if (!renderBox) return;
+                const textSpan = renderBox.querySelector('.social-commentary-text');
+                if (text.trim().length > 0) {
+                    renderBox.style.display = 'block';
+                    if (textSpan) textSpan.textContent = text;
+                } else {
+                    renderBox.style.display = 'none';
+                }
+            }
+            </script>
 
         <?php elseif ($active_tab === 'actions'): ?>
             <!-- TAB 3: ACTIONS & DIAGNOSTICS -->

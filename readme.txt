@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 5.2.2
+Stable tag: 5.2.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,7 +51,28 @@ Social Digest is licensed under the GNU General Public License v2.0 or later (GP
 
 == Changelog ==
 
-= 5.2.2 =
+= 5.2.7 =
+* Integrated complete interactive staging controls (pin lead story, exclude checkbox, remove post, and editable custom commentary input) directly inside the Live Staged Article Preview cards.
+* Restored Staged Queue Items postbox widget alongside Live Staged Article Preview in the Editorial & Staging Queue workspace for flexible multi-pane or stacked layouts.
+
+= 5.2.6 =
+* Combined Staged Queue Items and Live Staged Article Preview into a single unified widget with inline Exclude controls, Pin Lead story toggles, and Custom Editorial Takeaway author notes.
+* Standardized Settings tab widget headers and reordering controls to match the unified design language of Staging and Actions tabs.
+* Unified visual styling for widgets across Settings, Editorial & Staging Queue, and Actions & Diagnostics tabs.
+* Added left accent borders, color-matched section icons, uppercase tracking titles, drag handle indicators, and Move Up / Move Down buttons to all Settings widgets.
+* Enabled drag & drop reordering and Move Up / Move Down arrow controls for Settings widgets in both PHP and React admin interfaces.
+
+= 5.2.4 =
+* Re-architected Staging Queue workspace: Created standalone moveable "Quick Actions & Publishing Workbench" widget for Fetch Updates, Publish Now, Save Draft, and Clear Queue controls.
+* Removed redundant Editorial Staging Queue & Workbench table widget in favor of inline article editing.
+* Upgraded Live Staged Article Preview panel to render actual social posts with inline exclusion checkboxes, allowing users to toggle individual posts in/out of manual publication.
+* Added real-time visual exclusion indicators, custom commentary notes, and dynamic post counts directly inside the Live Article Preview.
+
+= 5.2.3 =
+* Resolved invisible text issue in Visual WYSIWYG editor mode by enforcing high-contrast text color `#1d2327` and white background `#ffffff` across TinyMCE and staging canvas.
+* Fixed inline style color conflicts when HTML with pasted inline dark mode styles (e.g., `color: #111111`) or unclosed tags are rendered in Visual mode.
+* Added visual representation badge for `<!--digest_split-->` divider in Visual mode so article header/footer split points are clearly identifiable.
+* Enhanced TinyMCE editor init hooks in `social-digest.php` to prevent editor body text color opacity loss.
 * Integrated drag-and-drop moveable postbox widgets and layout switcher natively into PHP-rendered WordPress admin interface (`social-digest.php`).
 * Re-architected Editorial & Staging Queue and Actions & Diagnostics tabs into standard WordPress postbox widgets with draggable headers and Up/Down arrow reordering controls.
 * Added Multi-Pane View toggle switcher in Staging Queue for side-by-side split view and single-column stacked view.
