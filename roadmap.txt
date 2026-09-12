@@ -27,10 +27,12 @@ Social Digest - Feature Roadmap & Release Status
 [x] Dry-Run / Simulation Preview: "Simulate Next Run" test engine that inspects active feeds and calculates candidate posts, generated titles, harvested tags, and thumbnail selections non-destructively without modifying database records or timestamps.
 [x] Network Connection Diagnostics: Real-time latency and HTTP status indicators for Bluesky and Mastodon API endpoints.
 
-6. Version 5.1 Release Milestone (Completed in v5.1.0)
+6. Version 5.1 Release Milestone (Completed in v5.1.0 & v5.1.1)
 -------------------------------------------------------
 [x] Duplicate Resolution Strategies: Configurable cross-posting resolution supporting "Prefer Mastodon if longer, otherwise Bluesky", "Longest text wins", and static network preferences. Compares clean text character lengths excluding hashtags and URLs while merging tags and media attachments from both versions.
 [x] Real-Time Staging Workbench: Interactive editorial review workspace with inline commentary framing, priority reordering, and immediate early publish capability.
 [x] Ephemeral Post Mockup Inspection: Interactive simulation inspector that renders full card mockups, tag taxonomy rankings, deduplication badges, and media selections on demand.
 [x] Full WordPress 6.x UI Fidelity: Synchronized Admin Bar, settings tab navigation, and live published post preview across both Admin and Front-End views.
+[x] Version 5.1.1 Documentation & Licensing Overhaul: Complete GPLv2+ license alignment, author URIs, extended FAQ, and duplicate resolution docs across readme.txt, README.md, and package manifests.
+
 

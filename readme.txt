@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 5.1.0
+Stable tag: 5.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -50,6 +50,10 @@ The plugin downloads attached images and converts them to `.webp` or `.avif` for
 Social Digest is licensed under the GNU General Public License v2.0 or later (GPLv2+).
 
 == Changelog ==
+
+= 5.1.1 =
+* Documentation and licensing overhaul: verified GPLv2+ compliance, updated plugin author URIs, and expanded FAQ entries.
+* Documented configurable Duplicate Resolution Strategies in readme.txt and project documentation.
 
 = 5.1.0 =
 * Added Duplicate Resolution Strategies: "Prefer Mastodon if longer, otherwise Bluesky", "Longest text wins", and network-specific overrides with clean text length calculation (excluding hashtags and URLs).
