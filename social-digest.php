@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, staging queue, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.1.1
+ * Version: 5.1.3
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -466,9 +466,9 @@ function social_render_settings_page() {
                                                 <td>
                                                     <label>
                                                         <input type="checkbox" name="social_digest_options[cross_dedup]" value="1" <?php checked($opts['cross_dedup'] ?? 1, 1); ?> />
-                                                        <strong>Merge matching cross-posts</strong>
+                                                        <strong>Deduplicate matching cross-posts</strong>
                                                     </label>
-                                                    <p class="description">If an update appears on both platforms, embed only the preferred platform while harvesting tags and preview images from both.</p>
+                                                    <p class="description">If an update appears on both platforms, embed ONLY the preferred platform's post and completely discard the duplicate.</p>
                                                 </td>
                                             </tr>
 
@@ -477,11 +477,11 @@ function social_render_settings_page() {
                                                 <td>
                                                     <select name="social_digest_options[preferred_platform]" id="social_preferred_platform">
                                                         <option value="masto_if_longer" <?php selected($opts['preferred_platform'] ?? 'masto_if_longer', 'masto_if_longer'); ?>>Prefer Mastodon if longer, otherwise Bluesky (Recommended)</option>
-                                                        <option value="longest" <?php selected($opts['preferred_platform'] ?? '', 'longest'); ?>>Longest text wins (Whichever platform wrote more text)</option>
-                                                        <option value="bsky" <?php selected($opts['preferred_platform'] ?? '', 'bsky'); ?>>Always prefer Bluesky (Embed Bluesky, harvest Mastodon tags/images)</option>
-                                                        <option value="mastodon" <?php selected($opts['preferred_platform'] ?? '', 'mastodon'); ?>>Always prefer Mastodon (Embed Mastodon, harvest Bluesky tags/images)</option>
+                                                        <option value="longest" <?php selected($opts['preferred_platform'] ?? '', 'longest'); ?>>Longest text wins (Whichever platform wrote more clean text)</option>
+                                                        <option value="bsky" <?php selected($opts['preferred_platform'] ?? '', 'bsky'); ?>>Always prefer Bluesky (Embed only Bluesky)</option>
+                                                        <option value="mastodon" <?php selected($opts['preferred_platform'] ?? '', 'mastodon'); ?>>Always prefer Mastodon (Embed only Mastodon)</option>
                                                     </select>
-                                                    <p class="description">When identical updates or shared links are detected on both networks, determine which card to embed. Hashtags, taxonomy, and media attachments are always merged from both versions.</p>
+                                                    <p class="description">When identical updates or shared links are detected on both networks, determines which post to exclusively embed. The other post is completely excluded from the digest.</p>
                                                 </td>
                                             </tr>
                                         </table>
@@ -1401,13 +1401,22 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
         $embed .= '<p style="font-size: 0.9em; color: #666;">&mdash; ' . $author_name . ' (<a href="' . esc_url($web_url) . '" target="_blank" rel="noopener">@' . esc_html($author_handle) . '</a> on Bluesky)</p>';
         $embed .= '</blockquote>';
 
+        $extracted_urls = [];
+        if (isset($post['embed']['external']['uri'])) {
+            $extracted_urls[] = $post['embed']['external']['uri'];
+        }
+        if (preg_match_all('/\b(?:https?:\/\/|www\.)[^\s<"\'\)]+/i', $text, $u_m)) {
+            $extracted_urls = array_merge($extracted_urls, $u_m[0]);
+        }
+
         $items[] = [
             'network'     => 'bsky',
             'timestamp'   => $created_at,
             'text'        => $text,
             'html'        => $embed,
             'thumb_image' => $first_image_url,
-            'extra_tags'  => []
+            'extra_tags'  => [],
+            'urls'        => array_values(array_unique($extracted_urls))
         ];
     }
 
@@ -1546,13 +1555,25 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
         $embed .= '<p style="font-size: 0.9em; color: #666;">&mdash; ' . $author_name . ' (<a href="' . $post_url . '" target="_blank" rel="noopener">@' . $author_acct . '</a> on Mastodon)</p>';
         $embed .= '</blockquote>';
 
+        $extracted_urls = [];
+        if (!empty($post_data['card']['url'])) {
+            $extracted_urls[] = $post_data['card']['url'];
+        }
+        if (preg_match_all('/href=["\'](https?:\/\/[^"\']+)["\']/i', $post_data['content'] ?? '', $h_m)) {
+            $extracted_urls = array_merge($extracted_urls, $h_m[1]);
+        }
+        if (preg_match_all('/\b(?:https?:\/\/|www\.)[^\s<"\'\)]+/i', $clean_text, $u_m)) {
+            $extracted_urls = array_merge($extracted_urls, $u_m[0]);
+        }
+
         $items[] = [
             'network'     => 'mastodon',
             'timestamp'   => $created_at,
             'text'        => $clean_text,
             'html'        => $embed,
             'thumb_image' => $first_image_url,
-            'extra_tags'  => []
+            'extra_tags'  => [],
+            'urls'        => array_values(array_unique($extracted_urls))
         ];
     }
 
@@ -1565,20 +1586,104 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
 
 function social_normalize_for_matching($text) {
     $t = wp_strip_all_tags($text);
-    $t = preg_replace('/\bhttps?:\/\/\S+/i', '', $t);
+    // Strip URLs (http, https, www, or domain paths)
+    $t = preg_replace('/\b(?:https?:\/\/|www\.)\S+/i', '', $t);
+    $t = preg_replace('/\b[a-z0-9\.\-]+\.[a-z]{2,6}\/\S+/i', '', $t);
     $t = preg_replace('/[#@]\w+/u', '', $t);
-    $t = preg_replace('/[^\p{L}\p{N}\s]/u', '', html_entity_decode($t, ENT_QUOTES, 'UTF-8'));
+    $t = preg_replace('/[^\p{L}\p{N}\s]/u', '', html_entity_decode($t, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
     return trim(preg_replace('/\s+/', ' ', mb_strtolower($t)));
 }
 
+function social_clean_url($url) {
+    if (empty($url)) return '';
+    $u = html_entity_decode((string)$url, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $clean = strtok($u, '?#');
+    $clean = preg_replace('#^https?://#i', '', $clean);
+    $clean = preg_replace('#^www\.#i', '', $clean);
+    $clean = preg_replace('#[\./]+$#', '', $clean);
+    return strtolower(trim($clean));
+}
+
 function social_extract_urls($text) {
-    preg_match_all('/\bhttps?:\/\/[^\s<"\'\)]+/i', $text, $matches);
+    preg_match_all('/\b(?:https?:\/\/|www\.)[^\s<"\'\)]+/i', (string)$text, $matches);
     $urls = [];
     foreach ($matches[0] as $u) {
-        $clean = strtok($u, '?#');
-        $urls[] = rtrim(strtolower($clean), '/');
+        $c = social_clean_url($u);
+        if ($c) $urls[] = $c;
     }
-    return array_unique($urls);
+    return array_values(array_unique($urls));
+}
+
+/**
+ * Robust multi-signal cross-posting detector for Bluesky and Mastodon.
+ * Checks URLs, link cards, substrings/prefixes (e.g. truncated cross-posts), and relative similarity.
+ */
+function social_check_posts_match($p1, $p2) {
+    // 1. URL & Link Card Matching (Exact or Stem/Prefix)
+    $urls1 = !empty($p1['urls']) ? (array)$p1['urls'] : social_extract_urls($p1['text'] ?? '');
+    $urls2 = !empty($p2['urls']) ? (array)$p2['urls'] : social_extract_urls($p2['text'] ?? '');
+
+    $clean1 = array_values(array_filter(array_map('social_clean_url', $urls1)));
+    $clean2 = array_values(array_filter(array_map('social_clean_url', $urls2)));
+
+    if (!empty($clean1) && !empty($clean2)) {
+        if (!empty(array_intersect($clean1, $clean2))) {
+            return true;
+        }
+        foreach ($clean1 as $u1) {
+            foreach ($clean2 as $u2) {
+                if (strlen($u1) >= 12 && strlen($u2) >= 12) {
+                    if (strpos($u1, $u2) === 0 || strpos($u2, $u1) === 0) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Normalized Text Comparison
+    $t1 = social_normalize_for_matching($p1['text'] ?? '');
+    $t2 = social_normalize_for_matching($p2['text'] ?? '');
+
+    $len1 = mb_strlen($t1, 'UTF-8');
+    $len2 = mb_strlen($t2, 'UTF-8');
+
+    if ($len1 >= 15 && $len2 >= 15) {
+        $short = $len1 <= $len2 ? $t1 : $t2;
+        $long  = $len1 <= $len2 ? $t2 : $t1;
+        $short_len = mb_strlen($short, 'UTF-8');
+
+        // Exact substring containment (e.g. Bluesky 300 char truncated copy of a 500 char Mastodon post)
+        if (mb_strpos($long, $short) !== false) {
+            return true;
+        }
+
+        // Common prefix match (both start with same 35+ characters)
+        if ($short_len >= 35 && mb_substr($short, 0, 35) === mb_substr($long, 0, 35)) {
+            return true;
+        }
+
+        // Relative similarity to the shorter text
+        similar_text($t1, $t2, $sim_two_way);
+        $matching_chars = ($sim_two_way / 100) * ($len1 + $len2) / 2;
+        $sim_relative = ($matching_chars / $short_len) * 100;
+
+        if ($sim_relative >= 70 || $sim_two_way >= 65) {
+            return true;
+        }
+
+        // Word token overlap
+        $words1 = array_filter(explode(' ', $t1), function($w) { return mb_strlen($w) >= 3; });
+        $words2 = array_filter(explode(' ', $t2), function($w) { return mb_strlen($w) >= 3; });
+        $common_words = array_intersect($words1, $words2);
+        $min_words = min(count($words1), count($words2));
+
+        if ($min_words >= 4 && (count($common_words) / $min_words) >= 0.70) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -1926,30 +2031,13 @@ function social_run_digest_import($is_dry_run = false) {
         $matched_masto_indices = [];
 
         foreach ($bsky_posts as $b_post) {
-            $b_norm = social_normalize_for_matching($b_post['text']);
-            $b_urls = social_extract_urls($b_post['text']);
             $matched_masto = null;
             $matched_masto_idx = null;
 
             foreach ($masto_posts as $m_idx => $m_post) {
                 if (isset($matched_masto_indices[$m_idx])) continue;
 
-                $m_norm = social_normalize_for_matching($m_post['text']);
-                $m_urls = social_extract_urls($m_post['text']);
-
-                $is_match = false;
-                if (!empty($b_urls) && !empty($m_urls) && !empty(array_intersect($b_urls, $m_urls))) {
-                    $is_match = true;
-                }
-
-                if (!$is_match && !empty($b_norm) && !empty($m_norm)) {
-                    similar_text($b_norm, $m_norm, $similarity);
-                    if ($similarity >= 75) {
-                        $is_match = true;
-                    }
-                }
-
-                if ($is_match) {
+                if (social_check_posts_match($b_post, $m_post)) {
                     $matched_masto = $m_post;
                     $matched_masto_idx = $m_idx;
                     break;
@@ -1959,13 +2047,13 @@ function social_run_digest_import($is_dry_run = false) {
             if ($matched_masto !== null) {
                 $matched_masto_indices[$matched_masto_idx] = true;
 
-                // Compare clean text lengths (excluding URLs and hashtags)
+                // Compare clean text lengths (excluding URLs, hashtags, and HTML tags)
                 $b_len = social_get_clean_text_length($b_post['text']);
                 $m_len = social_get_clean_text_length($matched_masto['text']);
 
                 $prefer_mastodon = false;
                 if ($preferred_platform === 'masto_if_longer') {
-                    // Only prefer Mastodon when it has strictly more text; otherwise default to Bluesky
+                    // Only prefer Mastodon when it has strictly more clean text; otherwise default to Bluesky
                     $prefer_mastodon = ($m_len > $b_len);
                 } elseif ($preferred_platform === 'longest') {
                     $prefer_mastodon = ($m_len > $b_len);
@@ -1983,21 +2071,30 @@ function social_run_digest_import($is_dry_run = false) {
                     $secondary = $matched_masto;
                 }
 
-                // Harvest tags and hashtags from secondary post
-                $harvested_tags = !empty($winner['extra_tags']) ? (array)$winner['extra_tags'] : [];
-                if (preg_match_all('/#(\w+)/u', $secondary['text'], $s_tags)) {
-                    $harvested_tags = array_merge($harvested_tags, $s_tags[1]);
-                }
-                if (!empty($secondary['extra_tags'])) {
-                    $harvested_tags = array_merge($harvested_tags, (array)$secondary['extra_tags']);
+                // TAG HARVESTING: Grab tags from the losing post if it has them and the winning post does not
+                $winner_tags = !empty($winner['extra_tags']) ? (array)$winner['extra_tags'] : [];
+                if (preg_match_all('/#(\w+)/u', $winner['text'], $w_matches)) {
+                    $winner_tags = array_merge($winner_tags, $w_matches[1]);
                 }
 
-                // Harvest thumbnail image if winner lacks one
+                $secondary_tags = !empty($secondary['extra_tags']) ? (array)$secondary['extra_tags'] : [];
+                if (preg_match_all('/#(\w+)/u', $secondary['text'], $s_matches)) {
+                    $secondary_tags = array_merge($secondary_tags, $s_matches[1]);
+                }
+
+                // Identify missing tags that the losing post has but the winning post does not
+                $missing_tags = array_diff($secondary_tags, $winner_tags);
+                if (!empty($missing_tags)) {
+                    $winner['extra_tags'] = array_values(array_unique(array_merge($winner_tags, $missing_tags)));
+                }
+
+                // Thumbnail fallback: if winner lacks thumbnail, use secondary's thumbnail
                 if (empty($winner['thumb_image']) && !empty($secondary['thumb_image'])) {
                     $winner['thumb_image'] = $secondary['thumb_image'];
                 }
 
-                $winner['extra_tags'] = array_values(array_unique($harvested_tags));
+                // SINGLE EMBED ENFORCEMENT: Strictly append ONLY the winning post.
+                // The secondary post is completely discarded from the digest body.
                 $merged_posts[] = $winner;
             } else {
                 $merged_posts[] = $b_post;

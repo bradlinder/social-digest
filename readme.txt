@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 5.1.1
+Stable tag: 5.1.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,7 +22,7 @@ Social Digest is a WordPress plugin that automates the aggregation and publicati
 * **Media Optimization & Storage Hygiene**: Automatic WebP/AVIF format conversion, thumbnail compression, responsive image srcset generation, and local asset/avatar caching.
 * **RSS-Only Syndication Mode**: Distribute digests exclusively to RSS feeds and newsletter subscribers without cluttering the main blog stream.
 * **Multi-Network Ingestion**: Native support for Bluesky handles/DIDs and Mastodon profile URLs.
-* **Smart Deduplication & Resolution Strategies**: Identifies cross-posted updates across platforms with configurable strategies ("Prefer Mastodon if longer, otherwise Bluesky", "Longest text wins", "Always prefer Bluesky", "Always prefer Mastodon"). Calculates clean text length by excluding hashtags and links, and merges tags and media attachments from both versions.
+* **Smart Deduplication & Resolution Strategies**: Identifies cross-posted updates across platforms with configurable strategies ("Prefer Mastodon if longer, otherwise Bluesky", "Longest text wins", "Always prefer Bluesky", "Always prefer Mastodon"). Strictly embeds ONLY the winning post and completely discards the duplicate.
 * **Featured Image Sideloading**: Automatically detects candidate images in social posts, downloads and sideloads them to the WordPress Media Library, and sets them as the article's Featured Image.
 * **Taxonomy & Hashtag Extraction**: Extracts hashtags from imported social posts, formats them with customizable delimiter/enclosure styles, and converts them into WordPress tags.
 * **Rich Header & Footer Framing**: Custom TinyMCE editor with `<!--digest_split-->` visual button for introductory notes, author commentary, and footer disclaimers.
@@ -38,7 +38,7 @@ Social Digest is a WordPress plugin that automates the aggregation and publicati
 == Frequently Asked Questions ==
 
 = How does cross-post deduplication work? =
-When you post the same link or update to both Bluesky and Mastodon, the plugin detects the match via URL extraction or high content similarity (>= 75%). Under the "Prefer Mastodon if longer, otherwise Bluesky" strategy, it strips URLs and hashtags, compares the clean character count, and embeds Mastodon if it contains more text; otherwise it defaults to Bluesky. Hashtags, categories, and thumbnail images from both posts are always merged.
+When you post the same link or update to both Bluesky and Mastodon, the plugin detects the match via multi-signal inspection (exact or stem URL matching from link cards and text, common prefix/substring containment, and relative text similarity). Under the default "Prefer Mastodon if longer, otherwise Bluesky" strategy, it compares clean character lengths (excluding URLs and hashtags). Only the winning post is embedded in the WordPress article body. If the winning post lacks hashtags that the losing post has, those missing tags are harvested to enrich the WordPress post taxonomy.
 
 = Can I review digests before they are published live? =
 Yes. You can set the publication status to "Draft" or enable the Editorial Staging Queue in the settings. The Staging Queue tab lets you view pending updates, reorder them, attach custom author notes, pin a story to the top, and publish manually when ready.
@@ -50,6 +50,15 @@ The plugin downloads attached images and converts them to `.webp` or `.avif` for
 Social Digest is licensed under the GNU General Public License v2.0 or later (GPLv2+).
 
 == Changelog ==
+
+= 5.1.3 =
+* Resolved cross-post detection failure for truncated posts and link cards by implementing multi-signal matching (URL stem containment, common prefix/substring matching, and relative text similarity).
+* Strictly enforced single-embed output: only the winning post is embedded in the WordPress post body; the secondary post is completely excluded.
+* Added intelligent tag harvesting: if the winning post lacks hashtags that the losing post possessed, those missing tags are harvested to enrich the WordPress post taxonomy.
+
+= 5.1.2 =
+* Corrected duplicate resolution to strictly use ONLY the winning post (embed, media, and tags) and discard the non-selected post without secondary metadata blending.
+* Enhanced URL normalization and cross-platform matching to detect shared links across cards, embeds, and HTML anchors.
 
 = 5.1.1 =
 * Documentation and licensing overhaul: verified GPLv2+ compliance, updated plugin author URIs, and expanded FAQ entries.

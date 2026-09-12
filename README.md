@@ -1,6 +1,6 @@
 # Social Digest for WordPress
 
-[![Version](https://img.shields.io/badge/version-5.1.1-blue.svg)](https://github.com)
+[![Version](https://img.shields.io/badge/version-5.1.3-blue.svg)](https://github.com)
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)](https://wordpress.org)
 [![PHP](https://img.shields.io/badge/PHP-7.4%2B-indigo.svg)](https://php.net)
 [![License: GPL v2+](https://img.shields.io/badge/License-GPLv2%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -37,12 +37,14 @@
 ### 6. Multi-Network Social Ingestion & Deduplication
 - **Bluesky (AT Protocol)**: Connects directly via public AT Protocol endpoints using your handle or DID.
 - **Mastodon (ActivityPub)**: Connects to any Mastodon or Fediverse instance via public API endpoints.
-- **Configurable Duplicate Resolution Strategies**: Detects identical posts shared to both networks via shared URLs or text similarity (>= 75%):
+- **Multi-Signal Cross-Posting Detector**: Accurately detects identical cross-posted updates across platforms via URL stem inspection, external link card URI matching, common prefix/substring containment, and relative text similarity.
+- **Configurable Duplicate Resolution Strategies**:
   - **Prefer Mastodon if longer, otherwise Bluesky (Default/Recommended)**: Compares clean character count (excluding hashtags and URLs) and embeds Mastodon when it contains more text; otherwise defaults to Bluesky.
   - **Longest text wins**: Selects whichever platform wrote more clean commentary.
-  - **Always prefer Bluesky**: Strictly embeds the Bluesky card.
-  - **Always prefer Mastodon**: Strictly embeds the Mastodon card.
-  - **Comprehensive Metadata & Media Merging**: Regardless of the embedded card chosen, hashtags and media thumbnails from both platforms are automatically harvested and combined.
+  - **Always prefer Bluesky**: Strictly embeds the Bluesky post.
+  - **Always prefer Mastodon**: Strictly embeds the Mastodon post.
+- **Strict Single-Embed Output**: Only the single winning post is embedded in the WordPress digest article body.
+- **Intelligent Tag Harvesting**: If the winning post lacks hashtags that the losing post possessed, those missing tags are harvested to enrich the WordPress post taxonomy.
 
 ### 7. Content Framing & Formatting
 - **Visual Header/Footer Editor**: Unified TinyMCE visual editor with a dedicated **Insert Post Splitter** (`<!--digest_split-->`) button.
