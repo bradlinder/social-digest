@@ -1,0 +1,133 @@
+name: Release Plugin
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release Tag (e.g. v4.7.0). Leave blank to auto-detect from social-digest.php'
+        required: false
+        default: ''
+        type: string
+      release_name:
+        description: 'Release Title (e.g. Social Digest 4.7.0). Leave blank to auto-generate'
+        required: false
+        default: ''
+        type: string
+      release_notes:
+        description: 'Custom release notes / changelog (optional)'
+        required: false
+        default: ''
+        type: string
+      draft:
+        description: 'Create as a draft release'
+        required: false
+        default: false
+        type: boolean
+      prerelease:
+        description: 'Mark as a pre-release'
+        required: false
+        default: false
+        type: boolean
+
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build & Publish Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Determine Version and Tag
+        id: vars
+        run: |
+          # Extract version from social-digest.php header
+          EXTRACTED_VER=$(grep -i "Version:" social-digest.php | head -n 1 | awk -F ':' '{print $2}' | tr -d ' \r\n')
+          if [ -z "$EXTRACTED_VER" ]; then
+            EXTRACTED_VER="1.0.0"
+          fi
+          
+          # Set Tag Name
+          if [ -n "${{ inputs.tag_name }}" ]; then
+            TAG="${{ inputs.tag_name }}"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="v${EXTRACTED_VER}"
+          fi
+          
+          # Set Release Title
+          if [ -n "${{ inputs.release_name }}" ]; then
+            TITLE="${{ inputs.release_name }}"
+          else
+            TITLE="Social Digest ${EXTRACTED_VER}"
+          fi
+          
+          echo "version=${EXTRACTED_VER}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "title=${TITLE}" >> $GITHUB_OUTPUT
+
+      - name: Package WordPress Plugin
+        run: |
+          # Create clean staging directory for WordPress plugin archive
+          STAGING_DIR="build-stage/social-digest"
+          mkdir -p "$STAGING_DIR"
+
+          # Copy core plugin files
+          cp social-digest.php "$STAGING_DIR/"
+          cp readme.txt "$STAGING_DIR/"
+          [ -f README.md ] && cp README.md "$STAGING_DIR/"
+          [ -f LICENSE ] && cp LICENSE "$STAGING_DIR/"
+
+          # Copy assets if present
+          if [ -d "assets" ]; then
+            cp -r assets "$STAGING_DIR/"
+          fi
+
+          # Create distribution zip
+          cd build-stage
+          zip -r ../social-digest.zip social-digest/
+          cd ..
+          
+          echo "Plugin packaged successfully into social-digest.zip"
+          unzip -l social-digest.zip
+
+      - name: Generate Release Body
+        id: release_notes
+        run: |
+          if [ -n "${{ inputs.release_notes }}" ]; then
+            echo "body<<EOF" >> $GITHUB_OUTPUT
+            echo "${{ inputs.release_notes }}" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "body<<EOF" >> $GITHUB_OUTPUT
+            echo "## Social Digest ${{ steps.vars.outputs.version }}"
+            echo ""
+            echo "### 📦 Installation"
+            echo "1. Download \`social-digest.zip\` from the release assets below."
+            echo "2. In your WordPress Admin Dashboard, navigate to **Plugins > Add New > Upload Plugin**."
+            echo "3. Upload \`social-digest.zip\` and click **Activate**."
+            echo "4. Go to **Settings > Social Digest** to configure your Bluesky and Mastodon feeds."
+            echo ""
+            echo "### 📄 Changelog"
+            echo "See \`readme.txt\` for complete version changelog and notes."
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          name: ${{ steps.vars.outputs.title }}
+          body: ${{ steps.release_notes.outputs.body }}
+          draft: ${{ inputs.draft || false }}
+          prerelease: ${{ inputs.prerelease || false }}
+          files: |
+            social-digest.zip
