@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, staging queue, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.1.6
+ * Version: 5.1.7
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -1068,6 +1068,106 @@ function social_render_settings_page() {
                         <button type="button" class="button button-secondary">Clear Staging Queue</button>
                     </div>
                     <span style="font-size: 12px; color: #666;">Next automated run scheduled in 4 hours.</span>
+                </div>
+            </div>
+
+            <!-- STAGED DIGEST ARTICLE PREVIEW -->
+            <div class="social-diag-card" style="border-left: 5px solid #2271b1; background: #f8fafc; margin-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dcdcdc; padding-bottom: 10px; margin-bottom: 15px;">
+                    <h3 style="margin: 0; color: #1d2327; font-size: 15px;">
+                        <span class="dashicons dashicons-visibility" style="vertical-align: -2px; color: #2271b1;"></span> Staged Digest Article Preview
+                    </h3>
+                    <span style="background: #e7f5ea; color: #00a32a; font-size: 11px; padding: 3px 10px; border-radius: 12px; font-weight: bold; border: 1px solid #c3e6cb;">
+                        Live Post Preview &bull; Refreshes with Queue Edits
+                    </span>
+                </div>
+
+                <p style="margin-top: 0; font-size: 12px; color: #50575e; margin-bottom: 15px;">
+                    This is a real-time preview of the compiled blog post that will be published from the staged queue items above, including custom editorial takeaways, media embeds, and footer tags.
+                </p>
+
+                <!-- LIVE MOCKUP CONTAINER -->
+                <div style="background: #ffffff; border: 1px solid #c3c4c7; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); overflow: hidden;">
+                    <div style="background: #1d2327; color: #fff; padding: 8px 16px; font-size: 11px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                        <span>WORDPRESS POST PREVIEW MODE</span>
+                        <span style="color: #72aee6;">Target Status: Publish</span>
+                    </div>
+
+                    <div style="padding: 24px; max-width: 820px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                        <h1 style="font-size: 24px; font-weight: 700; line-height: 1.3; margin: 0 0 10px 0; color: #1d2327;">
+                            Social Digest (Framework, RISCV, Fediverse)
+                        </h1>
+
+                        <div style="font-size: 12px; color: #646970; border-bottom: 1px solid #f0f0f1; padding-bottom: 10px; margin-bottom: 18px; display: flex; gap: 12px; flex-wrap: wrap;">
+                            <span>Published by <strong>Editor</strong></span>
+                            <span>&bull;</span>
+                            <span><?php echo esc_html(wp_date('F j, Y, g:i a', time(), $site_tz)); ?></span>
+                            <span>&bull;</span>
+                            <span>Categories: <strong>Roundups, Social</strong></span>
+                        </div>
+
+                        <!-- Header text -->
+                        <div style="font-size: 14px; color: #2c3338; margin-bottom: 20px; line-height: 1.5; padding: 12px; bg-color: #f6f7f7; border-left: 3px solid #2271b1; background: #f6f7f7;">
+                            <?php echo wp_kses_post($opts['header_text'] ?? '<p>Here is what we shared across social channels today:</p>'); ?>
+                        </div>
+
+                        <!-- Staged Embed Item 1 (Pinned) -->
+                        <div style="margin-bottom: 24px;">
+                            <div style="background: #fef8ea; border-left: 4px solid #f59e0b; padding: 10px 12px; border-radius: 0 6px 6px 0; margin-bottom: 8px; font-size: 13px; color: #78350f;">
+                                <strong style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; display: block; color: #b45309; margin-bottom: 2px;">📌 Author Note:</strong>
+                                Our benchmark team ran initial lab tests on the RISC-V board:
+                            </div>
+
+                            <blockquote class="social-post bsky-embed" style="border-left: 3px solid #0085ff; padding-left: 15px; margin: 0; background: #f7fbff; border: 1px solid #e0efff; border-left: 4px solid #0085ff; padding: 16px; border-radius: 6px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <strong>Brad Linder</strong> <small style="color: #666;">@bradlinder on Bluesky</small>
+                                </div>
+                                <p style="margin: 0 0 10px 0; font-size: 13.5px; color: #1d2327; line-height: 1.5;">
+                                    Framework Laptop 16 with RISC-V mainboard prototype tested. Standby power consumption on modern RISC-V and ARM boards has improved drastically...
+                                </p>
+                                <div style="font-size: 11px; color: #8c8f94; border-top: 1px solid #e8f2fc; padding-top: 6px;">
+                                    Sideloaded Media: 1 image (WebP) &bull; Timestamp: Today at 09:14 AM
+                                </div>
+                            </blockquote>
+
+                            <div style="font-size: 12px; color: #646970; margin-top: 6px; font-style: italic; padding-left: 12px;">
+                                Full schematics will be open-sourced on GitHub later this quarter.
+                            </div>
+                        </div>
+
+                        <!-- Staged Embed Item 2 -->
+                        <div style="margin-bottom: 24px;">
+                            <div style="background: #fef8ea; border-left: 4px solid #f59e0b; padding: 10px 12px; border-radius: 0 6px 6px 0; margin-bottom: 8px; font-size: 13px; color: #78350f;">
+                                <strong style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; display: block; color: #b45309; margin-bottom: 2px;">📌 Author Note:</strong>
+                                On the importance of RSS and independent protocol ownership:
+                            </div>
+
+                            <blockquote class="social-post mastodon-post" style="border-left: 3px solid #6364ff; padding-left: 15px; margin: 0; background: #fcfcff; border: 1px solid #e2e2ff; border-left: 4px solid #6364ff; padding: 16px; border-radius: 6px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <strong>Brad Linder</strong> <small style="color: #666;">@bradlinder on Mastodon</small>
+                                </div>
+                                <p style="margin: 0 0 10px 0; font-size: 13.5px; color: #1d2327; line-height: 1.5;">
+                                    Open protocols allow publishing directly to your own site without walled gardens. ActivityPub integration is working smoothly...
+                                </p>
+                                <div style="font-size: 11px; color: #8c8f94; border-top: 1px solid #eaeaff; padding-top: 6px;">
+                                    Timestamp: Today at 08:30 AM
+                                </div>
+                            </blockquote>
+                        </div>
+
+                        <!-- Footer text -->
+                        <div style="font-size: 13px; color: #50575e; margin-top: 25px; pt-15px; border-top: 1px dashed #dcdcde; padding-top: 15px;">
+                            <?php echo wp_kses_post($opts['footer_text'] ?? '<p>Follow us directly on social media for real-time updates!</p>'); ?>
+                        </div>
+
+                        <!-- Tag Pills -->
+                        <div style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 6px;">
+                            <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 8px; font-size: 11px; color: #2c3338;">#Framework</span>
+                            <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 8px; font-size: 11px; color: #2c3338;">#RISCV</span>
+                            <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 8px; font-size: 11px; color: #2c3338;">#Fediverse</span>
+                            <span style="background: #f0f0f1; border: 1px solid #dcdcde; border-radius: 3px; padding: 2px 8px; font-size: 11px; color: #2c3338;">#WordPress</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 

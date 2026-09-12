@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 5.1.6
+Stable tag: 5.1.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -50,6 +50,9 @@ The plugin downloads attached images and converts them to `.webp` or `.avif` for
 Social Digest is licensed under the GNU General Public License v2.0 or later (GPLv2+).
 
 == Changelog ==
+
+= 5.1.7 =
+* Added Live Staged Article Preview to the Editorial & Staging Queue workspace: editors can now inspect the compiled WordPress blog post mockup (including custom editorial takeaways, story pinning, header/footer framing, and media embeds) in real time while managing staged queue items.
 
 = 5.1.6 =
 * Refined title hashtag camelCase formatting: hashtags with a leading single lowercase letter followed by uppercase letters (e.g. #iPhone, #eReader, #iPad, #eBay, #iOS, #eBook) are now kept intact rather than erroneously splitting into separate words ("i Phone", "e Reader").
