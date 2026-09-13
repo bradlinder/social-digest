@@ -1010,7 +1010,31 @@ function social_render_settings_page() {
                                             </tr>
                                             <tr>
                                                 <th>Title Template</th>
-                                                <td><input name="social_digest_options[title_template]" type="text" value="<?php echo esc_attr($opts['title_template'] ?? 'Social Digest {hashtags}'); ?>" class="regular-text" /></td>
+                                                <td>
+                                                    <input name="social_digest_options[title_template]" type="text" value="<?php echo esc_attr($opts['title_template'] ?? 'Social Digest {hashtags}'); ?>" class="regular-text" />
+                                                    <p class="description">Available variables: <code>{hashtags}</code>, <code>{date}</code>, <code>{count}</code></p>
+                                                    <div style="margin-top: 10px; padding: 12px; background: #f6f7f7; border: 1px solid #ccd0d4; border-radius: 4px; max-width: 500px;">
+                                                        <strong style="display:block; margin-bottom: 8px;">Hashtag Formatting Rules:</strong>
+                                                        <div style="margin-bottom: 8px;">
+                                                            <label style="display:inline-block; width: 80px;">Enclosure:</label>
+                                                            <select name="social_digest_options[title_tag_enclosure]">
+                                                                <option value="parentheses" <?php selected($opts['title_tag_enclosure'] ?? 'parentheses', 'parentheses'); ?>>(Tag 1, Tag 2)</option>
+                                                                <option value="brackets" <?php selected($opts['title_tag_enclosure'] ?? '', 'brackets'); ?>>[Tag 1, Tag 2]</option>
+                                                                <option value="none" <?php selected($opts['title_tag_enclosure'] ?? '', 'none'); ?>>Tag 1, Tag 2 (No Enclosure)</option>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label style="display:inline-block; width: 80px;">Delimiter:</label>
+                                                            <select name="social_digest_options[title_tag_delimiter]">
+                                                                <option value="oxford" <?php selected($opts['title_tag_delimiter'] ?? 'oxford', 'oxford'); ?>>Tag 1, Tag 2, and Tag 3</option>
+                                                                <option value="commas" <?php selected($opts['title_tag_delimiter'] ?? '', 'commas'); ?>>Tag 1, Tag 2, Tag 3</option>
+                                                                <option value="ampersand" <?php selected($opts['title_tag_delimiter'] ?? '', 'ampersand'); ?>>Tag 1, Tag 2 &amp; Tag 3</option>
+                                                                <option value="pipe" <?php selected($opts['title_tag_delimiter'] ?? '', 'pipe'); ?>>Tag 1 | Tag 2 | Tag 3</option>
+                                                                <option value="slash" <?php selected($opts['title_tag_delimiter'] ?? '', 'slash'); ?>>Tag 1 / Tag 2 / Tag 3</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </td>
                                             </tr>
                                             <tr>
                                                 <th>Article Header &amp; Footer</th>

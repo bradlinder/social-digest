@@ -47,4 +47,14 @@ Social Digest - Feature Roadmap & Release Status
 [x] Tab & Staging Improvements (v5.3.2): Unified all staging queue features, toggles, actions, preview, and editor into the Actions, Staging & Diagnostics tab, and made "General Settings" the default primary tab.
 [x] Server-Side Action Handlers (v5.3.3 & v5.3.4): Implemented live WordPress server-side POST operational handlers for publishing, saving drafts, pending review, and curation actions.
 
+8. Future Refactoring & Edge Case Hardening Roadmap (Planned)
+--------------------------------------------------------------
+[ ] Codebase Modularization: Split the monolithic `social-digest.php` into a dedicated `includes/` directory structure (cron, fetchers, tag engine, admin settings) to resolve LLM token limitations and improve target maintainability.
+[ ] Editor Splitter Regex Normalization: Make the regex boundary for the TinyMCE `<!--digest_split-->` marker whitespace-insensitive and capable of handling nested `wpautop` paragraph wrappers to prevent data loss.
+[ ] Visual Editor Delimiter Lock: Add `contenteditable="false"` to the TinyMCE `<hr>` split marker to prevent accidental cursor fragmentation.
+[ ] Multi-Divider Cleanup: Strip extraneous `<!--digest_split-->` tokens from the footer payload to prevent multiple splitters from leaking into production.
+[ ] API Ingestion Timeout Reduction: Lower external `wp_remote_get()` timeouts to 10-12 seconds to prevent long-running requests from causing PHP timeouts and hanging `wp-cron`.
+[ ] Tag Popularity Caching: Implement temporary 5-minute WordPress transients for batch `get_terms()` lookups to reduce database query loads during manual test cycles.
+[ ] Mastodon Alt-Text Parity: Ensure Mastodon image alt-text extraction correctly falls back to attachment descriptions, maintaining accessibility parity with Bluesky embeds.
+
 
