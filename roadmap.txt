@@ -40,4 +40,11 @@ Social Digest - Feature Roadmap & Release Status
 [x] Ephemeral Post Mockup Inspection: Interactive simulation inspector that renders full card mockups, tag taxonomy rankings, deduplication badges, and media selections on demand.
 [x] Full WordPress 6.x UI Fidelity: Synchronized Admin Bar, settings tab navigation, and live published post preview across both Admin and Front-End views.
 
+7. Version 5.3 Release Milestone (Completed in v5.3.0, v5.3.2, v5.3.3 & v5.3.4)
+-------------------------------------------------------
+[x] Next-Run Editorial Workbench (v5.3.0 & v5.3.4): Upgraded to a state-driven architecture, centralizing digest creation into a modular state machine.
+[x] Postbox & UI Standardization (v5.3.0 & v5.3.2): Converted all widgets on both Settings and Actions & Preview tabs into standard collapsible, movable postboxes with optimized icon layout and padding.
+[x] Tab & Staging Improvements (v5.3.2): Unified all staging queue features, toggles, actions, preview, and editor into the Actions, Staging & Diagnostics tab, and made "General Settings" the default primary tab.
+[x] Server-Side Action Handlers (v5.3.3 & v5.3.4): Implemented live WordPress server-side POST operational handlers for publishing, saving drafts, pending review, and curation actions.
+
 
