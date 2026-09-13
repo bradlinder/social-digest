@@ -8,18 +8,12 @@ coverage/
 .env*
 !.env.example
 
-# Web App / Dev Studio Source & Tooling
-src/
-public/
-server.ts
-index.html
-vite.config.ts
-tsconfig.json
-package.json
+# Web App / Dev Studio Build Artifacts & Temporary Files
+.vite/
+.backups/
+plugin_storage/
 package-lock.json
 bun.lock
-metadata.json
-plugin_storage/
 
 # IDE / Editor Files
 .vscode/

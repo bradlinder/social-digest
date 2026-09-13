@@ -57,4 +57,35 @@ Social Digest - Feature Roadmap & Release Status
 [ ] Tag Popularity Caching: Implement temporary 5-minute WordPress transients for batch `get_terms()` lookups to reduce database query loads during manual test cycles.
 [ ] Mastodon Alt-Text Parity: Ensure Mastodon image alt-text extraction correctly falls back to attachment descriptions, maintaining accessibility parity with Bluesky embeds.
 
+9. Workbench Stabilization & Architectural Hardening (Planned)
+--------------------------------------------------------------
+Phase 1 — Critical Fixes (Blocking, Prioritized for Next Release)
+[ ] Persist Cutoff Timestamps on Publish:
+    - In `social_fetch_workbench_candidates()`, after a successful publish (not on mere fetch/preview), call `update_option('bsky_last_digest_time', $new_bsky)` and `update_option('masto_last_digest_time', $new_masto)`.
+    - Advance cutoffs only when the run actually publishes — inside `social_publish_workbench_run()` on success — not at fetch time, so a discarded/unpublished fetch never causes posts to be silently skipped later.
+    - Test: fetch -> publish -> refresh again, and confirm the same posts don't reappear as candidates.
+[ ] Fix Nonce Action Mismatches:
+    - Change `check_admin_referer('sd53_manual_run', 'sd53_nonce')` -> `check_admin_referer('sd53_workbench_action', 'sd53_nonce')`.
+    - Same fix for `check_admin_referer('sd53_reset_cutoff', 'sd53_nonce')`.
+    - Test: click "Run Standard Automated Import Now" and "Clear Cutoff Markers" and confirm neither hits the "Are you sure?" die screen.
+
+Phase 2 — Architectural Decisions & Collision Prevention
+[ ] Cron vs. Manual Staging Collision Prevention (Option A: Mutually Exclusive by Policy):
+    - Document clearly (in settings screen and/or README) that scheduling and manual workbench curation are not meant to run concurrently: if staging by hand, turn the schedule off until published or discarded.
+    - Add a visible warning notice in the Workbench tab when a schedule is active and unpublished candidates exist in `social_digest_next_run` (e.g. "A schedule is active and will overwrite this draft when it next fires. Disable scheduling before curating, or publish/discard this draft first.").
+
+Phase 3 — Editorial Workflow Improvements
+[ ] Refresh Confirmation Dialog:
+    - Add a JS `confirm()` on "Refresh / Fetch Next Run" button (e.g., "Refreshing will discard your current exclusions, pin, and notes — continue?") so data loss is explicit rather than silent.
+    - Only prompt when there is existing state to lose (skip confirmation if candidate list is empty or unchanged from defaults).
+[ ] Candidate Key Stability:
+    - Low priority evaluation; revisit only if preservation-on-refresh across candidate pools is desired later (not needed for confirm-dialog approach).
+
+Phase 4 — Polish & Hygiene
+[ ] Harmonize `network_mode` Default:
+    - Ensure settings tab displayed fallback matches registered setting default (`'both'`), eliminating stray `'bsky'` fallbacks.
+[ ] Remove Dead Code:
+    - Strip `delete_transient('social_digest_simulation_data')` from `social_clear_workbench_state()` as simulation data transient is deprecated in state machine architecture.
+
+
 

@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.3.5
+ * Version: 5.4
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -207,7 +207,7 @@ add_action('admin_init', function() {
         }
     }
 
-    if (isset($_POST['sd53_manual_run']) && check_admin_referer('sd53_manual_run', 'sd53_nonce')) {
+    if (isset($_POST['sd53_manual_run']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
         try {
             $result = social_run_digest_import(false);
         } catch (\Throwable $e) {
@@ -216,7 +216,7 @@ add_action('admin_init', function() {
         add_settings_error('sd53', 'manual', $result['message'] ?? 'Import failed.', !empty($result['success']) ? 'updated' : 'error');
     }
 
-    if (isset($_POST['sd53_reset_cutoff']) && check_admin_referer('sd53_reset_cutoff', 'sd53_nonce')) {
+    if (isset($_POST['sd53_reset_cutoff']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
         delete_option('bsky_last_digest_time');
         delete_option('masto_last_digest_time');
         add_settings_error('sd53', 'cutoff', 'Cutoff markers cleared for both networks.', 'updated');
@@ -225,14 +225,14 @@ add_action('admin_init', function() {
 
 function social_sanitize_settings($input) {
     $output = [];
-    $output['network_mode']       = in_array($input['network_mode'] ?? '', ['bsky', 'mastodon', 'both']) ? $input['network_mode'] : 'bsky';
+    $output['network_mode']       = in_array($input['network_mode'] ?? '', ['bsky', 'mastodon', 'both']) ? $input['network_mode'] : 'both';
     $output['bsky_handle']        = sanitize_text_field($input['bsky_handle'] ?? '');
     $output['masto_handle']       = sanitize_text_field($input['masto_handle'] ?? '');
     $output['cross_dedup']        = !empty($input['cross_dedup']) ? 1 : 0;
     $allowed_strategies           = ['masto_if_longer', 'longest', 'bsky', 'mastodon'];
     $output['preferred_platform'] = in_array($input['preferred_platform'] ?? '', $allowed_strategies) ? $input['preferred_platform'] : 'masto_if_longer';
 
-    $allowed_freqs = ['hourly', 'six_hours', 'twelve_hours', 'interval_days'];
+    $allowed_freqs = ['disabled', 'hourly', 'six_hours', 'twelve_hours', 'interval_days'];
     $output['schedule_freq'] = in_array($input['schedule_freq'] ?? '', $allowed_freqs) ? $input['schedule_freq'] : 'interval_days';
 
     $output['schedule_interval_days'] = max(1, absint($input['schedule_interval_days'] ?? 1));
@@ -312,6 +312,9 @@ function social_reschedule_cron($opts) {
     wp_clear_scheduled_hook('social_digest_cron');
 
     $freq = $opts['schedule_freq'] ?? 'interval_days';
+    if ($freq === 'disabled') {
+        return;
+    }
 
     if ($freq !== 'interval_days') {
         $intervals = [
@@ -354,7 +357,6 @@ function social_save_workbench_state($state) {
 
 function social_clear_workbench_state() {
     delete_option('social_digest_next_run');
-    delete_transient('social_digest_simulation_data');
 }
 
 function social_make_candidate_key($html, $index) {
@@ -543,6 +545,10 @@ function social_fetch_workbench_candidates() {
         'header_override' => '',
         'footer_override' => '',
         'preview_from_zero' => $preview_from_zero,
+        'cutoffs' => [
+            'bsky'  => $new_bsky,
+            'masto' => $new_masto,
+        ],
     ];
     social_save_workbench_state($next);
     return ['success' => true, 'message' => 'Fetched the next-run candidates.', 'state' => $next];
@@ -676,6 +682,29 @@ function social_publish_workbench_run($state) {
             if ($attachment_id) {
                 set_post_thumbnail($post_id, $attachment_id);
             }
+        }
+
+        // Advance cutoff timestamps strictly on successful publish
+        $new_bsky = (int)($state['cutoffs']['bsky'] ?? 0);
+        $new_masto = (int)($state['cutoffs']['masto'] ?? 0);
+
+        if ($new_bsky <= 0 || $new_masto <= 0) {
+            foreach ((array)($state['candidates'] ?? []) as $cand) {
+                $cand_ts = (int)($cand['timestamp'] ?? 0);
+                $net = strtolower($cand['network'] ?? '');
+                if ($net === 'bluesky' && $cand_ts > $new_bsky) {
+                    $new_bsky = $cand_ts;
+                } elseif ($net === 'mastodon' && $cand_ts > $new_masto) {
+                    $new_masto = $cand_ts;
+                }
+            }
+        }
+
+        if ($new_bsky > 0) {
+            update_option('bsky_last_digest_time', $new_bsky);
+        }
+        if ($new_masto > 0) {
+            update_option('masto_last_digest_time', $new_masto);
         }
 
         social_log_run(true, "Workbench digest created (ID: {$post_id}) with {$built['count']} article(s).", $post_id);
@@ -816,8 +845,8 @@ function social_render_settings_page() {
                                                 <th><label for="social_network_mode">Active Platforms</label></th>
                                                 <td>
                                                     <select name="social_digest_options[network_mode]" id="social_network_mode" onchange="socialToggleModeFields(this.value)">
-                                                        <option value="bsky" <?php selected($opts['network_mode'] ?? 'bsky', 'bsky'); ?>>Bluesky Only</option>
-                                                        <option value="mastodon" <?php selected($opts['network_mode'] ?? '', 'mastodon'); ?>>Mastodon Only</option>
+                                                        <option value="bsky" <?php selected($opts['network_mode'] ?? 'both', 'bsky'); ?>>Bluesky Only</option>
+                                                        <option value="mastodon" <?php selected($opts['network_mode'] ?? 'both', 'mastodon'); ?>>Mastodon Only</option>
                                                         <option value="both" <?php selected($opts['network_mode'] ?? 'both', 'both'); ?>>Combined (Bluesky + Mastodon)</option>
                                                     </select>
                                                 </td>
@@ -869,6 +898,7 @@ function social_render_settings_page() {
                                                 <th>Check Frequency</th>
                                                 <td>
                                                     <select name="social_digest_options[schedule_freq]" id="social_schedule_freq" onchange="socialToggleScheduleFields(this.value)">
+                                                        <option value="disabled" <?php selected($opts['schedule_freq'] ?? '', 'disabled'); ?>>Disabled (Manual Workbench Curation Only)</option>
                                                         <option value="hourly" <?php selected($opts['schedule_freq'] ?? '', 'hourly'); ?>>Hourly</option>
                                                         <option value="six_hours" <?php selected($opts['schedule_freq'] ?? '', 'six_hours'); ?>>Every 6 Hours</option>
                                                         <option value="twelve_hours" <?php selected($opts['schedule_freq'] ?? '', 'twelve_hours'); ?>>Every 12 Hours</option>
@@ -878,6 +908,7 @@ function social_render_settings_page() {
                                                         Run every <input name="social_digest_options[schedule_interval_days]" type="number" min="1" max="60" value="<?php echo esc_attr($opts['schedule_interval_days'] ?? 1); ?>" class="small-text" /> day(s) at 
                                                         <input name="social_digest_options[schedule_time]" type="time" value="<?php echo esc_attr($opts['schedule_time'] ?? '17:00'); ?>" />
                                                     </div>
+                                                    <p class="description" style="margin-top:6px;"><strong>Workbench Staging Notice:</strong> If you manually curate digests in the Workbench tab, turn off automated scheduling (or set to <em>Disabled</em>) to prevent scheduled background imports from overwriting unpublished workbench drafts.</p>
                                                 </td>
                                             </tr>
                                             <tr>
@@ -1070,7 +1101,18 @@ function social_render_settings_page() {
             <?php 
             $state = social_workbench_state();
             $candidates = (array)($state['candidates'] ?? []);
+            $has_candidates = !empty($candidates);
+            $fetch_confirm_attr = $has_candidates ? ' onclick="return confirm(\'Refreshing will discard your current exclusions, pin, and notes \u2014 continue?\');"' : '';
             ?>
+
+            <?php if ($next_run && $has_candidates): ?>
+                <div class="notice notice-warning" style="margin: 0 0 15px 0; padding: 12px 14px; border-left: 4px solid #dba617; background: #fff8e5;">
+                    <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #614700;">
+                        <strong>Warning: Automated Schedule Active:</strong> Automated cron scheduling is currently running and will overwrite this staged workbench draft on its next scheduled cycle (<strong><?php echo esc_html(wp_date('Y-m-d H:i:s T', $next_run, $site_tz)); ?></strong>). If you are curating this digest by hand, set <em>Check Frequency</em> to <strong>"Disabled (Manual Workbench Curation Only)"</strong> under <a href="<?php echo esc_url(admin_url('options-general.php?page=social-digest-settings&tab=settings')); ?>" style="color: #2271b1; text-decoration: underline;">General Settings</a> until you publish or discard this draft.
+                    </p>
+                </div>
+            <?php endif; ?>
+
             <div style="background:#fff; border:1px solid #c3c4c7; padding:8px 12px; border-radius:4px; margin-bottom:15px; font-size:12px; color:#50575e; display:flex; align-items:center; gap:6px;">
                 <span class="dashicons dashicons-move" style="color:#2271b1;"></span>
                 <span>Drag widget headers or click toggle arrows to expand, collapse, and reorder.</span>
@@ -1091,7 +1133,7 @@ function social_render_settings_page() {
                     <div class="inside">
                         <p style="margin-top:0">Fetch a preview of what the next digest will contain. Exclude articles, pin a lead story, add commentary, or temporarily override framing before publishing.</p>
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                            <button class="button button-primary" name="sd53_fetch" value="1">Fetch / Refresh Next Run</button>
+                            <button class="button button-primary" name="sd53_fetch" value="1"<?php echo $fetch_confirm_attr; ?>>Fetch / Refresh Next Run</button>
                             <button class="button" name="sd53_save" value="1">Save Next-Run Changes</button>
                             <button class="button" name="sd53_reset" value="1" onclick="return confirm('Discard all changes?')">Reset Next Run</button>
                             <button class="button button-primary" name="sd53_publish" value="1" onclick="return confirm('Publish this digest?')">Publish Next Run</button>

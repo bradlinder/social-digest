@@ -1,0 +1,6 @@
+{
+  "name": "Social Digest for WordPress",
+  "description": "WordPress plugin for curating and publishing automated social digests from Bluesky and Mastodon.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

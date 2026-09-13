@@ -1,0 +1,16 @@
+# Exclude development, build, and AI Studio preview simulation files from release archives
+/src               export-ignore
+/package.json      export-ignore
+/package-lock.json export-ignore
+/bun.lock          export-ignore
+/vite.config.ts    export-ignore
+/tsconfig.json     export-ignore
+/index.html        export-ignore
+/metadata.json     export-ignore
+/postcss.config.js export-ignore
+/tailwind.config.js export-ignore
+/AGENTS.md         export-ignore
+/GEMINI.md         export-ignore
+/roadmap.txt       export-ignore
+/.github           export-ignore
+/.gitignore        export-ignore
