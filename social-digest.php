@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.4.2
+ * Version: 5.4.3
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -162,6 +162,7 @@ add_action('admin_init', function() {
             'keep_threads'           => 1,
             'include_reposts'        => 0,
             'exclude_titles'         => 0,
+            'exclude_self_syndicated'=> 1,
             'title_template'         => 'Social Digest {hashtags}',
             'title_tag_enclosure'    => 'parentheses',
             'title_tag_delimiter'    => 'oxford',
@@ -302,6 +303,7 @@ function social_sanitize_settings($input) {
     $output['keep_threads']        = !empty($input['keep_threads']) ? 1 : 0;
     $output['include_reposts']     = !empty($input['include_reposts']) ? 1 : 0;
     $output['exclude_titles']      = !empty($input['exclude_titles']) ? 1 : 0;
+    $output['exclude_self_syndicated'] = !empty($input['exclude_self_syndicated']) ? 1 : 0;
     $output['title_template']      = sanitize_text_field($input['title_template'] ?? 'Social Digest {hashtags}');
     
     $allowed_enclosures = ['parentheses', 'brackets', 'none'];
@@ -399,6 +401,7 @@ function social_fetch_workbench_candidates() {
     $keep_threads = !empty($opts['keep_threads']);
     $include_reposts = !empty($opts['include_reposts']);
     $exclude_titles = !empty($opts['exclude_titles']);
+    $exclude_self_syndicated = !isset($opts['exclude_self_syndicated']) || !empty($opts['exclude_self_syndicated']);
     $excluded_words = array_filter(array_map('trim', explode(',', $opts['excluded_words'] ?? '')));
     $fetch_order = $opts['fetch_order'] ?? 'newest';
     $max_posts = max(1, (int)($opts['max_posts'] ?? 20));
@@ -430,21 +433,28 @@ function social_fetch_workbench_candidates() {
         $new_masto = (int)($r['newest_timestamp'] ?? $masto_last);
     }
 
-    $preview_from_zero = empty($raw);
-    if ($preview_from_zero) {
-        $fallback_cutoff = $age_boundary; // respect max_age_days rather than querying back to timestamp 0
-        if ($mode === 'bsky' || $mode === 'both') {
-            $r = social_fetch_bluesky($opts['bsky_handle'] ?? '', $fallback_cutoff, $keep_threads, $include_reposts);
-            $raw = array_merge($raw, (array)($r['posts'] ?? []));
-            $new_bsky = max($new_bsky, (int)($r['newest_timestamp'] ?? 0));
-        }
-        if ($mode === 'mastodon' || $mode === 'both') {
-            $r = social_fetch_mastodon($opts['masto_handle'] ?? '', $fallback_cutoff, $keep_threads, $include_reposts);
-            $raw = array_merge($raw, (array)($r['posts'] ?? []));
-            $new_masto = max($new_masto, (int)($r['newest_timestamp'] ?? 0));
-        }
+    // Notice: Do NOT fall back to historical posts when the network query yields no new posts.
+    // If the cutoff was manually set to "Right Now" or a recent publish, empty queue is the correct result.
+    if (!$raw) {
+        $empty_state = [
+            'created' => time(),
+            'preview' => ['title' => '', 'tags' => [], 'featured_image' => ''],
+            'candidates' => [],
+            'framing_override_enabled' => false,
+            'header_override' => '',
+            'footer_override' => '',
+            'cutoffs' => [
+                'bsky'  => $new_bsky,
+                'masto' => $new_masto,
+            ],
+        ];
+        social_save_workbench_state($empty_state);
+        return [
+            'success' => true,
+            'message' => 'No new posts found since the active cutoff timestamp. Next-run queue is clear.',
+            'state'   => $empty_state
+        ];
     }
-    if (!$raw) return ['success' => false, 'message' => 'No posts returned from configured networks.'];
 
     $normalized_site_titles = [];
     if ($exclude_titles) {
@@ -465,6 +475,9 @@ function social_fetch_workbench_candidates() {
         $text = (string)($item['text'] ?? '');
         $skip = false;
         if ($age_boundary > 0 && (int)($item['timestamp'] ?? 0) < $age_boundary) {
+            continue;
+        }
+        if ($exclude_self_syndicated && social_post_links_to_site($item)) {
             continue;
         }
         foreach ($excluded_words as $word) {
@@ -582,7 +595,6 @@ function social_fetch_workbench_candidates() {
         'framing_override_enabled' => false,
         'header_override' => '',
         'footer_override' => '',
-        'preview_from_zero' => $preview_from_zero,
         'cutoffs' => [
             'bsky'  => $new_bsky,
             'masto' => $new_masto,
@@ -973,6 +985,7 @@ function social_render_settings_page() {
                                                 <th>Feed Rules</th>
                                                 <td>
                                                     <label><input type="checkbox" name="social_digest_options[include_reposts]" value="1" <?php checked($opts['include_reposts'] ?? 0, 1); ?> /> Include Reposts / Boosts</label><br>
+                                                    <label><input type="checkbox" name="social_digest_options[exclude_self_syndicated]" value="1" <?php checked($opts['exclude_self_syndicated'] ?? 1, 1); ?> /> Exclude self-syndicated posts (posts linking back to this WordPress site)</label><br>
                                                     <label><input type="checkbox" name="social_digest_options[exclude_titles]" value="1" <?php checked($opts['exclude_titles'] ?? 0, 1); ?> /> Exclude posts matching existing WordPress headlines</label><br>
                                                     <label><input type="checkbox" name="social_digest_options[keep_threads]" value="1" <?php checked($opts['keep_threads'] ?? 1, 1); ?> /> Include self-replies / threads</label>
                                                 </td>
@@ -1582,6 +1595,43 @@ function social_clean_url($url) {
     $clean = preg_replace('#^https?://#i', '', $clean);
     $clean = preg_replace('#^www\.#i', '', $clean);
     return strtolower(trim(preg_replace('#[\./]+$#', '', $clean)));
+}
+
+function social_post_links_to_site($item) {
+    $site_host = wp_parse_url(home_url(), PHP_URL_HOST);
+    if (empty($site_host)) {
+        $site_host = wp_parse_url(site_url(), PHP_URL_HOST);
+    }
+    if (empty($site_host)) return false;
+    $site_host = strtolower(preg_replace('#^www\.#i', '', (string)$site_host));
+    if ($site_host === '') return false;
+
+    // Check extracted structured URLs from facets/entities
+    foreach ((array)($item['urls'] ?? []) as $u) {
+        $u_host = wp_parse_url((string)$u, PHP_URL_HOST);
+        if ($u_host) {
+            $u_host = strtolower(preg_replace('#^www\.#i', '', (string)$u_host));
+            if ($u_host === $site_host || str_ends_with($u_host, '.' . $site_host)) {
+                return true;
+            }
+        }
+    }
+
+    // Also inspect any unparsed inline URLs in the post text
+    $text = (string)($item['text'] ?? '');
+    if ($text !== '' && preg_match_all('/\bhttps?:\/\/[^\s<>"\'\)]+/i', $text, $matches)) {
+        foreach ($matches[0] as $match_url) {
+            $u_host = wp_parse_url($match_url, PHP_URL_HOST);
+            if ($u_host) {
+                $u_host = strtolower(preg_replace('#^www\.#i', '', (string)$u_host));
+                if ($u_host === $site_host || str_ends_with($u_host, '.' . $site_host)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
 }
 
 function social_check_posts_match($p1, $p2) {

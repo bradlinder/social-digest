@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.4.2',
+  version: '5.4.3',
   requiresWP: '6.0+',
   testedUpTo: '6.7',
   requiresPHP: '7.4+',
@@ -22,9 +22,20 @@ export const PLUGIN_META = {
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.4.3',
+    tag: 'v5.4.3',
+    isLatest: true,
+    highlights: [
+      'Resolved Workbench Empty-Queue Cutoff Bug: Removed historical fallback logic in candidate prefetching so setting cutoffs to "Right Now" strictly yields an empty queue when no newer posts exist.',
+      'Self-Syndication Ingestion Filter: Automatic domain-matching filter ignores social posts linking back to the host WordPress domain, preventing auto-syndicated digests/posts from re-importing.',
+      'Feed Rules Setting: Added "Exclude self-syndicated posts" toggle in General Settings (enabled by default) for full editorial control.',
+      'Cutoff Marker Synchronization: Setting or clearing cutoffs immediately resets staged drafts so stale workbench items never linger.'
+    ]
+  },
+  {
     version: '5.4.2',
     tag: 'v5.4.2',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Added "Set Cutoff to Right Now": Instantly marks all existing posts as seen with a single click, ensuring only posts published after this moment are ingested.',
       'Added Custom Cutoff Date & Time picker: Select any custom historical or future date/time boundary for digest candidate evaluation.',
