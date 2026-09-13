@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.4
+ * Version: 5.4.2
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -221,6 +221,32 @@ add_action('admin_init', function() {
         delete_option('masto_last_digest_time');
         add_settings_error('sd53', 'cutoff', 'Cutoff markers cleared for both networks.', 'updated');
     }
+
+    if (isset($_POST['sd53_set_cutoff_now']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+        $now = time();
+        update_option('bsky_last_digest_time', $now);
+        update_option('masto_last_digest_time', $now);
+        $tz = wp_timezone();
+        add_settings_error('sd53', 'cutoff', 'Cutoff markers set to current time (' . esc_html(wp_date('Y-m-d H:i:s T', $now, $tz)) . '). No posts older than this moment will be used.', 'updated');
+    }
+
+    if (isset($_POST['sd53_set_cutoff_custom']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+        $custom_dt = sanitize_text_field($_POST['sd53_custom_cutoff_datetime'] ?? '');
+        if (!empty($custom_dt)) {
+            $tz = wp_timezone();
+            $dt = date_create_immutable($custom_dt, $tz);
+            if ($dt) {
+                $custom_ts = $dt->getTimestamp();
+                update_option('bsky_last_digest_time', $custom_ts);
+                update_option('masto_last_digest_time', $custom_ts);
+                add_settings_error('sd53', 'cutoff', 'Cutoff markers set to ' . esc_html(wp_date('Y-m-d H:i:s T', $custom_ts, $tz)) . '. Posts older than this will be ignored.', 'updated');
+            } else {
+                add_settings_error('sd53', 'cutoff', 'Invalid date/time format provided for custom cutoff.', 'error');
+            }
+        } else {
+            add_settings_error('sd53', 'cutoff', 'Please select a date and time to set a custom cutoff.', 'error');
+        }
+    }
 });
 
 function social_sanitize_settings($input) {
@@ -382,6 +408,14 @@ function social_fetch_workbench_candidates() {
     $bsky_last = (int)get_option('bsky_last_digest_time', 0);
     $masto_last = (int)get_option('masto_last_digest_time', 0);
 
+    // Apply max_age_days boundary to prevent massive backlogs on fresh or reset cutoffs
+    $max_age_days = absint($opts['max_age_days'] ?? 0);
+    $age_boundary = ($max_age_days > 0) ? (time() - ($max_age_days * DAY_IN_SECONDS)) : 0;
+    if ($age_boundary > 0) {
+        $bsky_last  = max($bsky_last, $age_boundary);
+        $masto_last = max($masto_last, $age_boundary);
+    }
+
     $raw = [];
     $new_bsky = $bsky_last;
     $new_masto = $masto_last;
@@ -398,13 +432,14 @@ function social_fetch_workbench_candidates() {
 
     $preview_from_zero = empty($raw);
     if ($preview_from_zero) {
+        $fallback_cutoff = $age_boundary; // respect max_age_days rather than querying back to timestamp 0
         if ($mode === 'bsky' || $mode === 'both') {
-            $r = social_fetch_bluesky($opts['bsky_handle'] ?? '', 0, $keep_threads, $include_reposts);
+            $r = social_fetch_bluesky($opts['bsky_handle'] ?? '', $fallback_cutoff, $keep_threads, $include_reposts);
             $raw = array_merge($raw, (array)($r['posts'] ?? []));
             $new_bsky = max($new_bsky, (int)($r['newest_timestamp'] ?? 0));
         }
         if ($mode === 'mastodon' || $mode === 'both') {
-            $r = social_fetch_mastodon($opts['masto_handle'] ?? '', 0, $keep_threads, $include_reposts);
+            $r = social_fetch_mastodon($opts['masto_handle'] ?? '', $fallback_cutoff, $keep_threads, $include_reposts);
             $raw = array_merge($raw, (array)($r['posts'] ?? []));
             $new_masto = max($new_masto, (int)($r['newest_timestamp'] ?? 0));
         }
@@ -429,6 +464,9 @@ function social_fetch_workbench_candidates() {
     foreach ($raw as $item) {
         $text = (string)($item['text'] ?? '');
         $skip = false;
+        if ($age_boundary > 0 && (int)($item['timestamp'] ?? 0) < $age_boundary) {
+            continue;
+        }
         foreach ($excluded_words as $word) {
             if ($word !== '' && stripos($text, $word) !== false) { $skip = true; break; }
         }
@@ -632,6 +670,10 @@ function social_build_workbench_content($state) {
 
 function social_publish_workbench_run($state) {
     try {
+        if (function_exists('wp_raise_memory_limit')) {
+            wp_raise_memory_limit('admin');
+        }
+
         $opts = get_option('social_digest_options', []);
         $min = (int)($opts['min_posts'] ?? 1);
         $built = social_build_workbench_content($state);
@@ -1243,10 +1285,28 @@ function social_render_settings_page() {
                             <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
                         </div>
                         <div class="inside">
-                            <p>Bluesky cutoff: <strong><?php echo $bsky_last ? esc_html(wp_date('Y-m-d H:i:s', $bsky_last, $site_tz)) : 'None'; ?></strong> | Mastodon cutoff: <strong><?php echo $masto_last ? esc_html(wp_date('Y-m-d H:i:s', $masto_last, $site_tz)) : 'None'; ?></strong> | Next auto-run: <strong><?php echo $next_run ? esc_html(wp_date('Y-m-d H:i:s T', $next_run, $site_tz)) : 'Not scheduled'; ?></strong></p>
-                            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-                                <button class="button" name="sd53_manual_run" value="1">Run Standard Automated Import Now</button>
-                                <button class="button" name="sd53_reset_cutoff" value="1" onclick="return confirm('Clear cutoff markers for both networks?')">Clear Cutoff Markers</button>
+                            <p>Bluesky cutoff: <strong><?php echo $bsky_last ? esc_html(wp_date('Y-m-d H:i:s T', $bsky_last, $site_tz)) : 'None'; ?></strong> | Mastodon cutoff: <strong><?php echo $masto_last ? esc_html(wp_date('Y-m-d H:i:s T', $masto_last, $site_tz)) : 'None'; ?></strong> | Next auto-run: <strong><?php echo $next_run ? esc_html(wp_date('Y-m-d H:i:s T', $next_run, $site_tz)) : 'Not scheduled'; ?></strong></p>
+                            
+                            <div style="margin-top:14px; padding-top:12px; border-top:1px solid #dcdcde;">
+                                <strong style="display:block; margin-bottom:6px; color:#1d2327;">Cutoff Management &amp; Time Boundary:</strong>
+                                <p class="description" style="margin-bottom:10px;">Control which posts are considered "new". Any posts created before the cutoff timestamp will not be included in upcoming digests.</p>
+                                
+                                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+                                    <button type="submit" class="button button-primary" name="sd53_set_cutoff_now" value="1" onclick="return confirm('Set cutoff markers to right now? No posts published before this exact moment will be pulled into future digests.')">
+                                        <span class="dashicons dashicons-clock" style="vertical-align:text-bottom; margin-right:3px;"></span> Set Cutoff to Right Now
+                                    </button>
+                                    <button type="submit" class="button" name="sd53_reset_cutoff" value="1" onclick="return confirm('Clear cutoff markers for both networks? Upcoming fetch will pull posts back to your Max Post Age limit.')">Clear Cutoffs (Fetch Backlog)</button>
+                                </div>
+
+                                <div style="display:inline-flex; gap:6px; flex-wrap:wrap; align-items:center; background:#f6f7f7; border:1px solid #dcdcde; padding:8px 12px; border-radius:4px;">
+                                    <label for="sd53_custom_cutoff_datetime" style="font-weight:600; font-size:12px;">Or Set Custom Cutoff Date &amp; Time:</label>
+                                    <input type="datetime-local" id="sd53_custom_cutoff_datetime" name="sd53_custom_cutoff_datetime" class="regular-text" style="width:auto; max-width:210px;" value="<?php echo esc_attr(wp_date('Y-m-d\TH:i', time(), $site_tz)); ?>" />
+                                    <button type="submit" class="button" name="sd53_set_cutoff_custom" value="1">Apply Custom Cutoff</button>
+                                </div>
+                            </div>
+
+                            <div style="margin-top:14px; padding-top:12px; border-top:1px solid #dcdcde; display:flex; gap:8px; flex-wrap:wrap;">
+                                <button type="submit" class="button" name="sd53_manual_run" value="1">Run Standard Automated Import Now</button>
                             </div>
                         </div>
                     </div>
@@ -1552,10 +1612,27 @@ function social_get_clean_text_length($text) {
 
 function social_sideload_image_by_mime($url, $post_id, $desc = '') {
     if (empty($url)) return false;
-    $response = wp_safe_remote_get($url, ['timeout' => 25]);
+
+    // Temporary memory elevation for GD/Imagick thumbnail processing
+    if (function_exists('wp_raise_memory_limit')) {
+        wp_raise_memory_limit('image');
+    }
+
+    // Guard: Prevent downloading massive non-thumbnail images (cap at 12MB)
+    $response = wp_safe_remote_get($url, [
+        'timeout' => 25,
+        'stream'  => false,
+    ]);
     if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) return false;
+    
+    $headers = wp_remote_retrieve_headers($response);
+    $content_length = (int)($headers['content-length'] ?? 0);
+    if ($content_length > 12 * 1024 * 1024) {
+        return false; // Skip excessive remote assets
+    }
+
     $image_data = wp_remote_retrieve_body($response);
-    if (empty($image_data)) return false;
+    if (empty($image_data) || strlen($image_data) > 12 * 1024 * 1024) return false;
 
     $filename = 'digest-thumb-' . $post_id . '-' . wp_generate_password(6, false) . '.jpg';
     $upload = wp_upload_bits($filename, null, $image_data);
@@ -1569,7 +1646,20 @@ function social_sideload_image_by_mime($url, $post_id, $desc = '') {
 
     if ($attach_id && !is_wp_error($attach_id)) {
         require_once(ABSPATH . 'wp-admin/includes/image.php');
-        wp_update_attachment_metadata($attach_id, wp_generate_attachment_metadata($attach_id, $upload['file']));
+
+        // CPU & Memory Mitigation: Limit thumbnail resizing to essential standard sizes
+        $size_limiter = function($sizes) {
+            $allowed = ['thumbnail', 'medium', 'medium_large', 'large', 'post-thumbnail'];
+            return array_intersect_key((array)$sizes, array_flip($allowed));
+        };
+        add_filter('intermediate_image_sizes_advanced', $size_limiter, 99);
+
+        $metadata = wp_generate_attachment_metadata($attach_id, $upload['file']);
+        remove_filter('intermediate_image_sizes_advanced', $size_limiter, 99);
+
+        if (!empty($metadata) && !is_wp_error($metadata)) {
+            wp_update_attachment_metadata($attach_id, $metadata);
+        }
         return $attach_id;
     }
     return false;

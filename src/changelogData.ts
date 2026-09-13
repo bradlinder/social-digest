@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.4',
+  version: '5.4.2',
   requiresWP: '6.0+',
   testedUpTo: '6.7',
   requiresPHP: '7.4+',
@@ -22,9 +22,30 @@ export const PLUGIN_META = {
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.4.2',
+    tag: 'v5.4.2',
+    isLatest: true,
+    highlights: [
+      'Added "Set Cutoff to Right Now": Instantly marks all existing posts as seen with a single click, ensuring only posts published after this moment are ingested.',
+      'Added Custom Cutoff Date & Time picker: Select any custom historical or future date/time boundary for digest candidate evaluation.',
+      'Enhanced Cutoff Diagnostics: Added detailed admin notices showing the exact localized time applied for both Bluesky and Mastodon.'
+    ]
+  },
+  {
+    version: '5.4.1',
+    tag: 'v5.4.1',
+    isLatest: false,
+    highlights: [
+      'CPU & Memory Spike Mitigation: Added temporary memory elevation (wp_raise_memory_limit) during thumbnail sideloading and digest publishing.',
+      'Thumbnail Generation Throttling: Restricted intermediate image size generation during sideloading to standard sizes, avoiding multi-size resizing storms.',
+      'Remote Image Download Guard: Implemented a 12MB ceiling on remote image downloads to prevent malformed or oversized assets from spiking RAM.',
+      'Date-Range Backlog Bound: Enforced max_age_days cutoff boundary on initial and zero-cutoff candidate fetches to prevent heavy historical backlogs.'
+    ]
+  },
+  {
     version: '5.4',
     tag: 'v5.4',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Persist Cutoff Timestamps strictly on publication success, preventing unpublished candidate fetches from advancing cutoffs.',
       'Fixed admin nonce action verification mismatches for manual automated imports and cutoff marker resets.',
