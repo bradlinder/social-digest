@@ -15,4 +15,8 @@ The live preview of this project displays a lightweight, high-speed **Plugin Rel
   3. `package.json` (`"version": "x.y.z"`)
   4. Display badge in `/src/App.tsx`
 
+## Roadmap & Next Priorities
+- Consult `roadmap.txt` for the prioritized "Immediate Recommended Next Steps (To Do List)" whenever asked what to work on next.
+
+
 

@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.4.3',
+  version: '5.5.3',
   requiresWP: '6.0+',
   testedUpTo: '6.7',
   requiresPHP: '7.4+',
@@ -17,14 +17,52 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.3.5_beta',
+  rollbackTarget: 'v5.5.2',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.5.3',
+    tag: 'v5.5.3',
+    isLatest: true,
+    highlights: [
+      'Restored Social Embed CSS Harmonization: Re-applied front-end card framing CSS for Mastodon and Bluesky embeds (600px max-width, overflow wrapping, matching borders, padding, and subtle shadows).',
+      'Unified Visual Styling: Ensures both Bluesky and Mastodon post embeds render with visual symmetry across published single posts.'
+    ]
+  },
+  {
+    version: '5.5.2',
+    tag: 'v5.5.2',
+    isLatest: false,
+    highlights: [
+      'Resolved Mastodon Embed Content & Handle Parser Bug: Fixed missing $body_content, $author_acct, and $clean_handle variable assignments in social_fetch_mastodon().',
+      'Restored Complete Embed Rendering: Ensures Mastodon post text and author handles (@username) render inside the blockquote card iframe and staging workbench.'
+    ]
+  },
+  {
+    version: '5.5.1',
+    tag: 'v5.5.1',
+    isLatest: false,
+    highlights: [
+      'Reverted Social Embed CSS: Removed front-end injected stylesheet rules for social embeds per user request.',
+      'Random Article Ordering Option: Preserved "Random Order" setting in General Settings alongside Reverse Chronological and Chronological options.',
+      'Strict Cutoff Persistence & Nonce Audit: Preserved strict cutoff advancement upon successful publication and verified consistent admin nonce security.'
+    ]
+  },
+  {
+    version: '5.5',
+    tag: 'v5.5',
+    isLatest: false,
+    highlights: [
+      'Random Article Ordering Option: Added "Random Order" setting in General Settings alongside Reverse Chronological and Chronological options.',
+      'Preserved Image Selection Rules: Image selection (including "exclude most recent post" rule) strictly evaluates chronological order regardless of article display sequence.',
+      'Strict Cutoff Persistence & Nonce Audit: Verified cutoffs strictly advance inside social_publish_workbench_run() upon successful publication and verified consistent admin nonce security.'
+    ]
+  },
+  {
     version: '5.4.3',
     tag: 'v5.4.3',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Resolved Workbench Empty-Queue Cutoff Bug: Removed historical fallback logic in candidate prefetching so setting cutoffs to "Right Now" strictly yields an empty queue when no newer posts exist.',
       'Self-Syndication Ingestion Filter: Automatic domain-matching filter ignores social posts linking back to the host WordPress domain, preventing auto-syndicated digests/posts from re-importing.',

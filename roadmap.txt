@@ -1,6 +1,18 @@
 Social Digest - Feature Roadmap & Release Status
 ==================================================
 
+🎯 Immediate Recommended Next Steps (To Do List)
+------------------------------------------------
+1. Dual-Platform Back-Links [Feature Path]:
+   - Render links back to both Bluesky and Mastodon at the bottom of each social entry/embed when updates are cross-posted or deduplicated across both networks.
+
+0. Release v5.5 - v5.5.3 Enhancements (Completed in v5.5 - v5.5.3)
+-----------------------------------------------------------------
+[x] Restored Social Embed CSS (v5.5.3): Re-introduced card framing, 600px max-width, overflow wrapping, matching borders, padding, and drop shadows across Mastodon and Bluesky embeds.
+[x] Resolved Mastodon Content Parser Bug (v5.5.2): Fixed missing `$body_content`, `$author_acct`, and `$clean_handle` variables in `social_fetch_mastodon()`.
+[x] Random Article Ordering Option (v5.5): Exposed Reverse Chronological, Chronological, and Random ordering choices in General Settings while keeping image selection logic strictly chronological to protect the "exclude most recent post" rule.
+[x] Persist Cutoffs Strictly on Publish & Nonce Audit (v5.5): Verified strict cutoff advancement upon successful publication and verified consistent admin nonce security across all workbench actions.
+
 1. Admin Interface & Workflow Separation (Completed in v5.0.0)
 ---------------------------------------------------------------
 [x] Tabbed Settings & Actions UI: Divided the WordPress admin screen into distinct tabs using standard WordPress `nav-tab-wrapper` (Settings, Editorial & Staging Queue, Actions & Diagnostics). This cleanly separates persistent configuration from operational triggers and diagnostic tests.
@@ -86,6 +98,44 @@ Phase 4 — Polish & Hygiene
     - Ensure settings tab displayed fallback matches registered setting default (`'both'`), eliminating stray `'bsky'` fallbacks.
 [ ] Remove Dead Code:
     - Strip `delete_transient('social_digest_simulation_data')` from `social_clear_workbench_state()` as simulation data transient is deprecated in state machine architecture.
+
+10. Future UX & Visual Enhancements Roadmap (Planned)
+---------------------------------------------------
+[ ] Dual-Platform Back-Links:
+    - Render links back to both Mastodon and Bluesky at the bottom of each social entry/embed when updates are matched across networks or when enabled via feed options.
+[ ] CSS Harmonization for Social Embeds (Mastodon & Bluesky Parity):
+    - Refine plugin frontend styling so Mastodon embeds visually match Bluesky embeds cleanly (centered/600px width constraint, clean word breaking, matching card borders, background, padding, and subtle drop shadows).
+    - Reference CSS pattern:
+      ```css
+      /* Center and constrain both Bluesky and Mastodon embeds */
+      blockquote.social-post {
+          margin-left: auto !important;
+          margin-right: auto !important;
+          max-width: 600px !important;
+          box-sizing: border-box !important;
+          overflow-wrap: anywhere !important;
+          word-break: break-word !important;
+      }
+
+      /* Ensure link tags and URLs wrap cleanly */
+      blockquote.social-post a,
+      blockquote.social-post .masto-body,
+      blockquote.social-post p {
+          overflow-wrap: anywhere !important;
+          word-break: break-word !important;
+      }
+
+      /* Card framing for Mastodon to match Bluesky */
+      blockquote.social-post.mastodon-post {
+          border: 1px solid #0085ff !important;
+          border-left: 4px solid #0085ff !important;
+          border-radius: 8px !important;
+          padding: 16px !important;
+          background: #ffffff !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+      }
+      ```
+
 
 
 

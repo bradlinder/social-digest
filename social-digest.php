@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.4.3
+ * Version: 5.5.3
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -66,6 +66,39 @@ add_filter('cron_schedules', function($schedules) {
 add_action('wp_enqueue_scripts', function() {
     if (is_singular('post')) {
         wp_enqueue_script('bsky-embed-js', 'https://embed.bsky.app/static/embed.js', [], null, true);
+    }
+});
+
+add_action('wp_head', function() {
+    if (is_singular('post')) {
+        ?>
+        <style id="social-digest-embed-styles">
+        /* Card framing parity and 600px max-width alignment for social embeds */
+        blockquote.social-post {
+            margin-left: auto !important;
+            margin-right: auto !important;
+            max-width: 600px !important;
+            box-sizing: border-box !important;
+            overflow-wrap: anywhere !important;
+            word-break: break-word !important;
+        }
+        blockquote.social-post a,
+        blockquote.social-post .masto-body,
+        blockquote.social-post p {
+            overflow-wrap: anywhere !important;
+            word-break: break-word !important;
+        }
+        blockquote.social-post.mastodon-post,
+        blockquote.social-post.bsky-embed {
+            border: 1px solid #0085ff !important;
+            border-left: 4px solid #0085ff !important;
+            border-radius: 8px !important;
+            padding: 16px !important;
+            background: #ffffff !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+        }
+        </style>
+        <?php
     }
 });
 
@@ -530,9 +563,21 @@ function social_fetch_workbench_candidates() {
     }
 
     usort($eligible, function($a, $b) { return (int)$b['timestamp'] <=> (int)$a['timestamp']; });
-    if ($fetch_order === 'oldest') $eligible = array_reverse($eligible);
     if (count($eligible) > $max_posts) $eligible = array_slice($eligible, 0, $max_posts);
     if (!$eligible) return ['success' => false, 'message' => 'No eligible posts are available after filtering and deduplication.'];
+
+    // Preserve chronological list (newest first) for thumbnail selection so 'exclude_first' always excludes the most recent post in time
+    $chronological_posts = $eligible;
+
+    // Apply display ordering preference (reverse chronological, chronological, or random)
+    $display_order = $opts['display_order'] ?? 'reverse';
+    if ($display_order === 'chronological' || $display_order === 'oldest') {
+        usort($eligible, function($a, $b) { return (int)$a['timestamp'] <=> (int)$b['timestamp']; });
+    } elseif ($display_order === 'random') {
+        shuffle($eligible);
+    } else {
+        usort($eligible, function($a, $b) { return (int)$b['timestamp'] <=> (int)$a['timestamp']; });
+    }
 
     $candidates = [];
     foreach ($eligible as $i => $item) {
@@ -577,10 +622,10 @@ function social_fetch_workbench_candidates() {
     $featured = '';
     if (!empty($opts['auto_thumb'])) {
         $thumbs = [];
-        $ordered = $eligible;
+        $ordered = $chronological_posts;
         if (($opts['thumb_selection_scope'] ?? 'exclude_first') === 'exclude_first') $ordered = array_slice($ordered, 1);
         foreach ($ordered as $p) if (!empty($p['thumb_image'])) $thumbs[] = esc_url_raw($p['thumb_image']);
-        if (!$thumbs) foreach ($eligible as $p) if (!empty($p['thumb_image'])) $thumbs[] = esc_url_raw($p['thumb_image']);
+        if (!$thumbs) foreach ($chronological_posts as $p) if (!empty($p['thumb_image'])) $thumbs[] = esc_url_raw($p['thumb_image']);
         if ($thumbs) {
             $mode_thumb = $opts['thumb_selection_mode'] ?? 'random';
             if ($mode_thumb === 'random') $featured = $thumbs[array_rand($thumbs)];
@@ -988,6 +1033,17 @@ function social_render_settings_page() {
                                                     <label><input type="checkbox" name="social_digest_options[exclude_self_syndicated]" value="1" <?php checked($opts['exclude_self_syndicated'] ?? 1, 1); ?> /> Exclude self-syndicated posts (posts linking back to this WordPress site)</label><br>
                                                     <label><input type="checkbox" name="social_digest_options[exclude_titles]" value="1" <?php checked($opts['exclude_titles'] ?? 0, 1); ?> /> Exclude posts matching existing WordPress headlines</label><br>
                                                     <label><input type="checkbox" name="social_digest_options[keep_threads]" value="1" <?php checked($opts['keep_threads'] ?? 1, 1); ?> /> Include self-replies / threads</label>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Article Ordering</th>
+                                                <td>
+                                                    <select name="social_digest_options[display_order]" id="social_display_order">
+                                                        <option value="reverse" <?php selected($opts['display_order'] ?? 'reverse', 'reverse'); ?>>Reverse Chronological (Newest First)</option>
+                                                        <option value="chronological" <?php selected($opts['display_order'] ?? '', 'chronological'); ?>>Chronological (Oldest First)</option>
+                                                        <option value="random" <?php selected($opts['display_order'] ?? '', 'random'); ?>>Random Order</option>
+                                                    </select>
+                                                    <p class="description" style="margin-top:4px;">Controls the display sequence of social posts in the published digest article and Next-Run Workbench preview.</p>
                                                 </td>
                                             </tr>
                                         </table>
@@ -1530,7 +1586,10 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
             if (($post_data['in_reply_to_account_id'] ?? '') !== $account_id) continue;
         }
 
-        $clean_text = wp_strip_all_tags($post_data['content'] ?? '');
+        $body_content = $post_data['content'] ?? '';
+        $clean_text   = wp_strip_all_tags($body_content);
+        $clean_handle = $username;
+        $author_acct  = !empty($post_data['account']['acct']) ? $post_data['account']['acct'] : ($post_data['account']['username'] ?? $username);
         $first_image_url = null;
         $media_html = '';
 
