@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.5.3
+ * Version: 5.5.4
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -658,14 +658,25 @@ function social_sanitize_next_run($input) {
         if (!empty($c['key'])) $old_candidates[$c['key']] = $c;
     }
     
-    $pinned_key = sanitize_key($input['pinned_lead_post'] ?? '');
+    $pinned_key   = sanitize_key($input['pinned_lead_post'] ?? '');
+    $featured_sel = sanitize_key($input['selected_featured_post'] ?? '');
+
+    if ($featured_sel === 'none') {
+        $out['featured_image_override_key'] = 'none';
+        $out['preview']['featured_image']   = '';
+    } elseif ($featured_sel !== '' && $featured_sel !== 'auto' && isset($old_candidates[$featured_sel]) && !empty($old_candidates[$featured_sel]['thumb_image'])) {
+        $out['featured_image_override_key'] = $featured_sel;
+        $out['preview']['featured_image']   = esc_url_raw($old_candidates[$featured_sel]['thumb_image']);
+    } else {
+        $out['featured_image_override_key'] = 'auto';
+    }
 
     foreach ((array)($input['candidate'] ?? []) as $key => $raw) {
         $key = sanitize_key($key);
         if (!$key || !isset($old_candidates[$key])) continue;
         $base = $old_candidates[$key];
-        $base['excluded'] = !empty($raw['excluded']);
-        $base['pinned'] = ($key === $pinned_key && empty($base['excluded']));
+        $base['excluded']   = !empty($raw['excluded']);
+        $base['pinned']     = ($key === $pinned_key && empty($base['excluded']));
         $base['commentary'] = sanitize_textarea_field($raw['commentary'] ?? '');
         $out['candidates'][] = $base;
     }
@@ -880,6 +891,8 @@ function social_render_settings_page() {
         .sd53-item { border: 1px solid #dcdcde; border-radius: 6px; margin-bottom: 12px; background: #fff; }
         .sd53-item.excluded { opacity: .55; background: #f6f6f6; }
         .sd53-item.is-pinned { border: 2px solid #f59e0b; background: #fffdf5; }
+        .sd53-item.is-featured-thumb { border: 2px solid #10b981; background: #f0fdf4; }
+        .sd53-item.is-pinned.is-featured-thumb { border: 2px solid #f59e0b; outline: 2px solid #10b981; }
         .sd53-item-head {
             display: flex;
             justify-content: space-between;
@@ -1267,27 +1280,49 @@ function social_render_settings_page() {
                             <?php if (!$candidates): ?>
                                 <p><strong>No next-run candidates loaded.</strong> Click <em>Fetch / Refresh Next Run</em> above.</p>
                             <?php else: ?>
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #e2e4e7; padding-bottom:8px;">
-                                    <span style="font-size:12px; color:#50575e;">Select <strong>Pin as Lead Story</strong> to pin an update to the very top of the published article.</span>
-                                    <label style="font-size:11px; color:#646970;">
-                                        <input type="radio" name="pinned_lead_post" value="" <?php checked(empty(array_filter($candidates, fn($item) => !empty($item['pinned'])))); ?> onchange="document.querySelectorAll('.sd53-item').forEach(el=>el.classList.remove('is-pinned'));"> 
-                                        <em>No Pinned Lead (Standard Sort)</em>
-                                    </label>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #e2e4e7; padding-bottom:8px; flex-wrap:wrap; gap:10px;">
+                                    <span style="font-size:12px; color:#50575e;">Select <strong>Pin as Lead Story</strong> to pin an update to top, or <strong>Set as Featured Image</strong> to choose the digest's featured post thumbnail.</span>
+                                    <div style="display:flex; gap:12px; font-size:11px; color:#646970; align-items:center; flex-wrap:wrap;">
+                                        <label>
+                                            <input type="radio" name="pinned_lead_post" value="" <?php checked(empty(array_filter($candidates, fn($item) => !empty($item['pinned'])))); ?> onchange="document.querySelectorAll('.sd53-item').forEach(el=>el.classList.remove('is-pinned'));"> 
+                                            <em>No Pinned Lead</em>
+                                        </label>
+                                        <label>
+                                            <input type="radio" name="selected_featured_post" value="auto" <?php checked(empty($state['featured_image_override_key']) || $state['featured_image_override_key'] === 'auto'); ?>> 
+                                            <em>Auto Featured Image</em>
+                                        </label>
+                                        <label>
+                                            <input type="radio" name="selected_featured_post" value="none" <?php checked(($state['featured_image_override_key'] ?? '') === 'none'); ?> onchange="document.querySelectorAll('.sd53-item').forEach(el=>el.classList.remove('is-featured-thumb'));"> 
+                                            <em>No Featured Image</em>
+                                        </label>
+                                    </div>
                                 </div>
 
                                 <?php foreach ($candidates as $i => $c): 
                                     $key = sanitize_key($c['key']); 
                                     $excluded = !empty($c['excluded']); 
                                     $pinned = !empty($c['pinned']);
+                                    $c_thumb = esc_url($c['thumb_image'] ?? '');
+                                    $active_featured = esc_url($state['preview']['featured_image'] ?? '');
+                                    $is_featured_thumb = ($c_thumb !== '' && $active_featured === $c_thumb);
                                 ?>
-                                    <div class="sd53-item <?php echo $excluded ? 'excluded' : ''; ?> <?php echo $pinned ? 'is-pinned' : ''; ?>" id="sd53_<?php echo esc_attr($key); ?>" style="transition: all 0.2s ease;">
+                                    <div class="sd53-item <?php echo $excluded ? 'excluded' : ''; ?> <?php echo $pinned ? 'is-pinned' : ''; ?> <?php echo $is_featured_thumb ? 'is-featured-thumb' : ''; ?>" id="sd53_<?php echo esc_attr($key); ?>" style="transition: all 0.2s ease;">
                                         <div class="sd53-item-head">
-                                            <div style="display:flex; align-items:center; gap:16px;">
+                                            <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
                                                 <label style="font-weight:600;"><input type="checkbox" name="candidate[<?php echo esc_attr($key); ?>][excluded]" value="1" <?php checked($excluded); ?> onchange="this.closest('.sd53-item').classList.toggle('excluded', this.checked)"> Exclude from next post</label>
                                                 <label style="color:#b45309; font-weight:700; cursor:pointer;">
                                                     <input type="radio" name="pinned_lead_post" value="<?php echo esc_attr($key); ?>" <?php checked($pinned); ?> onchange="document.querySelectorAll('.sd53-item').forEach(el=>el.classList.remove('is-pinned')); this.closest('.sd53-item').classList.add('is-pinned');"> 
                                                     📌 Pin as Lead Story
                                                 </label>
+                                                <?php if ($c_thumb): ?>
+                                                    <label style="color:#047857; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                                                        <input type="radio" name="selected_featured_post" value="<?php echo esc_attr($key); ?>" <?php checked($is_featured_thumb); ?> onchange="document.querySelectorAll('.sd53-item').forEach(el=>el.classList.remove('is-featured-thumb')); if (this.checked) this.closest('.sd53-item').classList.add('is-featured-thumb');"> 
+                                                        🖼️ Set as Featured Image
+                                                        <img src="<?php echo esc_url($c_thumb); ?>" style="width:20px; height:20px; object-fit:cover; border-radius:3px; border:1px solid #10b981; vertical-align:middle;" title="Candidate Featured Thumbnail" />
+                                                    </label>
+                                                <?php else: ?>
+                                                    <span style="color:#8c8f94; font-size:11px; font-style:italic;">(No post image)</span>
+                                                <?php endif; ?>
                                             </div>
                                             <span style="background:#e8f0fe; color:#1a73e8; font-weight:700; padding:2px 8px; border-radius:3px; font-size:10px; text-transform:uppercase;">
                                                 <?php echo esc_html($c['network'] ?? 'Social'); ?>
@@ -1497,6 +1532,10 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
             $link_desc  = esc_html($ext['description'] ?? '');
             $link_thumb = esc_url($ext['thumb'] ?? '');
 
+            if (!$link_thumb && $link_url) {
+                $link_thumb = social_get_og_image_cached($link_url);
+            }
+
             if (!$first_image_url && $link_thumb) $first_image_url = $link_thumb;
 
             $media_html .= '<div class="social-link-card" style="border:1px solid #e1e8ed; border-radius:8px; overflow:hidden; margin:12px 0; max-width:500px; background:#f8fafc;">';
@@ -1593,6 +1632,11 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
         $first_image_url = null;
         $media_html = '';
 
+        $extracted_urls = [];
+        if (!empty($post_data['card']['url'])) $extracted_urls[] = $post_data['card']['url'];
+        if (preg_match_all('/\b(?:https?:\/\/|www\.)[^\s<"\'\)]+/i', $clean_text, $u_m)) $extracted_urls = array_merge($extracted_urls, $u_m[0]);
+        $extracted_urls = array_values(array_unique($extracted_urls));
+
         if (!empty($post_data['media_attachments']) && is_array($post_data['media_attachments'])) {
             $media_html .= '<div class="social-embed-media" style="display:flex; flex-wrap:wrap; gap:10px; margin:12px 0;">';
             foreach ($post_data['media_attachments'] as $med) {
@@ -1605,6 +1649,44 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
                 }
             }
             $media_html .= '</div>';
+        }
+
+        if (!empty($post_data['card']) && is_array($post_data['card'])) {
+            $card       = $post_data['card'];
+            $card_url   = esc_url($card['url'] ?? '');
+            $card_title = esc_html($card['title'] ?? '');
+            $card_desc  = esc_html($card['description'] ?? '');
+            $card_thumb = esc_url($card['image'] ?? '');
+            $card_prov  = esc_html($card['provider_name'] ?? '');
+
+            if (!$card_thumb && $card_url) {
+                $card_thumb = social_get_og_image_cached($card_url);
+            }
+
+            if (!$first_image_url && $card_thumb) {
+                $first_image_url = $card_thumb;
+            }
+
+            if ($card_url && ($card_title || $card_thumb)) {
+                $media_html .= '<div class="social-link-card" style="border:1px solid #e1e8ed; border-radius:8px; overflow:hidden; margin:12px 0; max-width:500px; background:#f8fafc;">';
+                if ($card_thumb) {
+                    $media_html .= '<img src="' . $card_thumb . '" alt="' . $card_title . '" style="width:100%; max-height:220px; object-fit:cover; display:block;" />';
+                }
+                $media_html .= '<div style="padding:10px 14px;">';
+                if ($card_prov) {
+                    $media_html .= '<div style="font-size:0.75em; text-transform:uppercase; color:#657786; margin-bottom:2px;">' . $card_prov . '</div>';
+                }
+                $media_html .= '<div style="font-weight:bold; font-size:1em; margin-bottom:4px;"><a href="' . $card_url . '" target="_blank" rel="noopener" style="color:#0085ff; text-decoration:none;">' . ($card_title ?: $card_url) . '</a></div>';
+                if ($card_desc) {
+                    $media_html .= '<div style="font-size:0.85em; color:#555; line-height:1.4;">' . wp_trim_words($card_desc, 25) . '</div>';
+                }
+                $media_html .= '</div></div>';
+            }
+        } elseif (!$first_image_url && !empty($extracted_urls[0])) {
+            $fallback_thumb = social_get_og_image_cached($extracted_urls[0]);
+            if ($fallback_thumb) {
+                $first_image_url = $fallback_thumb;
+            }
         }
 
         $author_name = esc_html(!empty($post_data['account']['display_name']) ? $post_data['account']['display_name'] : $post_data['account']['username']);
@@ -1639,6 +1721,43 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
 // ==========================================
 // 7. STRING, IMAGE & HASHTAG HELPERS
 // ==========================================
+
+function social_get_og_image_cached($url) {
+    if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) return '';
+    $transient_key = 'sd_og_img_' . md5($url);
+    $cached = get_transient($transient_key);
+    if ($cached !== false) return (string)$cached;
+
+    $res = wp_remote_get($url, [
+        'timeout'     => 3,
+        'user-agent'  => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) WordPress-SocialDigest/1.0',
+        'redirection' => 2,
+    ]);
+
+    if (is_wp_error($res)) {
+        set_transient($transient_key, '', DAY_IN_SECONDS);
+        return '';
+    }
+
+    $body = wp_remote_retrieve_body($res);
+    if (empty($body)) {
+        set_transient($transient_key, '', DAY_IN_SECONDS);
+        return '';
+    }
+
+    $img_url = '';
+    if (preg_match('/<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']/i', $body, $m)) {
+        $img_url = $m[1];
+    } elseif (preg_match('/<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']/i', $body, $m)) {
+        $img_url = $m[1];
+    } elseif (preg_match('/<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)["\']/i', $body, $m)) {
+        $img_url = $m[1];
+    }
+
+    $img_url = esc_url_raw(html_entity_decode($img_url));
+    set_transient($transient_key, $img_url, DAY_IN_SECONDS);
+    return $img_url;
+}
 
 function social_normalize_for_matching($text) {
     $t = wp_strip_all_tags($text);

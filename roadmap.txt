@@ -6,8 +6,10 @@ Social Digest - Feature Roadmap & Release Status
 1. Dual-Platform Back-Links [Feature Path]:
    - Render links back to both Bluesky and Mastodon at the bottom of each social entry/embed when updates are cross-posted or deduplicated across both networks.
 
-0. Release v5.5 - v5.5.3 Enhancements (Completed in v5.5 - v5.5.3)
+0. Release v5.5 - v5.5.4 Enhancements (Completed in v5.5 - v5.5.4)
 -----------------------------------------------------------------
+[x] Mastodon Link Card Parity & Scraper (v5.5.4): Added `card` status object parsing and cached OpenGraph image scraper (`social_get_og_image_cached()`) for Mastodon, ensuring posts with external links render with image preview cards and populate post thumbnails.
+[x] Explicit Featured Image Selection UI (v5.5.4): Added "Set as Featured Image" radio control with candidate thumbnail image previews to the Next-Run Workbench, allowing administrators to choose any post image as the digest featured image.
 [x] Restored Social Embed CSS (v5.5.3): Re-introduced card framing, 600px max-width, overflow wrapping, matching borders, padding, and drop shadows across Mastodon and Bluesky embeds.
 [x] Resolved Mastodon Content Parser Bug (v5.5.2): Fixed missing `$body_content`, `$author_acct`, and `$clean_handle` variables in `social_fetch_mastodon()`.
 [x] Random Article Ordering Option (v5.5): Exposed Reverse Chronological, Chronological, and Random ordering choices in General Settings while keeping image selection logic strictly chronological to protect the "exclude most recent post" rule.

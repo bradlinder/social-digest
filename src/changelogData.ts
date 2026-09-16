@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.5.3',
+  version: '5.5.4',
   requiresWP: '6.0+',
   testedUpTo: '6.7',
   requiresPHP: '7.4+',
@@ -17,14 +17,23 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.5.2',
+  rollbackTarget: 'v5.5.3',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.5.4',
+    tag: 'v5.5.4',
+    isLatest: true,
+    highlights: [
+      'Mastodon Link Card Parity & OpenGraph Scraper: Added link card parsing (`card` status object) and cached OpenGraph image scraper fallback (`social_get_og_image_cached()`), ensuring Mastodon posts with external links render with image preview cards and populate post thumbnails.',
+      'Explicit Featured Image Selector in Workbench: Added "Set as Featured Image" radio control with candidate thumbnail image previews to the Next-Run Workbench, allowing administrators to choose any post image as the digest featured image.'
+    ]
+  },
+  {
     version: '5.5.3',
     tag: 'v5.5.3',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Restored Social Embed CSS Harmonization: Re-applied front-end card framing CSS for Mastodon and Bluesky embeds (600px max-width, overflow wrapping, matching borders, padding, and subtle shadows).',
       'Unified Visual Styling: Ensures both Bluesky and Mastodon post embeds render with visual symmetry across published single posts.'
