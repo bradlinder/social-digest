@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 5.5.4
+Stable tag: 5.6.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,21 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.6.1 =
+* Save as Draft Option in Workbench: Added a "Save as Draft" button alongside the publish action in the Next-Run Workbench, allowing editorial review of compiled digests in the WordPress editor before going live.
+* Posts Menu Integration: Relocated primary Social Digest management to `Posts -> Social Digest` (`edit.php`), reflecting its core editorial role in creating WordPress posts.
+* Default Tab to Actions & Preview: Accessing Social Digest via the Posts menu or toolbar now defaults directly to the Actions & Preview Workbench instead of Settings.
+* Top Admin Bar Quick-Access Shortcut: Added a direct quick-action node to the WordPress Admin Bar / Toolbar for instant navigation to the Workbench and Settings from anywhere in the WordPress admin or front end.
+* Direct Post Editor Links: Added direct "Edit Post" and "Edit Draft in WordPress" action links in the admin success notices upon creating or publishing a digest.
+
+= 5.6.0 =
+* Native Multi-Network Social Post Rendering: Replaced 3rd-party remote script widgets (`embed.js`) with native local HTML/CSS post card rendering for both Bluesky and Mastodon. Posts render consistently and seamlessly for all visitors, independent of client-side script blockers.
+* Unified Post Card Architecture: Features user avatar, display name, handle links, and a direct "+ Follow" button in the card header, alongside localized timestamp and platform action badges in the footer.
+* Live Social Engagement Metrics: Display-only like (Bluesky) and favorite/boost (Mastodon) counts with direct links back to the source post to interact or like directly on the platform.
+* Dual-Platform Back-Links for Deduplicated Cross-Posts: When a post is shared across both Bluesky and Mastodon, the rendered native card features links and engagement badges for both networks.
+* Platform Link Restrictions: Selecting "Bluesky Only" or "Mastodon Only" strictly confines follow links and action badges exclusively to the chosen network.
+* Avatar Source Preference Setting: Added configuration setting under Sources allowing administrators to choose profile avatar precedence (Automatic, Prefer Bluesky, Prefer Mastodon, or None/Hidden).
 
 = 5.5.4 =
 * Mastodon Link Card Parity & Scraper: Added link card parsing (`card` status object) and cached OpenGraph scraper fallback (`social_get_og_image_cached()`) for Mastodon, ensuring posts with external links render with image previews and populate post thumbnails.

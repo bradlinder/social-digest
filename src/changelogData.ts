@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.5.4',
+  version: '5.6.1',
   requiresWP: '6.0+',
   testedUpTo: '6.7',
   requiresPHP: '7.4+',
@@ -17,14 +17,39 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.5.3',
+  rollbackTarget: 'v5.6.0',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.6.1',
+    tag: 'v5.6.1',
+    isLatest: true,
+    highlights: [
+      'Save as Draft Option in Workbench: Added a "Save as Draft" button alongside publish in the Next-Run Workbench, generating WordPress drafts with full preview tags and categories for editorial review before publishing.',
+      'Posts Menu Integration: Moved primary plugin management under Posts -> Social Digest (edit.php), establishing Social Digest as a native content drafting workflow.',
+      'Default Tab to Actions & Preview: Navigating to Social Digest via the Posts menu or toolbar shortcuts now defaults directly to the Actions & Preview Workbench instead of Settings.',
+      'WordPress Admin Bar Quick-Access Shortcut: Added a direct quick-action node to the top WordPress Admin Bar / Toolbar for fast navigation to Workbench and Settings from any page.',
+      'Direct Post Editor Links in Admin Notices: Added clickable "Edit Post" and "Edit Draft in WordPress" links inside success notices upon creating or publishing a digest.'
+    ]
+  },
+  {
+    version: '5.6.0',
+    tag: 'v5.6.0',
+    isLatest: false,
+    highlights: [
+      'Native Multi-Network Social Post Rendering: Replaced 3rd-party remote script widgets (embed.js) with native local HTML/CSS card rendering for both Bluesky and Mastodon, remaining completely visible even with ad/script blockers active.',
+      'Unified Header & Direct Follow Action: Header includes author avatar, display name, handle links, and direct "+ Follow" action buttons for the active platform(s).',
+      'Display-Only Engagement Counts: Displays live like count (Bluesky) and favorite/boost count (Mastodon) with direct links back to the source post to interact directly.',
+      'Dual-Platform Back-Links on Deduplicated Posts: Cross-posted entries that match on both Bluesky and Mastodon display back-links and engagement counters for both networks.',
+      'Platform Link Scope Enforcement: Selecting "Bluesky Only" or "Mastodon Only" strictly confines follow links and action badges exclusively to the chosen platform.',
+      'Avatar Platform Preference Setting: Added configuration dropdown in Settings allowing administrators to select which profile avatar to display (Automatic, Prefer Bluesky, Prefer Mastodon, or Hidden).'
+    ]
+  },
+  {
     version: '5.5.4',
     tag: 'v5.5.4',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Mastodon Link Card Parity & OpenGraph Scraper: Added link card parsing (`card` status object) and cached OpenGraph image scraper fallback (`social_get_og_image_cached()`), ensuring Mastodon posts with external links render with image preview cards and populate post thumbnails.',
       'Explicit Featured Image Selector in Workbench: Added "Set as Featured Image" radio control with candidate thumbnail image previews to the Next-Run Workbench, allowing administrators to choose any post image as the digest featured image.'

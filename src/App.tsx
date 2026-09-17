@@ -2,15 +2,50 @@ import { useState } from 'react';
 import { 
   GitBranch, CheckCircle2, ShieldCheck, 
   ExternalLink, Copy, Check, Terminal,
-  Package, Sparkles, FileCode,
-  Tag, History
+  Package, Sparkles, FileCode, Download,
+  Tag, History, AlertCircle
 } from 'lucide-react';
+import JSZip from 'jszip';
 import { PLUGIN_META, CHANGELOG_DATA } from './changelogData';
+import socialDigestCode from '../social-digest.php?raw';
+import readmeTextCode from '../readme.txt?raw';
 
 export default function App() {
   const [copiedZip, setCopiedZip] = useState(false);
   const [copiedRollback, setCopiedRollback] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [filterQuery, setFilterQuery] = useState('');
+
+  const downloadPluginZip = async () => {
+    try {
+      setIsDownloading(true);
+      const zip = new JSZip();
+      
+      // Standard WordPress plugin zip folder hierarchy:
+      // social-digest/
+      //   ├── social-digest.php
+      //   └── readme.txt
+      const pluginFolder = zip.folder('social-digest');
+      if (pluginFolder) {
+        pluginFolder.file('social-digest.php', socialDigestCode);
+        pluginFolder.file('readme.txt', readmeTextCode);
+      }
+
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(content);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `social-digest-v${PLUGIN_META.version}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to generate zip:', err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const copyToClipboard = (text: string, type: 'zip' | 'rollback') => {
     navigator.clipboard.writeText(text);
@@ -47,14 +82,18 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 text-xs">
+        <div className="flex items-center space-x-3 text-xs">
+          <button
+            onClick={downloadPluginZip}
+            disabled={isDownloading}
+            className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-500 text-white font-medium px-3.5 py-1.5 rounded-md shadow-sm transition-colors cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>{isDownloading ? 'Packaging...' : `Download v${PLUGIN_META.version} (.zip)`}</span>
+          </button>
           <div className="hidden sm:flex items-center space-x-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-3 py-1.5 rounded-md">
             <CheckCircle2 className="w-3.5 h-3.5" />
             <span>Plugin Healthy</span>
-          </div>
-          <div className="flex items-center space-x-1.5 bg-slate-800 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-md font-mono">
-            <GitBranch className="w-3.5 h-3.5 text-blue-400" />
-            <span>tag: v{PLUGIN_META.version}</span>
           </div>
         </div>
       </header>
@@ -84,7 +123,14 @@ export default function App() {
               </div>
             </div>
             <div className="mt-4 pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs">
-              <span className="text-slate-400">Core file: <code className="text-blue-300">social-digest.php</code></span>
+              <button
+                onClick={downloadPluginZip}
+                disabled={isDownloading}
+                className="text-xs bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/40 text-blue-300 hover:text-white px-3 py-1.5 rounded-lg font-medium flex items-center space-x-1.5 transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download Plugin (.zip)</span>
+              </button>
               <span className="flex items-center space-x-1 text-emerald-400 font-medium">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>Verified</span>
@@ -130,20 +176,20 @@ export default function App() {
                 <span>Clean Distribution</span>
               </div>
               <div className="text-sm font-semibold text-white mt-1">
-                Zero-Bloat Zip Packaging
+                WordPress-Compliant Structure
               </div>
               <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-                Preview &amp; tooling files excluded via <code className="text-slate-300 bg-slate-900 px-1 py-0.5 rounded font-mono">.gitattributes</code> (export-ignore) and strict release workflow.
+                Packaged inside a root <code className="text-slate-300 bg-slate-900 px-1 py-0.5 rounded font-mono">social-digest/</code> folder containing <code className="text-slate-300 bg-slate-900 px-1 py-0.5 rounded font-mono">social-digest.php</code> and <code className="text-slate-300 bg-slate-900 px-1 py-0.5 rounded font-mono">readme.txt</code>.
               </p>
             </div>
 
             <div className="mt-4 pt-3 border-t border-slate-700/60 flex items-center justify-between">
               <button
-                onClick={() => copyToClipboard('zip -r social-digest.zip social-digest.php readme.txt LICENSE', 'zip')}
+                onClick={() => copyToClipboard('mkdir -p social-digest && cp social-digest.php readme.txt social-digest/ && zip -r social-digest.zip social-digest/', 'zip')}
                 className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center space-x-1.5 transition-colors"
               >
                 {copiedZip ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedZip ? 'Command copied!' : 'Copy manual zip cmd'}</span>
+                <span>{copiedZip ? 'Command copied!' : 'Copy terminal packaging cmd'}</span>
               </button>
               <a
                 href={`https://github.com/${PLUGIN_META.githubRepo}`}
@@ -155,6 +201,14 @@ export default function App() {
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
+          </div>
+        </div>
+
+        {/* Installation Tip Banner */}
+        <div className="bg-blue-950/40 border border-blue-800/60 rounded-xl p-4 text-xs text-blue-200 flex items-start space-x-3">
+          <AlertCircle className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+          <div className="leading-relaxed">
+            <strong className="text-white font-semibold">How to Install in WordPress:</strong> Click the <strong>Download v{PLUGIN_META.version} (.zip)</strong> button above. Then in your WordPress admin, navigate to <strong>Plugins → Add New Plugin → Upload Plugin</strong>, choose the downloaded <code className="bg-blue-900/50 text-blue-300 px-1.5 py-0.5 rounded font-mono">social-digest-v{PLUGIN_META.version}.zip</code>, and click <strong>Install Now</strong>. <em>(Do not upload the full repository / AI Studio project ZIP, as WordPress requires the dedicated plugin archive structure)</em>.
           </div>
         </div>
 

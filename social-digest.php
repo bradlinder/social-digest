@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.5.4
+ * Version: 5.6.1
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -63,39 +63,56 @@ add_filter('cron_schedules', function($schedules) {
     return $schedules;
 });
 
-add_action('wp_enqueue_scripts', function() {
-    if (is_singular('post')) {
-        wp_enqueue_script('bsky-embed-js', 'https://embed.bsky.app/static/embed.js', [], null, true);
-    }
-});
-
 add_action('wp_head', function() {
     if (is_singular('post')) {
         ?>
         <style id="social-digest-embed-styles">
-        /* Card framing parity and 600px max-width alignment for social embeds */
-        blockquote.social-post {
+        /* Social Digest Native Card Styling */
+        blockquote.social-post.social-card {
             margin-left: auto !important;
             margin-right: auto !important;
             max-width: 600px !important;
             box-sizing: border-box !important;
             overflow-wrap: anywhere !important;
             word-break: break-word !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #0284c7;
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
         }
-        blockquote.social-post a,
-        blockquote.social-post .masto-body,
-        blockquote.social-post p {
-            overflow-wrap: anywhere !important;
-            word-break: break-word !important;
+        blockquote.social-post.social-card a {
+            text-decoration: none;
+            transition: opacity 0.15s ease;
         }
-        blockquote.social-post.mastodon-post,
-        blockquote.social-post.bsky-embed {
-            border: 1px solid #0085ff !important;
-            border-left: 4px solid #0085ff !important;
-            border-radius: 8px !important;
-            padding: 16px !important;
-            background: #ffffff !important;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+        blockquote.social-post.social-card a:hover {
+            opacity: 0.85;
+            text-decoration: underline;
+        }
+        blockquote.social-post .social-avatar {
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        blockquote.social-post .social-follow-btn:hover,
+        blockquote.social-post .social-badge:hover {
+            text-decoration: none !important;
+            filter: brightness(0.96);
+        }
+        @media (max-width: 480px) {
+            blockquote.social-post .social-card-header {
+                flex-direction: column;
+                align-items: flex-start !important;
+            }
+            blockquote.social-post .social-follow-wrap {
+                margin-top: 6px;
+                width: 100%;
+            }
+            blockquote.social-post .social-card-footer {
+                flex-direction: column;
+                align-items: flex-start !important;
+            }
         }
         </style>
         <?php
@@ -111,8 +128,9 @@ add_action('admin_enqueue_scripts', function($hook) {
 });
 
 add_filter('plugin_action_links_' . plugin_basename(__FILE__), function($links) {
-    $settings_link = '<a href="' . esc_url(admin_url('options-general.php?page=social-digest-settings')) . '">' . __('Settings') . '</a>';
-    array_unshift($links, $settings_link);
+    $actions_link = '<a href="' . esc_url(admin_url('edit.php?page=social-digest-settings&tab=workbench')) . '"><strong>' . __('Actions & Preview') . '</strong></a>';
+    $settings_link = '<a href="' . esc_url(admin_url('edit.php?page=social-digest-settings&tab=settings')) . '">' . __('Settings') . '</a>';
+    array_unshift($links, $actions_link, $settings_link);
     return $links;
 });
 
@@ -148,6 +166,17 @@ add_action('pre_get_posts', function($query) {
 // ==========================================
 
 add_action('admin_menu', function() {
+    // Primary placement: Submenu directly under Posts (defaults to Actions & Preview)
+    add_submenu_page(
+        'edit.php',
+        'Social Digest',
+        'Social Digest',
+        'manage_options',
+        'social-digest-settings',
+        __NAMESPACE__ . '\\social_render_settings_page'
+    );
+
+    // Backwards-compatibility: Keep Settings -> Social Digest registered
     add_options_page(
         'Social Digest Settings',
         'Social Digest',
@@ -157,12 +186,38 @@ add_action('admin_menu', function() {
     );
 });
 
+// Top WordPress Admin Bar Quick-Access Shortcut
+add_action('admin_bar_menu', function(\WP_Admin_Bar $wp_admin_bar) {
+    if (!current_user_can('manage_options')) return;
+
+    $wp_admin_bar->add_node([
+        'id'    => 'social_digest_admin_bar',
+        'title' => '<span class="ab-icon dashicons dashicons-share" style="top:2px;"></span><span class="ab-label">Social Digest</span>',
+        'href'  => admin_url('edit.php?page=social-digest-settings&tab=workbench'),
+    ]);
+
+    $wp_admin_bar->add_node([
+        'id'     => 'social_digest_bar_actions',
+        'parent' => 'social_digest_admin_bar',
+        'title'  => '⚡ Actions &amp; Preview',
+        'href'   => admin_url('edit.php?page=social-digest-settings&tab=workbench'),
+    ]);
+
+    $wp_admin_bar->add_node([
+        'id'     => 'social_digest_bar_settings',
+        'parent' => 'social_digest_admin_bar',
+        'title'  => '⚙️ Settings',
+        'href'   => admin_url('edit.php?page=social-digest-settings&tab=settings'),
+    ]);
+}, 90);
+
 add_action('admin_init', function() {
     register_setting('social_digest_group', 'social_digest_options', [
         'type'              => 'array',
         'sanitize_callback' => __NAMESPACE__ . '\\social_sanitize_settings',
         'default'           => [
             'network_mode'           => 'both',
+            'avatar_source'          => 'auto',
             'bsky_handle'            => '',
             'masto_handle'           => '',
             'cross_dedup'            => 1,
@@ -231,13 +286,28 @@ add_action('admin_init', function() {
     if (isset($_POST['sd53_publish']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
         $state = social_sanitize_next_run($_POST);
         social_save_workbench_state($state);
-        $result = social_publish_workbench_run($state);
+        $result = social_publish_workbench_run($state, 'publish');
         if (!empty($result['success'])) {
             social_clear_workbench_state();
-            wp_safe_redirect(admin_url('options-general.php?page=social-digest-settings&tab=workbench&sd53_published=1'));
+            $post_id = absint($result['post_id'] ?? 1);
+            wp_safe_redirect(admin_url('edit.php?page=social-digest-settings&tab=workbench&sd53_published=' . $post_id));
             exit;
         } else {
             add_settings_error('sd53', 'publish', $result['message'] ?? 'Publishing failed.', 'error');
+        }
+    }
+
+    if (isset($_POST['sd53_save_draft']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+        $state = social_sanitize_next_run($_POST);
+        social_save_workbench_state($state);
+        $result = social_publish_workbench_run($state, 'draft');
+        if (!empty($result['success'])) {
+            social_clear_workbench_state();
+            $post_id = absint($result['post_id'] ?? 1);
+            wp_safe_redirect(admin_url('edit.php?page=social-digest-settings&tab=workbench&sd53_drafted=' . $post_id));
+            exit;
+        } else {
+            add_settings_error('sd53', 'draft', $result['message'] ?? 'Draft creation failed.', 'error');
         }
     }
 
@@ -286,6 +356,7 @@ add_action('admin_init', function() {
 function social_sanitize_settings($input) {
     $output = [];
     $output['network_mode']       = in_array($input['network_mode'] ?? '', ['bsky', 'mastodon', 'both']) ? $input['network_mode'] : 'both';
+    $output['avatar_source']      = in_array($input['avatar_source'] ?? '', ['auto', 'bsky', 'mastodon', 'none'], true) ? $input['avatar_source'] : 'auto';
     $output['bsky_handle']        = sanitize_text_field($input['bsky_handle'] ?? '');
     $output['masto_handle']       = sanitize_text_field($input['masto_handle'] ?? '');
     $output['cross_dedup']        = !empty($input['cross_dedup']) ? 1 : 0;
@@ -555,6 +626,14 @@ function social_fetch_workbench_candidates() {
                 $secondary_tags = array_merge((array)($secondary['extra_tags'] ?? []), preg_match_all('/#(\w+)/u', $secondary['text'] ?? '', $sm) ? $sm[1] : []);
                 $winner['extra_tags'] = array_values(array_unique(array_merge($winner_tags, array_diff($secondary_tags, $winner_tags))));
                 if (empty($winner['thumb_image']) && !empty($secondary['thumb_image'])) $winner['thumb_image'] = $secondary['thumb_image'];
+
+                // Merge platform links for dual-network footer actions
+                $winner_links = (array)($winner['platform_links'] ?? []);
+                $secondary_links = (array)($secondary['platform_links'] ?? []);
+                $winner['platform_links'] = array_merge($winner_links, $secondary_links);
+
+                // Re-render native card HTML with merged dual-platform links and metadata
+                $winner['html'] = social_render_native_card($winner, $opts);
             }
             $merged[] = $winner;
         }
@@ -736,7 +815,7 @@ function social_build_workbench_content($state) {
     return ['success' => true, 'content' => $content, 'count' => count($selected)];
 }
 
-function social_publish_workbench_run($state) {
+function social_publish_workbench_run($state, $force_status = null) {
     try {
         if (function_exists('wp_raise_memory_limit')) {
             wp_raise_memory_limit('admin');
@@ -768,10 +847,12 @@ function social_publish_workbench_run($state) {
             $author_id = get_current_user_id();
         }
 
+        $status_to_use = ($force_status !== null) ? $force_status : ($opts['post_status'] ?? 'publish');
+
         $post_args = [
             'post_title'   => $title,
             'post_content' => $built['content'],
-            'post_status'  => $opts['post_status'] ?? 'publish',
+            'post_status'  => $status_to_use,
             'post_author'  => $author_id,
             'post_type'    => 'post',
             'tags_input'   => array_values(array_map('sanitize_text_field', (array)($state['preview']['tags'] ?? []))),
@@ -794,7 +875,7 @@ function social_publish_workbench_run($state) {
             }
         }
 
-        // Advance cutoff timestamps strictly on successful publish
+        // Advance cutoff timestamps on successful publish or draft creation
         $new_bsky = (int)($state['cutoffs']['bsky'] ?? 0);
         $new_masto = (int)($state['cutoffs']['masto'] ?? 0);
 
@@ -817,8 +898,9 @@ function social_publish_workbench_run($state) {
             update_option('masto_last_digest_time', $new_masto);
         }
 
-        social_log_run(true, "Workbench digest created (ID: {$post_id}) with {$built['count']} article(s).", $post_id);
-        return ['success' => true, 'message' => "Digest created (ID: {$post_id}) with {$built['count']} selected article(s)."];
+        $status_label = ($status_to_use === 'draft') ? 'Draft created' : 'Digest published';
+        social_log_run(true, "Workbench {$status_label} (ID: {$post_id}) with {$built['count']} article(s).", $post_id);
+        return ['success' => true, 'post_id' => $post_id, 'status' => $status_to_use, 'message' => "{$status_label} (ID: {$post_id}) with {$built['count']} selected article(s)."];
     } catch (\Throwable $e) {
         return ['success' => false, 'message' => 'Fatal runtime error publishing digest: ' . $e->getMessage()];
     }
@@ -830,7 +912,7 @@ function social_publish_workbench_run($state) {
 
 function social_render_settings_page() {
     if (!current_user_can('manage_options')) return;
-    $active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'settings';
+    $active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'workbench';
     $opts       = get_option('social_digest_options', []);
     $site_tz    = wp_timezone();
     $bsky_last  = get_option('bsky_last_digest_time', 0);
@@ -915,16 +997,23 @@ function social_render_settings_page() {
     <div class="wrap">
         <h1>Social Digest</h1>
         <nav class="nav-tab-wrapper wp-clearfix" style="margin-top: 15px; margin-bottom: 20px;">
-            <a href="<?php echo esc_url(admin_url('options-general.php?page=social-digest-settings&tab=settings')); ?>" class="nav-tab <?php echo $active_tab === 'settings' ? 'nav-tab-active' : ''; ?>">
-                <span class="dashicons dashicons-admin-generic" style="vertical-align: -3px; font-size: 17px;"></span> Settings
-            </a>
-            <a href="<?php echo esc_url(admin_url('options-general.php?page=social-digest-settings&tab=workbench')); ?>" class="nav-tab <?php echo $active_tab === 'workbench' ? 'nav-tab-active' : ''; ?>">
+            <a href="<?php echo esc_url(admin_url('edit.php?page=social-digest-settings&tab=workbench')); ?>" class="nav-tab <?php echo $active_tab === 'workbench' ? 'nav-tab-active' : ''; ?>">
                 <span class="dashicons dashicons-performance" style="vertical-align: -3px; font-size: 17px;"></span> Actions &amp; Preview
+            </a>
+            <a href="<?php echo esc_url(admin_url('edit.php?page=social-digest-settings&tab=settings')); ?>" class="nav-tab <?php echo $active_tab === 'settings' ? 'nav-tab-active' : ''; ?>">
+                <span class="dashicons dashicons-admin-generic" style="vertical-align: -3px; font-size: 17px;"></span> Settings
             </a>
         </nav>
         <?php 
         if (!empty($_GET['sd53_published'])) {
-            add_settings_error('sd53', 'publish', 'Digest published successfully.', 'updated');
+            $pub_id = absint($_GET['sd53_published']);
+            $edit_link = ($pub_id > 1 && function_exists('get_edit_post_link')) ? ' <a href="' . esc_url(get_edit_post_link($pub_id)) . '" class="button button-small" style="margin-left:10px;">Edit Post ↗</a>' : '';
+            add_settings_error('sd53', 'publish', 'Digest published successfully!' . $edit_link, 'updated');
+        }
+        if (!empty($_GET['sd53_drafted'])) {
+            $draft_id = absint($_GET['sd53_drafted']);
+            $edit_link = ($draft_id > 1 && function_exists('get_edit_post_link')) ? ' <a href="' . esc_url(get_edit_post_link($draft_id)) . '" class="button button-small" style="margin-left:10px;">Edit Draft in WordPress ↗</a>' : '';
+            add_settings_error('sd53', 'draft', 'Draft post created successfully!' . $edit_link, 'updated');
         }
         ?>
         <?php settings_errors('sd53'); ?>
@@ -972,6 +1061,18 @@ function social_render_settings_page() {
                                                 <td>
                                                     <input name="social_digest_options[masto_handle]" type="text" id="social_masto_handle" value="<?php echo esc_attr($opts['masto_handle'] ?? ''); ?>" class="regular-text" placeholder="@user@instance.social or profile URL" />
                                                     <p class="description">Accepts user@instance.social or profile URL.</p>
+                                                </td>
+                                            </tr>
+                                            <tr class="social-combined-field">
+                                                <th>Avatar Source Preference</th>
+                                                <td>
+                                                    <select name="social_digest_options[avatar_source]" id="social_avatar_source">
+                                                        <option value="auto" <?php selected($opts['avatar_source'] ?? 'auto', 'auto'); ?>>Automatic (Source / Post Winner)</option>
+                                                        <option value="bsky" <?php selected($opts['avatar_source'] ?? '', 'bsky'); ?>>Prefer Bluesky Profile Avatar</option>
+                                                        <option value="mastodon" <?php selected($opts['avatar_source'] ?? '', 'mastodon'); ?>>Prefer Mastodon Profile Avatar</option>
+                                                        <option value="none" <?php selected($opts['avatar_source'] ?? '', 'none'); ?>>None (Hide Profile Avatars)</option>
+                                                    </select>
+                                                    <p class="description">Select which platform profile avatar to display in the native social post header.</p>
                                                 </td>
                                             </tr>
                                             <tr class="social-combined-field">
@@ -1232,7 +1333,7 @@ function social_render_settings_page() {
             <?php if ($next_run && $has_candidates): ?>
                 <div class="notice notice-warning" style="margin: 0 0 15px 0; padding: 12px 14px; border-left: 4px solid #dba617; background: #fff8e5;">
                     <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #614700;">
-                        <strong>Warning: Automated Schedule Active:</strong> Automated cron scheduling is currently running and will overwrite this staged workbench draft on its next scheduled cycle (<strong><?php echo esc_html(wp_date('Y-m-d H:i:s T', $next_run, $site_tz)); ?></strong>). If you are curating this digest by hand, set <em>Check Frequency</em> to <strong>"Disabled (Manual Workbench Curation Only)"</strong> under <a href="<?php echo esc_url(admin_url('options-general.php?page=social-digest-settings&tab=settings')); ?>" style="color: #2271b1; text-decoration: underline;">General Settings</a> until you publish or discard this draft.
+                        <strong>Warning: Automated Schedule Active:</strong> Automated cron scheduling is currently running and will overwrite this staged workbench draft on its next scheduled cycle (<strong><?php echo esc_html(wp_date('Y-m-d H:i:s T', $next_run, $site_tz)); ?></strong>). If you are curating this digest by hand, set <em>Check Frequency</em> to <strong>"Disabled (Manual Workbench Curation Only)"</strong> under <a href="<?php echo esc_url(admin_url('edit.php?page=social-digest-settings&tab=settings')); ?>" style="color: #2271b1; text-decoration: underline;">General Settings</a> until you publish or discard this draft.
                     </p>
                 </div>
             <?php endif; ?>
@@ -1256,11 +1357,12 @@ function social_render_settings_page() {
                     </div>
                     <div class="inside">
                         <p style="margin-top:0">Fetch a preview of what the next digest will contain. Exclude articles, pin a lead story, add commentary, or temporarily override framing before publishing.</p>
-                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                             <button class="button button-primary" name="sd53_fetch" value="1"<?php echo $fetch_confirm_attr; ?>>Fetch / Refresh Next Run</button>
                             <button class="button" name="sd53_save" value="1">Save Next-Run Changes</button>
                             <button class="button" name="sd53_reset" value="1" onclick="return confirm('Discard all changes?')">Reset Next Run</button>
-                            <button class="button button-primary" name="sd53_publish" value="1" onclick="return confirm('Publish this digest?')">Publish Next Run</button>
+                            <button class="button" name="sd53_save_draft" value="1" onclick="return confirm('Save this staged digest as a WordPress Draft post?')"><span class="dashicons dashicons-edit" style="vertical-align:text-bottom; margin-right:2px; font-size:16px;"></span> Save as Draft</button>
+                            <button class="button button-primary" name="sd53_publish" value="1" onclick="return confirm('Publish this digest immediately?')">Publish Next Run</button>
                         </div>
                     </div>
                 </div>
@@ -1454,8 +1556,139 @@ function social_render_settings_page() {
 }
 
 // ==========================================
-// 6. CORE FETCHERS & ADAPTERS
+// 6. CORE FETCHERS, NATIVE RENDERER & ADAPTERS
 // ==========================================
+
+function social_render_native_card($item, $opts = []) {
+    $mode = $opts['network_mode'] ?? 'both';
+    $avatar_pref = $opts['avatar_source'] ?? 'auto';
+    $timestamp = (int)($item['timestamp'] ?? time());
+    $site_tz = wp_timezone();
+    $formatted_date = wp_date('M j, Y · g:i A', $timestamp, $site_tz);
+
+    $is_repost = !empty($item['is_repost']);
+    $repost_user = esc_html($item['repost_user'] ?? '');
+
+    // Resolve active platform links based on network_mode
+    $links = (array)($item['platform_links'] ?? []);
+    $has_bsky = !empty($links['bsky']['url']) && ($mode === 'bsky' || $mode === 'both');
+    $has_masto = !empty($links['mastodon']['url']) && ($mode === 'mastodon' || $mode === 'both');
+
+    // Determine author name & primary handle
+    $author_name = esc_html($item['author_name'] ?? 'Author');
+
+    // Avatar resolution
+    $avatar_url = '';
+    if ($avatar_pref !== 'none') {
+        if ($avatar_pref === 'bsky' && !empty($links['bsky']['avatar'])) {
+            $avatar_url = $links['bsky']['avatar'];
+        } elseif ($avatar_pref === 'mastodon' && !empty($links['mastodon']['avatar'])) {
+            $avatar_url = $links['mastodon']['avatar'];
+        } elseif (!empty($item['author_avatar'])) {
+            $avatar_url = $item['author_avatar'];
+        } elseif (!empty($links['bsky']['avatar'])) {
+            $avatar_url = $links['bsky']['avatar'];
+        } elseif (!empty($links['mastodon']['avatar'])) {
+            $avatar_url = $links['mastodon']['avatar'];
+        }
+    }
+
+    // Follow links resolution (only for platforms enabled in network_mode)
+    $follow_links = [];
+    if ($has_bsky && !empty($links['bsky']['profile_url'])) {
+        $follow_links[] = '<a href="' . esc_url($links['bsky']['profile_url']) . '" target="_blank" rel="noopener" class="social-follow-btn bsky-follow" style="display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; padding:4px 10px; border-radius:9999px; background:#e0f2fe; color:#0284c7; text-decoration:none; border:1px solid #bae6fd;">+ Follow</a>';
+    }
+    if ($has_masto && !empty($links['mastodon']['profile_url'])) {
+        $follow_links[] = '<a href="' . esc_url($links['mastodon']['profile_url']) . '" target="_blank" rel="noopener" class="social-follow-btn masto-follow" style="display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; padding:4px 10px; border-radius:9999px; background:#f3e8ff; color:#7e22ce; text-decoration:none; border:1px solid #e9d5ff;">+ Follow</a>';
+    }
+
+    // Handles display
+    $handle_parts = [];
+    if ($has_bsky && !empty($links['bsky']['handle'])) {
+        $handle_parts[] = '<a href="' . esc_url($links['bsky']['profile_url'] ?? '') . '" target="_blank" rel="noopener" style="color:#64748b; text-decoration:none;">@' . esc_html($links['bsky']['handle']) . '</a>';
+    }
+    if ($has_masto && !empty($links['mastodon']['handle'])) {
+        $handle_parts[] = '<a href="' . esc_url($links['mastodon']['profile_url'] ?? '') . '" target="_blank" rel="noopener" style="color:#64748b; text-decoration:none;">@' . esc_html($links['mastodon']['handle']) . '</a>';
+    }
+    if (empty($handle_parts) && !empty($item['author_handle'])) {
+        $handle_parts[] = '@' . esc_html($item['author_handle']);
+    }
+
+    // Repost / Boost banner
+    $repost_html = '';
+    if ($is_repost && $repost_user) {
+        $repost_html = '<div class="social-repost-banner" style="font-size:12px; font-weight:700; color:#0284c7; margin-bottom:10px; display:flex; align-items:center; gap:5px;">&#x1F501; Reposted by @' . $repost_user . '</div>';
+    }
+
+    // Build the Native Card HTML
+    $html = '<blockquote class="social-post social-card" style="border:1px solid #e2e8f0; border-left:4px solid #0284c7; border-radius:12px; padding:18px; margin:26px auto; background:#ffffff; box-shadow:0 2px 6px rgba(0,0,0,0.04); max-width:600px; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif;">';
+
+    if ($repost_html) {
+        $html .= $repost_html;
+    }
+
+    // Card Header (Avatar + Name + Handles + Follow Buttons)
+    $html .= '<div class="social-card-header" style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #f1f5f9;">';
+    $html .= '<div style="display:flex; align-items:center; gap:12px; min-width:0;">';
+    if ($avatar_url) {
+        $html .= '<img src="' . esc_url($avatar_url) . '" alt="' . esc_attr($author_name) . '" class="social-avatar" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:1px solid #e2e8f0; flex-shrink:0;" />';
+    }
+    $html .= '<div style="min-width:0; line-height:1.35;">';
+    $html .= '<div class="social-author-name" style="font-weight:700; font-size:15px; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' . $author_name . '</div>';
+    $html .= '<div class="social-author-handles" style="font-size:13px; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' . implode(' · ', $handle_parts) . '</div>';
+    $html .= '</div>';
+    $html .= '</div>';
+    if ($follow_links) {
+        $html .= '<div class="social-follow-wrap" style="display:flex; flex-wrap:wrap; gap:6px; flex-shrink:0;">' . implode('', $follow_links) . '</div>';
+    }
+    $html .= '</div>';
+
+    // Body content
+    $html .= '<div class="social-card-body" style="font-size:15px; line-height:1.6; color:#1e293b; margin-bottom:14px; overflow-wrap:anywhere; word-break:break-word;">';
+    $body_text = $item['body_html'] ?? nl2br(esc_html($item['text'] ?? ''));
+    $html .= $body_text;
+    $html .= '</div>';
+
+    if (!empty($item['media_html'])) {
+        $html .= $item['media_html'];
+    }
+
+    // Card Footer (Date on left + Interactive Platform badges on right)
+    $html .= '<div class="social-card-footer" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin-top:14px; padding-top:12px; border-top:1px solid #f1f5f9; font-size:13px; color:#64748b;">';
+    $html .= '<div class="social-timestamp" style="display:flex; align-items:center; gap:4px;">';
+    $html .= '<span>📅 ' . esc_html($formatted_date) . '</span>';
+    $html .= '</div>';
+
+    // Platform action badges with live engagement counters
+    $badges = [];
+    if ($has_bsky) {
+        $bsky_data = $links['bsky'];
+        $b_url = esc_url($bsky_data['url'] ?? '');
+        $b_likes = absint($bsky_data['likes'] ?? 0);
+        $like_str = ($b_likes > 0) ? ' <span style="font-size:11px; background:#eff6ff; color:#1d4ed8; padding:1px 6px; border-radius:9999px; margin-left:3px;">❤️ ' . $b_likes . '</span>' : '';
+        $badges[] = '<a href="' . $b_url . '" target="_blank" rel="noopener" class="social-badge bsky-badge" style="display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:6px; background:#f0f9ff; color:#0284c7; text-decoration:none; border:1px solid #bae6fd; font-weight:600; font-size:12px;" title="View and like post on Bluesky">🦋 Bluesky' . $like_str . ' ↗</a>';
+    }
+    if ($has_masto) {
+        $masto_data = $links['mastodon'];
+        $m_url = esc_url($masto_data['url'] ?? '');
+        $m_favs = absint($masto_data['favs'] ?? 0);
+        $m_boosts = absint($masto_data['boosts'] ?? 0);
+        $m_stats = [];
+        if ($m_favs > 0) $m_stats[] = '⭐ ' . $m_favs;
+        if ($m_boosts > 0) $m_stats[] = '🔁 ' . $m_boosts;
+        $m_stat_str = $m_stats ? ' <span style="font-size:11px; background:#faf5ff; color:#6b21a8; padding:1px 6px; border-radius:9999px; margin-left:3px;">' . implode(' · ', $m_stats) . '</span>' : '';
+        $badges[] = '<a href="' . $m_url . '" target="_blank" rel="noopener" class="social-badge masto-badge" style="display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:6px; background:#faf5ff; color:#7e22ce; text-decoration:none; border:1px solid #e9d5ff; font-weight:600; font-size:12px;" title="View and favorite on Mastodon">🐘 Mastodon' . $m_stat_str . ' ↗</a>';
+    }
+
+    if ($badges) {
+        $html .= '<div class="social-platform-badges" style="display:flex; flex-wrap:wrap; align-items:center; gap:6px;">' . implode('', $badges) . '</div>';
+    }
+
+    $html .= '</div>';
+    $html .= '</blockquote>';
+
+    return $html;
+}
 
 register_activation_hook(__FILE__, function() {
     $opts = get_option('social_digest_options', []);
@@ -1471,6 +1704,7 @@ add_action('social_digest_cron', __NAMESPACE__ . '\\social_run_digest_import');
 function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_reposts) {
     if (empty($handle)) return ['posts' => [], 'newest_timestamp' => $last_check];
 
+    $opts = get_option('social_digest_options', []);
     $api_url = 'https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed?actor=' . urlencode($handle) . '&limit=50';
     $response = wp_remote_get($api_url, ['timeout' => 20]);
     if (is_wp_error($response)) return ['posts' => [], 'newest_timestamp' => $last_check];
@@ -1549,25 +1783,45 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
         $rkey     = substr($post_uri, strrpos($post_uri, '/') + 1);
         $author_handle = $post['author']['handle'] ?? $handle;
         $author_name   = esc_html($post['author']['displayName'] ?? $author_handle);
+        $author_avatar = esc_url_raw($post['author']['avatar'] ?? '');
+        $author_profile_url = 'https://bsky.app/profile/' . $author_handle;
         $web_url       = 'https://bsky.app/profile/' . $author_handle . '/post/' . $rkey;
 
-        $repost_badge = $is_repost ? '<div style="font-size: 0.8em; color: #0085ff; font-weight: bold; margin-bottom: 6px;">&#x1F501; Reposted by @' . esc_html($handle) . '</div>' : '';
-
-        $embed  = '<blockquote class="social-post bsky-embed" data-bluesky-uri="' . esc_attr($post_uri) . '" style="border-left: 3px solid #0085ff; padding-left: 15px; margin: 25px 0;">' . $repost_badge . '<p lang="en">' . nl2br(esc_html($text)) . '</p>' . $media_html . '<p style="font-size: 0.9em; color: #666;">&mdash; ' . $author_name . ' (<a href="' . esc_url($web_url) . '" target="_blank" rel="noopener">@' . esc_html($author_handle) . '</a>)</p></blockquote>';
+        $like_count   = absint($post['likeCount'] ?? 0);
+        $repost_count = absint($post['repostCount'] ?? 0);
 
         $extracted_urls = [];
         if (isset($post['embed']['external']['uri'])) $extracted_urls[] = $post['embed']['external']['uri'];
         if (preg_match_all('/\b(?:https?:\/\/|www\.)[^\s<"\'\)]+/i', $text, $u_m)) $extracted_urls = array_merge($extracted_urls, $u_m[0]);
 
-        $items[] = [
-            'network'     => 'bsky',
-            'timestamp'   => $created_at,
-            'text'        => $text,
-            'html'        => $embed,
-            'thumb_image' => $first_image_url,
-            'extra_tags'  => [],
-            'urls'        => array_values(array_unique($extracted_urls))
+        $item_data = [
+            'network'        => 'bsky',
+            'timestamp'      => $created_at,
+            'text'           => $text,
+            'body_html'      => nl2br(esc_html($text)),
+            'author_name'    => $author_name,
+            'author_handle'  => $author_handle,
+            'author_avatar'  => $author_avatar,
+            'media_html'     => $media_html,
+            'thumb_image'    => $first_image_url,
+            'is_repost'      => $is_repost,
+            'repost_user'    => $handle,
+            'platform_links' => [
+                'bsky' => [
+                    'url'         => $web_url,
+                    'profile_url' => $author_profile_url,
+                    'handle'      => $author_handle,
+                    'avatar'      => $author_avatar,
+                    'likes'       => $like_count,
+                    'reposts'     => $repost_count,
+                ]
+            ],
+            'extra_tags'     => [],
+            'urls'           => array_values(array_unique($extracted_urls))
         ];
+
+        $item_data['html'] = social_render_native_card($item_data, $opts);
+        $items[] = $item_data;
     }
 
     return ['posts' => $items, 'newest_timestamp' => $newest_timestamp];
@@ -1576,6 +1830,7 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
 function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include_reposts) {
     if (empty($handle_raw)) return ['posts' => [], 'newest_timestamp' => $last_check];
 
+    $opts = get_option('social_digest_options', []);
     $raw = trim($handle_raw);
     if (preg_match('#^https?://([^/]+)/@?([^/?\#]+)#i', $raw, $url_parts)) {
         $instance = $url_parts[1];
@@ -1629,8 +1884,13 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
         $clean_text   = wp_strip_all_tags($body_content);
         $clean_handle = $username;
         $author_acct  = !empty($post_data['account']['acct']) ? $post_data['account']['acct'] : ($post_data['account']['username'] ?? $username);
+        $author_avatar = esc_url_raw($post_data['account']['avatar'] ?? $post_data['account']['avatar_static'] ?? '');
+        $author_profile_url = esc_url_raw($post_data['account']['url'] ?? "https://{$instance}/@{$username}");
         $first_image_url = null;
         $media_html = '';
+
+        $fav_count   = absint($post_data['favourites_count'] ?? $post_data['favorites_count'] ?? 0);
+        $boost_count = absint($post_data['reblogs_count'] ?? 0);
 
         $extracted_urls = [];
         if (!empty($post_data['card']['url'])) $extracted_urls[] = $post_data['card']['url'];
@@ -1691,28 +1951,35 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
 
         $author_name = esc_html(!empty($post_data['account']['display_name']) ? $post_data['account']['display_name'] : $post_data['account']['username']);
         $post_url    = esc_url($post_data['url'] ?? "https://{$instance}/@{$username}/{$post_data['id']}");
-        $boost_badge = $is_reblog ? '<div style="font-size: 0.8em; color: #0085ff; font-weight: bold; margin-bottom: 8px;">&#x1F501; Boosted by @' . esc_html($clean_handle) . '</div>' : '';
 
-        $embed  = '<blockquote class="social-post mastodon-post" style="border: 1px solid #0085ff; border-left: 4px solid #0085ff; border-radius: 8px; padding: 16px; margin: 25px 0; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); max-width: 600px;">';
-        $embed .= $boost_badge;
-        $embed .= '<div class="masto-body" style="font-size: 15px; line-height: 1.55; color: #1d2327; margin-bottom: 12px;">' . wp_kses_post($body_content) . '</div>';
-        $embed .= $media_html;
-        $embed .= '<p style="font-size: 0.88em; color: #646970; margin: 10px 0 0 0; padding-top: 8px; border-top: 1px solid #f0f0f1;">&mdash; ' . $author_name . ' (<a href="' . esc_url($post_url) . '" target="_blank" rel="noopener" style="color: #0085ff; text-decoration: none;">@' . $author_acct . '</a> on Mastodon)</p>';
-        $embed .= '</blockquote>';
-        
-        $extracted_urls = [];
-        if (!empty($post_data['card']['url'])) $extracted_urls[] = $post_data['card']['url'];
-        if (preg_match_all('/\b(?:https?:\/\/|www\.)[^\s<"\'\)]+/i', $clean_text, $u_m)) $extracted_urls = array_merge($extracted_urls, $u_m[0]);
-
-        $items[] = [
-            'network'     => 'mastodon',
-            'timestamp'   => $created_at,
-            'text'        => $clean_text,
-            'html'        => $embed,
-            'thumb_image' => $first_image_url,
-            'extra_tags'  => [],
-            'urls'        => array_values(array_unique($extracted_urls))
+        $item_data = [
+            'network'        => 'mastodon',
+            'timestamp'      => $created_at,
+            'text'           => $clean_text,
+            'body_html'      => wp_kses_post($body_content),
+            'author_name'    => $author_name,
+            'author_handle'  => $author_acct,
+            'author_avatar'  => $author_avatar,
+            'media_html'     => $media_html,
+            'thumb_image'    => $first_image_url,
+            'is_repost'      => $is_reblog,
+            'repost_user'    => $clean_handle,
+            'platform_links' => [
+                'mastodon' => [
+                    'url'         => $post_url,
+                    'profile_url' => $author_profile_url,
+                    'handle'      => $author_acct,
+                    'avatar'      => $author_avatar,
+                    'favs'        => $fav_count,
+                    'boosts'      => $boost_count,
+                ]
+            ],
+            'extra_tags'     => [],
+            'urls'           => array_values(array_unique($extracted_urls))
         ];
+
+        $item_data['html'] = social_render_native_card($item_data, $opts);
+        $items[] = $item_data;
     }
 
     return ['posts' => $items, 'newest_timestamp' => $newest_timestamp];

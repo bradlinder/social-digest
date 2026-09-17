@@ -3,11 +3,32 @@ Social Digest - Feature Roadmap & Release Status
 
 🎯 Immediate Recommended Next Steps (To Do List)
 ------------------------------------------------
-1. Dual-Platform Back-Links [Feature Path]:
-   - Render links back to both Bluesky and Mastodon at the bottom of each social entry/embed when updates are cross-posted or deduplicated across both networks.
+1. Automated Social Thread Collapsing & Unrolling [Feature Path]:
+   - Automatically identify multi-post threads authored by the account owner and roll them into a unified, collapsible thread block rather than discrete independent cards.
+2. Local Media Attachment Auto-Sideloading Cache [Performance & Resilience]:
+   - Directly sideload all post images/media attachments into the WordPress Media Library to serve all assets strictly from the local origin and protect against remote server outages.
+3. Interactive Post Card Dark Mode Stylesheet Toggle [Accessibility]:
+   - Provide high-contrast dark theme styles for native cards matching dark WordPress theme parent containers.
 
-0. Release v5.5 - v5.5.4 Enhancements (Completed in v5.5 - v5.5.4)
------------------------------------------------------------------
+0. Release v5.6.1 Posts Menu, Draft Creation & Toolbar Shortcut (Completed in v5.6.1)
+------------------------------------------------------------------------------------
+[x] Save as Draft in Workbench (v5.6.1): Added a "Save as Draft" button alongside publish in the Next-Run Workbench, generating a WordPress draft with full preview tags, categories, and images for editorial review.
+[x] Posts Submenu Integration (v5.6.1): Relocated Social Digest under `Posts -> Social Digest` (`edit.php`), establishing it as a primary content authoring tool while maintaining backwards compatibility under Settings.
+[x] Default Actions & Preview View (v5.6.1): Navigating to Social Digest from the Posts submenu or admin bar defaults immediately to the Actions & Preview Workbench instead of Settings.
+[x] Top Admin Bar / Toolbar Shortcut (v5.6.1): Added a direct quick-access node with submenu dropdowns for Workbench and Settings in the WordPress Admin Bar.
+[x] Direct Post Editor Links in Admin Notices (v5.6.1): Displays "Edit Post" and "Edit Draft in WordPress" buttons in success notices upon creating or publishing a digest.
+
+0.1. Release v5.6.0 Native Multi-Network Rendering (Completed in v5.6.0)
+----------------------------------------------------------------------
+[x] Native Multi-Network Social Post Rendering (v5.6.0): Replaced 3rd-party remote script widgets (`embed.js`) with native local HTML/CSS post card rendering for both Bluesky and Mastodon. Posts render consistently and seamlessly for all visitors, independent of client-side script blockers.
+[x] Unified Header & Direct Follow Action (v5.6.0): Header includes author avatar, display name, handle links, and direct "+ Follow" action buttons for the active platform(s).
+[x] Live Social Engagement Metrics (v5.6.0): Display-only like (Bluesky) and favorite/boost (Mastodon) counts with direct links back to the source post to interact or like directly on the platform.
+[x] Dual-Platform Back-Links on Deduplicated Cross-Posts (v5.6.0): When a post is shared across both Bluesky and Mastodon, the rendered native card features links and engagement badges for both networks.
+[x] Platform Link Restrictions (v5.6.0): Selecting "Bluesky Only" or "Mastodon Only" strictly confines follow links and action badges exclusively to the chosen network.
+[x] Avatar Source Preference Setting (v5.6.0): Added configuration setting under Sources allowing administrators to choose profile avatar precedence (Automatic, Prefer Bluesky, Prefer Mastodon, or None/Hidden).
+
+0.1. Release v5.5 - v5.5.4 Enhancements (Completed in v5.5 - v5.5.4)
+--------------------------------------------------------------------
 [x] Mastodon Link Card Parity & Scraper (v5.5.4): Added `card` status object parsing and cached OpenGraph image scraper (`social_get_og_image_cached()`) for Mastodon, ensuring posts with external links render with image preview cards and populate post thumbnails.
 [x] Explicit Featured Image Selection UI (v5.5.4): Added "Set as Featured Image" radio control with candidate thumbnail image previews to the Next-Run Workbench, allowing administrators to choose any post image as the digest featured image.
 [x] Restored Social Embed CSS (v5.5.3): Re-introduced card framing, 600px max-width, overflow wrapping, matching borders, padding, and drop shadows across Mastodon and Bluesky embeds.
