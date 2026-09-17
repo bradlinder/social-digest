@@ -122,12 +122,57 @@ jobs:
           fi
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.vars.outputs.tag }}
-          name: ${{ steps.vars.outputs.title }}
-          body: ${{ steps.release_notes.outputs.body }}
-          draft: ${{ inputs.draft || false }}
-          prerelease: ${{ inputs.prerelease || false }}
-          files: |
-            social-digest.zip
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.vars.outputs.tag }}"
+          TITLE="${{ steps.vars.outputs.title }}"
+          
+          # Save release notes to temporary file
+          cat << 'EOF' > release_notes.md
+          ${{ steps.release_notes.outputs.body }}
+          EOF
+
+          # Prepare optional flags
+          FLAGS=()
+          if [ "${{ inputs.draft }}" = "true" ]; then FLAGS+=("--draft"); fi
+          if [ "${{ inputs.prerelease }}" = "true" ]; then FLAGS+=("--prerelease"); fi
+
+          echo "Publishing release $TAG ($TITLE)..."
+
+          # Retry loop to handle transient GitHub API 500 "Unicorn" errors on asset uploads
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          SUCCESS=0
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "Attempt $RETRY_COUNT of $MAX_RETRIES..."
+
+            if gh release view "$TAG" >/dev/null 2>&1; then
+              if gh release upload "$TAG" social-digest.zip --clobber && \
+                 gh release edit "$TAG" --title "$TITLE" --notes-file release_notes.md "${FLAGS[@]}"; then
+                SUCCESS=1
+                break
+              fi
+            else
+              if gh release create "$TAG" social-digest.zip \
+                --title "$TITLE" \
+                --notes-file release_notes.md \
+                --target "${{ github.sha }}" \
+                "${FLAGS[@]}"; then
+                SUCCESS=1
+                break
+              fi
+            fi
+
+            echo "Upload/release creation hit transient error. Waiting 5s before retrying..."
+            sleep 5
+          done
+
+          if [ $SUCCESS -ne 1 ]; then
+            echo "Failed to publish GitHub release after $MAX_RETRIES attempts."
+            exit 1
+          fi
+          echo "GitHub Release $TAG published successfully!"
+
