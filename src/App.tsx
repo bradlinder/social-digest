@@ -233,7 +233,7 @@ export default function App() {
 
           {/* Rendered WordPress Native Card Simulation */}
           <div className="bg-slate-100 rounded-lg p-4 sm:p-6 flex justify-center">
-            <blockquote
+            <div
               className="social-post social-card w-full max-w-[600px] bg-white text-slate-800 rounded-xl p-4 sm:p-5 shadow-sm border border-slate-200 border-l-4 border-l-[#0284c7] font-sans"
               style={{ margin: '0 auto' }}
             >
@@ -303,7 +303,7 @@ export default function App() {
                   </a>
                 </div>
               </div>
-            </blockquote>
+            </div>
           </div>
         </section>
 

@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.6.2',
+  version: '5.6.3',
   requiresWP: '6.0+',
   testedUpTo: '6.7',
   requiresPHP: '7.4+',
@@ -17,14 +17,22 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.6.1',
+  rollbackTarget: 'v5.6.2',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.6.3',
+    tag: 'v5.6.3',
+    isLatest: true,
+    highlights: [
+      'Changed HTML structure: Converted the outer social card container from `blockquote` to `div` to resolve conflicts with aggressive WordPress theme styles or embed scripts (like Newspack) that were hiding or distorting native blocks.'
+    ]
+  },
+  {
     version: '5.6.2',
     tag: 'v5.6.2',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Inline Follow Links & Bluesky Embed Symmetry: Redesigned the native card header to match the official Bluesky embed aesthetic. Handles and follow links are now paired directly inline (@handle · Follow), eliminating separate pill buttons on the far right.',
       'Multi-Network Follow Associations: On cross-posted entries, each platform handle is paired directly with its own dedicated follow link in brand-coordinated styling (@user.bsky.social · Follow · @user@instance · Follow).',

@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.6.2
+ * Version: 5.6.3
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -68,7 +68,7 @@ add_action('wp_head', function() {
         ?>
         <style id="social-digest-embed-styles">
         /* Social Digest Native Card Styling */
-        blockquote.social-post.social-card {
+        div.social-post.social-card {
             margin-left: auto !important;
             margin-right: auto !important;
             max-width: 600px !important;
@@ -83,28 +83,28 @@ add_action('wp_head', function() {
             padding: 18px;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
         }
-        blockquote.social-post.social-card a {
+        div.social-post.social-card a {
             text-decoration: none;
             transition: opacity 0.15s ease;
         }
-        blockquote.social-post.social-card a:hover {
+        div.social-post.social-card a:hover {
             opacity: 0.85;
             text-decoration: underline;
         }
-        blockquote.social-post .social-avatar {
+        div.social-post .social-avatar {
             border-radius: 50%;
             object-fit: cover;
         }
-        blockquote.social-post .social-follow-link:hover {
+        div.social-post .social-follow-link:hover {
             text-decoration: underline !important;
             opacity: 0.85;
         }
-        blockquote.social-post .social-badge:hover {
+        div.social-post .social-badge:hover {
             text-decoration: none !important;
             filter: brightness(0.96);
         }
         @media (max-width: 480px) {
-            blockquote.social-post .social-card-footer {
+            div.social-post .social-card-footer {
                 flex-direction: column;
                 align-items: flex-start !important;
             }
@@ -1633,7 +1633,7 @@ function social_render_native_card($item, $opts = []) {
     }
 
     // Build the Native Card HTML
-    $html = '<blockquote class="social-post social-card" style="border:1px solid #e2e8f0; border-left:4px solid #0284c7; border-radius:12px; padding:18px; margin:26px auto; background:#ffffff; box-shadow:0 2px 6px rgba(0,0,0,0.04); max-width:600px; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif;">';
+    $html = '<div class="social-post social-card" style="border:1px solid #e2e8f0; border-left:4px solid #0284c7; border-radius:12px; padding:18px; margin:26px auto; background:#ffffff; box-shadow:0 2px 6px rgba(0,0,0,0.04); max-width:600px; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif;">';
 
     if ($repost_html) {
         $html .= $repost_html;
@@ -1692,7 +1692,7 @@ function social_render_native_card($item, $opts = []) {
     }
 
     $html .= '</div>';
-    $html .= '</blockquote>';
+    $html .= '</div>';
 
     return $html;
 }
