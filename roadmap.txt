@@ -10,7 +10,15 @@ Social Digest - Feature Roadmap & Release Status
 3. Interactive Post Card Dark Mode Stylesheet Toggle [Accessibility]:
    - Provide high-contrast dark theme styles for native cards matching dark WordPress theme parent containers.
 
-0. Release v5.6.1 Posts Menu, Draft Creation & Toolbar Shortcut (Completed in v5.6.1)
+0. Release v5.6.2 Inline Follow Links & Embed Styling Symmetry (Completed in v5.6.2)
+------------------------------------------------------------------------------------
+[x] Inline Follow Links (v5.6.2): Replaced separate pill buttons on the right of the header with clean, inline `@handle · Follow` links directly mimicking the official Bluesky embed aesthetic.
+[x] Multi-Network Follow Association (v5.6.2): On cross-posted entries, each platform handle is paired directly with its respective follow link in brand-coordinated styling (`@user.bsky.social · Follow · @user@instance · Follow`).
+[x] Full Mastodon Handle Formatting (v5.6.2): Ensures author handles include instance domain (e.g. `@bradlinder@fosstodon.org`) even when instance APIs omit the domain host.
+[x] Removed Calendar Emoji (v5.6.2): Removed calendar icon (`📅 `) from footer timestamp for an uncluttered date/time presentation.
+[x] Responsive Header Flow (v5.6.2): Improved mobile wrap dynamics to keep avatar and handle layout natural across all screen sizes.
+
+0.1. Release v5.6.1 Posts Menu, Draft Creation & Toolbar Shortcut (Completed in v5.6.1)
 ------------------------------------------------------------------------------------
 [x] Save as Draft in Workbench (v5.6.1): Added a "Save as Draft" button alongside publish in the Next-Run Workbench, generating a WordPress draft with full preview tags, categories, and images for editorial review.
 [x] Posts Submenu Integration (v5.6.1): Relocated Social Digest under `Posts -> Social Digest` (`edit.php`), establishing it as a primary content authoring tool while maintaining backwards compatibility under Settings.

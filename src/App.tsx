@@ -212,6 +212,101 @@ export default function App() {
           </div>
         </div>
 
+        {/* Live Visual Card Design Preview (v5.6.2) */}
+        <section className="bg-slate-800/50 border border-slate-700/70 rounded-xl p-5 sm:p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-700/60">
+            <div>
+              <div className="flex items-center space-x-2">
+                <Sparkles className="w-4 h-4 text-blue-400" />
+                <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+                  Native Post Card Design Preview (v5.6.2)
+                </h2>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
+                  Live Style
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Visual demonstration of the newly updated card header layout with inline follow links and calendar-free footer.
+              </p>
+            </div>
+          </div>
+
+          {/* Rendered WordPress Native Card Simulation */}
+          <div className="bg-slate-100 rounded-lg p-4 sm:p-6 flex justify-center">
+            <blockquote
+              className="social-post social-card w-full max-w-[600px] bg-white text-slate-800 rounded-xl p-4 sm:p-5 shadow-sm border border-slate-200 border-l-4 border-l-[#0284c7] font-sans"
+              style={{ margin: '0 auto' }}
+            >
+              {/* Card Header */}
+              <div className="flex items-center gap-3 pb-3 mb-3 border-b border-slate-100">
+                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-inner flex-shrink-0">
+                  BL
+                </div>
+                <div className="min-w-0 flex-1 leading-snug">
+                  <div className="font-bold text-[15px] text-slate-900 truncate">
+                    Liliputing
+                  </div>
+                  <div className="text-[13px] text-slate-500 flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                    <span className="inline-flex items-center whitespace-nowrap">
+                      <a href="https://bsky.app/profile/liliputing.bsky.social" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-slate-700 hover:underline">
+                        @liliputing.bsky.social
+                      </a>
+                      <span className="text-slate-400 mx-1.5">·</span>
+                      <a href="https://bsky.app/profile/liliputing.bsky.social" target="_blank" rel="noopener noreferrer" className="text-[#0284c7] font-semibold hover:underline">
+                        Follow
+                      </a>
+                    </span>
+                    <span className="text-slate-300">·</span>
+                    <span className="inline-flex items-center whitespace-nowrap">
+                      <a href="https://fosstodon.org/@bradlinder" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-slate-700 hover:underline">
+                        @bradlinder@fosstodon.org
+                      </a>
+                      <span className="text-slate-400 mx-1.5">·</span>
+                      <a href="https://fosstodon.org/@bradlinder" target="_blank" rel="noopener noreferrer" className="text-[#7e22ce] font-semibold hover:underline">
+                        Follow
+                      </a>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card Body */}
+              <div className="text-[15px] leading-relaxed text-slate-800 mb-3 break-words">
+                A look at the refreshed Social Digest post card formatting. Handles and follow links are now paired directly inline, closely resembling the native Bluesky embed design.
+              </div>
+
+              {/* Card Footer (Clean Date + Platform Badges) */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 text-[13px] text-slate-500">
+                <div className="flex items-center">
+                  <span>Oct 14, 2026 · 3:45 PM</span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <a
+                    href="https://bsky.app"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded bg-sky-50 text-[#0284c7] border border-sky-200 hover:bg-sky-100 transition-colors"
+                  >
+                    <span>🦋 Bluesky</span>
+                    <span className="text-[11px] bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-full">❤️ 42</span>
+                    <span className="text-[10px]">↗</span>
+                  </a>
+                  <a
+                    href="https://fosstodon.org"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded bg-purple-50 text-[#7e22ce] border border-purple-200 hover:bg-purple-100 transition-colors"
+                  >
+                    <span>🐘 Mastodon</span>
+                    <span className="text-[11px] bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded-full">⭐ 18 · 🔁 5</span>
+                    <span className="text-[10px]">↗</span>
+                  </a>
+                </div>
+              </div>
+            </blockquote>
+          </div>
+        </section>
+
         {/* Changelog Section */}
         <section className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">

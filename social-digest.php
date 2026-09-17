@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.6.1
+ * Version: 5.6.2
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -95,20 +95,15 @@ add_action('wp_head', function() {
             border-radius: 50%;
             object-fit: cover;
         }
-        blockquote.social-post .social-follow-btn:hover,
+        blockquote.social-post .social-follow-link:hover {
+            text-decoration: underline !important;
+            opacity: 0.85;
+        }
         blockquote.social-post .social-badge:hover {
             text-decoration: none !important;
             filter: brightness(0.96);
         }
         @media (max-width: 480px) {
-            blockquote.social-post .social-card-header {
-                flex-direction: column;
-                align-items: flex-start !important;
-            }
-            blockquote.social-post .social-follow-wrap {
-                margin-top: 6px;
-                width: 100%;
-            }
             blockquote.social-post .social-card-footer {
                 flex-direction: column;
                 align-items: flex-start !important;
@@ -1593,25 +1588,42 @@ function social_render_native_card($item, $opts = []) {
         }
     }
 
-    // Follow links resolution (only for platforms enabled in network_mode)
-    $follow_links = [];
-    if ($has_bsky && !empty($links['bsky']['profile_url'])) {
-        $follow_links[] = '<a href="' . esc_url($links['bsky']['profile_url']) . '" target="_blank" rel="noopener" class="social-follow-btn bsky-follow" style="display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; padding:4px 10px; border-radius:9999px; background:#e0f2fe; color:#0284c7; text-decoration:none; border:1px solid #bae6fd;">+ Follow</a>';
-    }
-    if ($has_masto && !empty($links['mastodon']['profile_url'])) {
-        $follow_links[] = '<a href="' . esc_url($links['mastodon']['profile_url']) . '" target="_blank" rel="noopener" class="social-follow-btn masto-follow" style="display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; padding:4px 10px; border-radius:9999px; background:#f3e8ff; color:#7e22ce; text-decoration:none; border:1px solid #e9d5ff;">+ Follow</a>';
+    // Platform handles & inline follow links
+    $social_identities = [];
+
+    if ($has_bsky && !empty($links['bsky']['handle'])) {
+        $b_raw_handle = ltrim($links['bsky']['handle'], '@');
+        $b_handle = '@' . esc_html($b_raw_handle);
+        $b_profile = esc_url($links['bsky']['profile_url'] ?? ('https://bsky.app/profile/' . $b_raw_handle));
+        $b_html  = '<span class="social-identity bsky-identity" style="display:inline-flex; align-items:center; white-space:nowrap;">';
+        $b_html .= '<a href="' . $b_profile . '" target="_blank" rel="noopener" style="color:#64748b; text-decoration:none;">' . $b_handle . '</a>';
+        $b_html .= '<span style="color:#94a3b8; margin:0 5px;">·</span>';
+        $b_html .= '<a href="' . $b_profile . '" target="_blank" rel="noopener" class="social-follow-link bsky-follow" style="color:#0284c7; font-weight:600; text-decoration:none;" title="Follow ' . $b_handle . ' on Bluesky">Follow</a>';
+        $b_html .= '</span>';
+        $social_identities[] = $b_html;
     }
 
-    // Handles display
-    $handle_parts = [];
-    if ($has_bsky && !empty($links['bsky']['handle'])) {
-        $handle_parts[] = '<a href="' . esc_url($links['bsky']['profile_url'] ?? '') . '" target="_blank" rel="noopener" style="color:#64748b; text-decoration:none;">@' . esc_html($links['bsky']['handle']) . '</a>';
-    }
     if ($has_masto && !empty($links['mastodon']['handle'])) {
-        $handle_parts[] = '<a href="' . esc_url($links['mastodon']['profile_url'] ?? '') . '" target="_blank" rel="noopener" style="color:#64748b; text-decoration:none;">@' . esc_html($links['mastodon']['handle']) . '</a>';
+        $m_raw_handle = ltrim($links['mastodon']['handle'], '@');
+        if (strpos($m_raw_handle, '@') === false && !empty($links['mastodon']['profile_url'])) {
+            $p_host = parse_url($links['mastodon']['profile_url'], PHP_URL_HOST);
+            if ($p_host) {
+                $m_raw_handle .= '@' . $p_host;
+            }
+        }
+        $m_handle = '@' . esc_html($m_raw_handle);
+        $m_profile = esc_url($links['mastodon']['profile_url'] ?? '');
+        $m_html  = '<span class="social-identity masto-identity" style="display:inline-flex; align-items:center; white-space:nowrap;">';
+        $m_html .= '<a href="' . $m_profile . '" target="_blank" rel="noopener" style="color:#64748b; text-decoration:none;">' . $m_handle . '</a>';
+        $m_html .= '<span style="color:#94a3b8; margin:0 5px;">·</span>';
+        $m_html .= '<a href="' . $m_profile . '" target="_blank" rel="noopener" class="social-follow-link masto-follow" style="color:#7e22ce; font-weight:600; text-decoration:none;" title="Follow ' . $m_handle . ' on Mastodon">Follow</a>';
+        $m_html .= '</span>';
+        $social_identities[] = $m_html;
     }
-    if (empty($handle_parts) && !empty($item['author_handle'])) {
-        $handle_parts[] = '@' . esc_html($item['author_handle']);
+
+    if (empty($social_identities) && !empty($item['author_handle'])) {
+        $fallback_handle = '@' . ltrim(esc_html($item['author_handle']), '@');
+        $social_identities[] = '<span style="color:#64748b;">' . $fallback_handle . '</span>';
     }
 
     // Repost / Boost banner
@@ -1627,20 +1639,15 @@ function social_render_native_card($item, $opts = []) {
         $html .= $repost_html;
     }
 
-    // Card Header (Avatar + Name + Handles + Follow Buttons)
-    $html .= '<div class="social-card-header" style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #f1f5f9;">';
-    $html .= '<div style="display:flex; align-items:center; gap:12px; min-width:0;">';
+    // Card Header (Avatar + Name + Inline Handles with Follow Links)
+    $html .= '<div class="social-card-header" style="display:flex; align-items:center; gap:12px; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #f1f5f9;">';
     if ($avatar_url) {
         $html .= '<img src="' . esc_url($avatar_url) . '" alt="' . esc_attr($author_name) . '" class="social-avatar" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:1px solid #e2e8f0; flex-shrink:0;" />';
     }
-    $html .= '<div style="min-width:0; line-height:1.35;">';
+    $html .= '<div style="min-width:0; line-height:1.35; flex:1;">';
     $html .= '<div class="social-author-name" style="font-weight:700; font-size:15px; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' . $author_name . '</div>';
-    $html .= '<div class="social-author-handles" style="font-size:13px; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' . implode(' · ', $handle_parts) . '</div>';
+    $html .= '<div class="social-author-handles" style="font-size:13px; color:#64748b; display:flex; flex-wrap:wrap; align-items:center; column-gap:8px; row-gap:2px;">' . implode('<span style="color:#cbd5e1; margin:0 2px;">·</span>', $social_identities) . '</div>';
     $html .= '</div>';
-    $html .= '</div>';
-    if ($follow_links) {
-        $html .= '<div class="social-follow-wrap" style="display:flex; flex-wrap:wrap; gap:6px; flex-shrink:0;">' . implode('', $follow_links) . '</div>';
-    }
     $html .= '</div>';
 
     // Body content
@@ -1655,8 +1662,8 @@ function social_render_native_card($item, $opts = []) {
 
     // Card Footer (Date on left + Interactive Platform badges on right)
     $html .= '<div class="social-card-footer" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin-top:14px; padding-top:12px; border-top:1px solid #f1f5f9; font-size:13px; color:#64748b;">';
-    $html .= '<div class="social-timestamp" style="display:flex; align-items:center; gap:4px;">';
-    $html .= '<span>📅 ' . esc_html($formatted_date) . '</span>';
+    $html .= '<div class="social-timestamp" style="display:flex; align-items:center;">';
+    $html .= '<span>' . esc_html($formatted_date) . '</span>';
     $html .= '</div>';
 
     // Platform action badges with live engagement counters
@@ -1884,6 +1891,7 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
         $clean_text   = wp_strip_all_tags($body_content);
         $clean_handle = $username;
         $author_acct  = !empty($post_data['account']['acct']) ? $post_data['account']['acct'] : ($post_data['account']['username'] ?? $username);
+        $full_acct    = (strpos($author_acct, '@') === false && !empty($instance)) ? "{$author_acct}@{$instance}" : $author_acct;
         $author_avatar = esc_url_raw($post_data['account']['avatar'] ?? $post_data['account']['avatar_static'] ?? '');
         $author_profile_url = esc_url_raw($post_data['account']['url'] ?? "https://{$instance}/@{$username}");
         $first_image_url = null;
@@ -1958,7 +1966,7 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
             'text'           => $clean_text,
             'body_html'      => wp_kses_post($body_content),
             'author_name'    => $author_name,
-            'author_handle'  => $author_acct,
+            'author_handle'  => $full_acct,
             'author_avatar'  => $author_avatar,
             'media_html'     => $media_html,
             'thumb_image'    => $first_image_url,
@@ -1968,7 +1976,7 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
                 'mastodon' => [
                     'url'         => $post_url,
                     'profile_url' => $author_profile_url,
-                    'handle'      => $author_acct,
+                    'handle'      => $full_acct,
                     'avatar'      => $author_avatar,
                     'favs'        => $fav_count,
                     'boosts'      => $boost_count,

@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 5.6.1
+Stable tag: 5.6.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,13 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.6.2 =
+* Inline Follow Links & Bluesky Embed Symmetry: Restyled the native card header to mirror the official Bluesky embed design. Handles and follow links are now paired directly inline (`@handle · Follow`), replacing the separate pill buttons on the right.
+* Multi-Network Association: When posts are cross-posted or accounts exist on both Bluesky and Mastodon, each handle is paired directly with its respective follow link in brand-coordinated styling (`@user.bsky.social · Follow · @user@instance · Follow`).
+* Full Mastodon Handle Formatting: Ensured Mastodon author handles cleanly include the instance domain (e.g. `@bradlinder@fosstodon.org`) even when instance APIs return local user accounts without the host.
+* Cleaner Footer Timestamp: Removed the calendar icon from the lower left corner of the card footer, providing a clean, uncluttered publication timestamp (`M j, Y · g:i A`).
+* Responsive Header Flow: Optimized header wrap dynamics for narrow mobile viewports, keeping the avatar and author identity aligned without artificial stacking.
 
 = 5.6.1 =
 * Save as Draft Option in Workbench: Added a "Save as Draft" button alongside the publish action in the Next-Run Workbench, allowing editorial review of compiled digests in the WordPress editor before going live.
