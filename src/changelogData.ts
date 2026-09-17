@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.6.3',
+  version: '5.6.4',
   requiresWP: '6.0+',
   testedUpTo: '6.7',
   requiresPHP: '7.4+',
@@ -17,14 +17,23 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.6.2',
+  rollbackTarget: 'v5.6.3',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.6.4',
+    tag: 'v5.6.4',
+    isLatest: true,
+    highlights: [
+      'Multiple images within a single post are now displayed as a grid gallery instead of sequential large images.',
+      'Automatically prioritizes hashtags from the selected featured image post for the generated digest title.'
+    ]
+  },
+  {
     version: '5.6.3',
     tag: 'v5.6.3',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Changed HTML structure: Converted the outer social card container from `blockquote` to `div` to resolve conflicts with aggressive WordPress theme styles or embed scripts (like Newspack) that were hiding or distorting native blocks.'
     ]

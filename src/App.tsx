@@ -212,14 +212,14 @@ export default function App() {
           </div>
         </div>
 
-        {/* Live Visual Card Design Preview (v5.6.2) */}
+        {/* Live Visual Card Design Preview (v5.6.4) */}
         <section className="bg-slate-800/50 border border-slate-700/70 rounded-xl p-5 sm:p-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-700/60">
             <div>
               <div className="flex items-center space-x-2">
                 <Sparkles className="w-4 h-4 text-blue-400" />
                 <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                  Native Post Card Design Preview (v5.6.2)
+                  Native Post Card Design Preview (v5.6.4)
                 </h2>
                 <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
                   Live Style

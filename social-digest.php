@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.6.3
+ * Version: 5.6.4
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -675,8 +675,33 @@ function social_fetch_workbench_candidates() {
         ];
     }
 
+    $featured = '';
+    $featured_post_tags = [];
+    if (!empty($opts['auto_thumb'])) {
+        $thumbs = [];
+        $ordered = $chronological_posts;
+        if (($opts['thumb_selection_scope'] ?? 'exclude_first') === 'exclude_first') $ordered = array_slice($ordered, 1);
+        foreach ($ordered as $p) if (!empty($p['thumb_image'])) $thumbs[] = $p;
+        if (!$thumbs) foreach ($chronological_posts as $p) if (!empty($p['thumb_image'])) $thumbs[] = $p;
+        if ($thumbs) {
+            $mode_thumb = $opts['thumb_selection_mode'] ?? 'random';
+            if ($mode_thumb === 'random') $sel = $thumbs[array_rand($thumbs)];
+            else $sel = $thumbs[min(count($thumbs)-1, max(0, (int)$mode_thumb-1))];
+            
+            $featured = esc_url_raw($sel['thumb_image']);
+            $featured_post_tags = array_merge((array)($sel['extra_tags'] ?? []), preg_match_all('/#(\w+)/u', $sel['text'] ?? '', $tm) ? $tm[1] : []);
+            $featured_post_tags = array_values(array_unique(array_filter($featured_post_tags, fn($t) => mb_strlen($t) >= $min_tag_length)));
+        }
+    }
+
     $raw_tags = [];
     $post_tags_list = [];
+    
+    // Add the featured post tags first so they are prioritized for the title
+    if (!empty($featured_post_tags)) {
+        $post_tags_list[] = $featured_post_tags;
+    }
+
     foreach ($eligible as $item) {
         $tags = array_merge((array)($item['extra_tags'] ?? []), preg_match_all('/#(\w+)/u', $item['text'] ?? '', $tm) ? $tm[1] : []);
         $valid_post_tags = array_slice(array_values(array_unique(array_filter($tags, fn($t) => mb_strlen($t) >= $min_tag_length))), 0, $max_tags_per_post);
@@ -685,6 +710,7 @@ function social_fetch_workbench_candidates() {
             $post_tags_list[] = $valid_post_tags;
         }
     }
+    
     $title_hashtags = social_rank_and_format_title_tags($post_tags_list, $opts['default_tags'] ?? '', $opts['title_tag_enclosure'] ?? 'parentheses', $opts['title_tag_delimiter'] ?? 'oxford');    
     $tag_map = [];
     foreach (array_filter(array_map('trim', explode(',', $opts['default_tags'] ?? ''))) as $tag) $tag_map[mb_strtolower($tag)] = $tag;
@@ -693,19 +719,6 @@ function social_fetch_workbench_candidates() {
     $title_tpl = $opts['title_template'] ?? 'Social Digest {hashtags}';
     $title = trim(preg_replace('/\s*[:\-–]\s*$/u', '', preg_replace('/\s+/', ' ', str_replace(['{hashtags}','{date}','{count}'], [$title_hashtags, wp_date(get_option('date_format'), time(), wp_timezone()), count($candidates)], $title_tpl))));
 
-    $featured = '';
-    if (!empty($opts['auto_thumb'])) {
-        $thumbs = [];
-        $ordered = $chronological_posts;
-        if (($opts['thumb_selection_scope'] ?? 'exclude_first') === 'exclude_first') $ordered = array_slice($ordered, 1);
-        foreach ($ordered as $p) if (!empty($p['thumb_image'])) $thumbs[] = esc_url_raw($p['thumb_image']);
-        if (!$thumbs) foreach ($chronological_posts as $p) if (!empty($p['thumb_image'])) $thumbs[] = esc_url_raw($p['thumb_image']);
-        if ($thumbs) {
-            $mode_thumb = $opts['thumb_selection_mode'] ?? 'random';
-            if ($mode_thumb === 'random') $featured = $thumbs[array_rand($thumbs)];
-            else $featured = $thumbs[min(count($thumbs)-1, max(0, (int)$mode_thumb-1))];
-        }
-    }
 
     $next = [
         'created' => time(),
@@ -1754,13 +1767,24 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
         $media_html = '';
 
         if (isset($post['embed']['images']) && is_array($post['embed']['images'])) {
-            $media_html .= '<div class="social-embed-images" style="display:flex; flex-wrap:wrap; gap:10px; margin:12px 0;">';
-            foreach ($post['embed']['images'] as $img) {
+            $images = $post['embed']['images'];
+            $num_imgs = count($images);
+            if ($num_imgs > 1) {
+                $cols = $num_imgs == 2 || $num_imgs == 4 ? 2 : 3;
+                $media_html .= '<div class="social-embed-images" style="display:grid; grid-template-columns: repeat(' . $cols . ', 1fr); gap:10px; margin:12px 0;">';
+            } else {
+                $media_html .= '<div class="social-embed-images" style="margin:12px 0;">';
+            }
+            foreach ($images as $img) {
                 $img_url = esc_url($img['fullsize'] ?? $img['thumb'] ?? '');
                 $alt_txt = esc_attr($img['alt'] ?? 'Bluesky image');
                 if ($img_url) {
                     if (!$first_image_url) $first_image_url = $img_url;
-                    $media_html .= '<figure style="margin:0; max-width:100%;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="max-height:400px; width:auto; border-radius:8px; display:block;" /></figure>';
+                    if ($num_imgs > 1) {
+                        $media_html .= '<figure style="margin:0;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px; display:block;" /></figure>';
+                    } else {
+                        $media_html .= '<figure style="margin:0;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="max-width:100%; max-height:400px; width:auto; border-radius:8px; display:block;" /></figure>';
+                    }
                 }
             }
             $media_html .= '</div>';
@@ -1906,17 +1930,31 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
         $extracted_urls = array_values(array_unique($extracted_urls));
 
         if (!empty($post_data['media_attachments']) && is_array($post_data['media_attachments'])) {
-            $media_html .= '<div class="social-embed-media" style="display:flex; flex-wrap:wrap; gap:10px; margin:12px 0;">';
+            $images = [];
             foreach ($post_data['media_attachments'] as $med) {
-                if ($med['type'] === 'image') {
+                if ($med['type'] === 'image') $images[] = $med;
+            }
+            if (!empty($images)) {
+                $num_imgs = count($images);
+                if ($num_imgs > 1) {
+                    $cols = $num_imgs == 2 || $num_imgs == 4 ? 2 : 3;
+                    $media_html .= '<div class="social-embed-media" style="display:grid; grid-template-columns: repeat(' . $cols . ', 1fr); gap:10px; margin:12px 0;">';
+                } else {
+                    $media_html .= '<div class="social-embed-media" style="margin:12px 0;">';
+                }
+                foreach ($images as $med) {
                     $img_url = esc_url($med['url'] ?? $med['preview_url'] ?? '');
                     if ($img_url) {
                         if (!$first_image_url) $first_image_url = $img_url;
-                        $media_html .= '<figure style="margin:0;"><img src="' . $img_url . '" style="max-height:400px; width:auto; border-radius:8px; display:block;" /></figure>';
+                        if ($num_imgs > 1) {
+                            $media_html .= '<figure style="margin:0;"><img src="' . $img_url . '" style="width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px; display:block;" /></figure>';
+                        } else {
+                            $media_html .= '<figure style="margin:0;"><img src="' . $img_url . '" style="max-width:100%; max-height:400px; width:auto; border-radius:8px; display:block;" /></figure>';
+                        }
                     }
                 }
+                $media_html .= '</div>';
             }
-            $media_html .= '</div>';
         }
 
         if (!empty($post_data['card']) && is_array($post_data['card'])) {
