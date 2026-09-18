@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.6
+Stable tag: 5.7.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -15,9 +15,12 @@ Social Digest is a WordPress plugin that automates the aggregation and publicati
 
 == Changelog ==
 
-= 5.7.6 =
-* Architecture: Modular Codebase with Zero-Downtime Self-Healing: Restructured plugin into clean, dedicated modules (`includes/helpers.php`, `includes/api-clients.php`, `includes/feed-builder.php`, and `includes/admin.php`). Built-in self-healing provisioner automatically creates the `/includes/` directory and restores module files on the fly if the plugin is installed on a server that only received `social-digest.php`, guaranteeing zero downtime and complete backwards compatibility across all deployment workflows.
+= 5.7.7 =
+* Architecture: Modular Codebase with Zero-Downtime Self-Healing: Restructured plugin into clean, dedicated modules (`includes/helpers.php`, `includes/api-clients.php`, `includes/feed-builder.php`, and `includes/admin.php`). Built-in self-healing provisioner in `social-digest.php` automatically creates the `/includes/` directory and restores module files on the fly if the plugin is installed or updated on a server that only received `social-digest.php`, guaranteeing zero downtime and complete backwards compatibility across all deployment workflows.
 * Fix: TinyMCE Editor Splitter Inline Fallback: Added an inline TinyMCE plugin fallback in `admin_footer` to guarantee the "Insert Post Splitter" toolbar button functions properly even if the external JS asset is not present on disk.
+
+= 5.7.6 =
+* Hotfix: Emergency Standalone Consolidation: Consolidated core helper functions, API clients, feed builders, and admin UI views directly into `social-digest.php` to immediately eliminate fatal missing file errors (`require_once includes/helpers.php: Failed to open stream`) on environments performing single-file updates.
 
 = 5.7.5 =
 * Critical Fix: PHP 8.5 / PHP 8.1+ Compatibility & Outage Prevention: Resolved an uncaught `Fatal error: Class "SocialDigest\DateTimeImmutable" not found` in `social-digest.php`. The DateTime class in `social_reschedule_cron()` was missing the global root namespace backslash (`\DateTimeImmutable`), which caused PHP to fail looking within the plugin namespace during cron scheduling, settings saves, and activation.

@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.6',
+  version: '5.7.7',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,17 +17,25 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.5',
+  rollbackTarget: 'v5.7.6',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
-    version: '5.7.6',
-    tag: 'v5.7.6',
+    version: '5.7.7',
+    tag: 'v5.7.7',
     isLatest: true,
     highlights: [
-      'Architecture: Modular Codebase with Zero-Downtime Self-Healing: Restructured plugin into clean, dedicated modules (includes/helpers.php, includes/api-clients.php, includes/feed-builder.php, and includes/admin.php). Built-in self-healing provisioner automatically creates the /includes/ directory and restores module files on the fly if installed on a server that only received social-digest.php, guaranteeing zero downtime and complete backwards compatibility.',
+      'Architecture: Modular Codebase with Zero-Downtime Self-Healing: Restructured plugin into clean, dedicated modules (includes/helpers.php, includes/api-clients.php, includes/feed-builder.php, and includes/admin.php). Built-in self-healing provisioner in social-digest.php automatically creates the /includes/ directory and restores module files on the fly if installed on a server that only received social-digest.php, guaranteeing zero downtime and complete backwards compatibility.',
       'Fix: TinyMCE Editor Splitter Inline Fallback: Added an inline TinyMCE plugin fallback in admin_footer to guarantee the "Insert Post Splitter" toolbar button functions properly even if external JS assets are missing from disk.'
+    ]
+  },
+  {
+    version: '5.7.6',
+    tag: 'v5.7.6',
+    isLatest: false,
+    highlights: [
+      'Hotfix: Emergency Standalone Consolidation: Consolidated core helper functions, API clients, feed builders, and admin UI views directly into social-digest.php to immediately eliminate fatal missing file errors (require_once includes/helpers.php: Failed to open stream) on environments performing single-file updates.'
     ]
   },
   {

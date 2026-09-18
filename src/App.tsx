@@ -370,7 +370,7 @@ export default function App() {
             <div className="flex items-center space-x-2">
               <FileCode className="w-4 h-4 text-emerald-400" />
               <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                Modular Codebase Architecture (v5.7.6)
+                Modular Codebase Architecture (v5.7.7)
               </h2>
             </div>
             <span className="text-[11px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 px-2 py-0.5 rounded font-mono">
