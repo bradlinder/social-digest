@@ -117,8 +117,29 @@ function social_render_native_card($item, $opts = []) {
     $html .= $body_text;
     $html .= '</div>';
 
-    if (!empty($item['media_html'])) {
-        $html .= $item['media_html'];
+    $media_content = $item['media_html'] ?? '';
+    // In posts with both link preview cards and image galleries/videos,
+    // ensure the link preview card always displays above the gallery
+    if ($media_content !== '' && strpos($media_content, 'social-link-card') !== false) {
+        $first_embed_pos = false;
+        foreach (['social-embed-images', 'social-embed-media', 'social-embed-video', 'social-embed-gifv'] as $embed_class) {
+            $pos = strpos($media_content, $embed_class);
+            if ($pos !== false && ($first_embed_pos === false || $pos < $first_embed_pos)) {
+                $first_embed_pos = $pos;
+            }
+        }
+        $card_pos = strpos($media_content, 'social-link-card');
+        if ($first_embed_pos !== false && $card_pos !== false && $card_pos > $first_embed_pos) {
+            if (preg_match('/(<div class="social-link-card"[^>]*>.*?<\/div>\s*<\/div>)/s', $media_content, $m)) {
+                $card_snippet = $m[1];
+                $gallery_snippet = trim(str_replace($card_snippet, '', $media_content));
+                $media_content = $card_snippet . $gallery_snippet;
+            }
+        }
+    }
+
+    if (!empty($media_content)) {
+        $html .= $media_content;
     }
 
     // Card Footer (Date on left + Interactive Platform badges on right)
@@ -127,7 +148,7 @@ function social_render_native_card($item, $opts = []) {
     $html .= '<span>' . esc_html($formatted_date) . '</span>';
     $html .= '</div>';
 
-    // Platform action badges with live engagement counters and mobile deep-linking
+    // Platform action badges with live engagement counters and smart mobile deep-linking
     $enable_deep_links = !isset($opts['mobile_deep_links']) || !empty($opts['mobile_deep_links']);
     $badges = [];
     if ($has_bsky) {
@@ -135,11 +156,12 @@ function social_render_native_card($item, $opts = []) {
         $b_url = esc_url($bsky_data['url'] ?? '');
         $b_likes = absint($bsky_data['likes'] ?? 0);
         $like_str = ($b_likes > 0) ? ' <span style="font-size:11px; background:#eff6ff; color:#1d4ed8; padding:1px 6px; border-radius:9999px; margin-left:3px;">❤️ ' . $b_likes . '</span>' : '';
-        $badges[] = '<a href="' . $b_url . '" target="_blank" rel="noopener" class="social-badge bsky-badge" style="display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:6px; background:#f0f9ff; color:#0284c7; text-decoration:none; border:1px solid #bae6fd; font-weight:600; font-size:12px;" title="View and like post on Bluesky">🦋 Bluesky' . $like_str . ' ↗</a>';
+        $b_deep_attr = '';
         if ($enable_deep_links && preg_match('/bsky\.app\/profile\/([^\/]+)\/post\/([^\/]+)/i', $b_url, $bm)) {
-            $deep_url = 'bsky://profile/' . $bm[1] . '/post/' . $bm[2];
-            $badges[] = '<a href="' . esc_url($deep_url) . '" class="social-badge bsky-app-badge" style="display:inline-flex; align-items:center; gap:4px; padding:4px 8px; border-radius:6px; background:#e0f2fe; color:#0369a1; text-decoration:none; border:1px solid #7dd3fc; font-weight:600; font-size:12px;" title="Open directly in installed Bluesky mobile app">📲 App</a>';
+            $b_deep_url = 'bsky://profile/' . $bm[1] . '/post/' . $bm[2];
+            $b_deep_attr = ' data-app-url="' . esc_attr($b_deep_url) . '"';
         }
+        $badges[] = '<a href="' . $b_url . '"' . $b_deep_attr . ' target="_blank" rel="noopener" class="social-badge bsky-badge" style="display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:6px; background:#f0f9ff; color:#0284c7; text-decoration:none; border:1px solid #bae6fd; font-weight:600; font-size:12px;" title="View on Bluesky">🦋 Bluesky' . $like_str . ' ↗</a>';
     }
     if ($has_masto) {
         $masto_data = $links['mastodon'];
@@ -150,11 +172,12 @@ function social_render_native_card($item, $opts = []) {
         if ($m_favs > 0) $m_stats[] = '⭐ ' . $m_favs;
         if ($m_boosts > 0) $m_stats[] = '🔁 ' . $m_boosts;
         $m_stat_str = $m_stats ? ' <span style="font-size:11px; background:#faf5ff; color:#6b21a8; padding:1px 6px; border-radius:9999px; margin-left:3px;">' . implode(' · ', $m_stats) . '</span>' : '';
-        $badges[] = '<a href="' . $m_url . '" target="_blank" rel="noopener" class="social-badge masto-badge" style="display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:6px; background:#faf5ff; color:#7e22ce; text-decoration:none; border:1px solid #e9d5ff; font-weight:600; font-size:12px;" title="View and favorite on Mastodon">🐘 Mastodon' . $m_stat_str . ' ↗</a>';
+        $m_deep_attr = '';
         if ($enable_deep_links && !empty($m_url)) {
-            $deep_url = 'mastodon://' . preg_replace('/^https?:\/\//i', '', $m_url);
-            $badges[] = '<a href="' . esc_url($deep_url) . '" class="social-badge masto-app-badge" style="display:inline-flex; align-items:center; gap:4px; padding:4px 8px; border-radius:6px; background:#f3e8ff; color:#6b21a8; text-decoration:none; border:1px solid #d8b4fe; font-weight:600; font-size:12px;" title="Open in installed Mastodon app">📲 App</a>';
+            $m_deep_url = 'mastodon://' . preg_replace('/^https?:\/\//i', '', $m_url);
+            $m_deep_attr = ' data-app-url="' . esc_attr($m_deep_url) . '"';
         }
+        $badges[] = '<a href="' . $m_url . '"' . $m_deep_attr . ' target="_blank" rel="noopener" class="social-badge masto-badge" style="display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:6px; background:#faf5ff; color:#7e22ce; text-decoration:none; border:1px solid #e9d5ff; font-weight:600; font-size:12px;" title="View on Mastodon">🐘 Mastodon' . $m_stat_str . ' ↗</a>';
     }
 
     if ($badges) {
@@ -219,16 +242,17 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
         $web_url       = 'https://bsky.app/profile/' . $author_handle . '/post/' . $rkey;
 
         $first_image_url = null;
-        $media_html = '';
+        $gallery_html = '';
+        $card_html = '';
 
         if (isset($post['embed']['images']) && is_array($post['embed']['images'])) {
             $images = $post['embed']['images'];
             $num_imgs = count($images);
             if ($num_imgs > 1) {
                 $cols = $num_imgs == 2 || $num_imgs == 4 ? 2 : 3;
-                $media_html .= '<div class="social-embed-images" style="display:grid; grid-template-columns: repeat(' . $cols . ', 1fr); gap:10px; margin:12px 0;">';
+                $gallery_html .= '<div class="social-embed-images" style="display:grid; grid-template-columns: repeat(' . $cols . ', 1fr); gap:10px; margin:12px 0;">';
             } else {
-                $media_html .= '<div class="social-embed-images" style="margin:12px 0;">';
+                $gallery_html .= '<div class="social-embed-images" style="margin:12px 0;">';
             }
             foreach ($images as $img) {
                 $img_url = esc_url($img['fullsize'] ?? $img['thumb'] ?? '');
@@ -241,16 +265,16 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
                 if ($img_url) {
                     if (!$first_image_url) $first_image_url = $img_url;
                     $title_attr = ($num_imgs > 1) ? 'View full gallery on Bluesky' : 'View image on Bluesky';
-                    $media_html .= '<a href="' . esc_url($web_url) . '" target="_blank" rel="noopener" title="' . esc_attr($title_attr) . '" style="display:block; text-decoration:none;">';
+                    $gallery_html .= '<a href="' . esc_url($web_url) . '" target="_blank" rel="noopener" title="' . esc_attr($title_attr) . '" style="display:block; text-decoration:none;">';
                     if ($num_imgs > 1) {
-                        $media_html .= '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
+                        $gallery_html .= '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
                     } else {
-                        $media_html .= '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="max-width:100%; max-height:400px; width:auto; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
+                        $gallery_html .= '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="max-width:100%; max-height:400px; width:auto; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
                     }
-                    $media_html .= '</a>';
+                    $gallery_html .= '</a>';
                 }
             }
-            $media_html .= '</div>';
+            $gallery_html .= '</div>';
         }
 
         // Bluesky Video Embed Support (app.bsky.embed.video)
@@ -264,20 +288,20 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
             if ($video_thumb && !$first_image_url) {
                 $first_image_url = $video_thumb;
             }
-            $media_html .= '<div class="social-embed-video" style="margin:12px 0; position:relative; border-radius:8px; overflow:hidden; background:#000;">';
-            $media_html .= '<a href="' . esc_url($web_url) . '" target="_blank" rel="noopener" title="Watch video on Bluesky" style="display:block; position:relative; text-decoration:none;">';
+            $gallery_html .= '<div class="social-embed-video" style="margin:12px 0; position:relative; border-radius:8px; overflow:hidden; background:#000;">';
+            $gallery_html .= '<a href="' . esc_url($web_url) . '" target="_blank" rel="noopener" title="Watch video on Bluesky" style="display:block; position:relative; text-decoration:none;">';
             if ($video_thumb) {
-                $media_html .= '<img src="' . $video_thumb . '" alt="' . $alt_txt . '" style="width:100%; max-height:450px; object-fit:contain; display:block; background:#0f172a;" />';
+                $gallery_html .= '<img src="' . $video_thumb . '" alt="' . $alt_txt . '" style="width:100%; max-height:450px; object-fit:contain; display:block; background:#0f172a;" />';
             } else {
-                $media_html .= '<div style="height:220px; width:100%; background:#0f172a; display:flex; align-items:center; justify-content:center;"></div>';
+                $gallery_html .= '<div style="height:220px; width:100%; background:#0f172a; display:flex; align-items:center; justify-content:center;"></div>';
             }
             // Play Button Overlay
-            $media_html .= '<div class="social-video-play-btn" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:56px; height:56px; border-radius:50%; background:rgba(15,23,42,0.85); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.5); border:2px solid rgba(255,255,255,0.8);">';
-            $media_html .= '<span style="color:#ffffff; font-size:22px; margin-left:3px; line-height:1;">▶</span>';
-            $media_html .= '</div>';
-            $media_html .= '<span data-nosnippet style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.75); color:#fff; font-size:11px; font-weight:700; padding:2px 6px; border-radius:4px; letter-spacing:0.5px;">VIDEO ↗</span>';
-            $media_html .= '</a>';
-            $media_html .= '</div>';
+            $gallery_html .= '<div class="social-video-play-btn" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:56px; height:56px; border-radius:50%; background:rgba(15,23,42,0.85); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.5); border:2px solid rgba(255,255,255,0.8);">';
+            $gallery_html .= '<span style="color:#ffffff; font-size:22px; margin-left:3px; line-height:1;">▶</span>';
+            $gallery_html .= '</div>';
+            $gallery_html .= '<span data-nosnippet style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.75); color:#fff; font-size:11px; font-weight:700; padding:2px 6px; border-radius:4px; letter-spacing:0.5px;">VIDEO ↗</span>';
+            $gallery_html .= '</a>';
+            $gallery_html .= '</div>';
         }
 
         $extracted_urls = [];
@@ -330,7 +354,7 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
             if (!$first_image_url && $link_thumb) $first_image_url = $link_thumb;
 
             $domain = parse_url($link_url, PHP_URL_HOST);
-            $media_html .= social_render_link_card_html($link_url, $link_title, $link_desc, $link_thumb, $domain);
+            $card_html .= social_render_link_card_html($link_url, $link_title, $link_desc, $link_thumb, $domain);
             $has_card = true;
             $primary_card_url = $link_url;
         } elseif (!empty($extracted_urls[0])) {
@@ -341,7 +365,7 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
                 if (!$first_image_url && !empty($og_card['image'])) {
                     $first_image_url = $og_card['image'];
                 }
-                $media_html .= social_render_link_card_html(
+                $card_html .= social_render_link_card_html(
                     $target_url,
                     $og_card['title'] ?? '',
                     $og_card['description'] ?? '',
@@ -355,6 +379,9 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
                 if ($fallback_thumb) $first_image_url = $fallback_thumb;
             }
         }
+
+        // Preview card comes before image galleries/media
+        $media_html = $card_html . $gallery_html;
 
         $like_count   = absint($post['likeCount'] ?? 0);
         $repost_count = absint($post['repostCount'] ?? 0);
@@ -461,7 +488,8 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
         $author_name = esc_html(!empty($post_data['account']['display_name']) ? $post_data['account']['display_name'] : $post_data['account']['username']);
         $post_url    = esc_url($post_data['url'] ?? "https://{$instance}/@{$username}/{$post_data['id']}");
         $first_image_url = null;
-        $media_html = '';
+        $gallery_html = '';
+        $card_html = '';
 
         $fav_count   = absint($post_data['favourites_count'] ?? $post_data['favorites_count'] ?? 0);
         $boost_count = absint($post_data['reblogs_count'] ?? 0);
@@ -485,9 +513,9 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
                 $num_imgs = count($images);
                 if ($num_imgs > 1) {
                     $cols = $num_imgs == 2 || $num_imgs == 4 ? 2 : 3;
-                    $media_html .= '<div class="social-embed-media" style="display:grid; grid-template-columns: repeat(' . $cols . ', 1fr); gap:10px; margin:12px 0;">';
+                    $gallery_html .= '<div class="social-embed-media" style="display:grid; grid-template-columns: repeat(' . $cols . ', 1fr); gap:10px; margin:12px 0;">';
                 } else {
-                    $media_html .= '<div class="social-embed-media" style="margin:12px 0;">';
+                    $gallery_html .= '<div class="social-embed-media" style="margin:12px 0;">';
                 }
                 foreach ($images as $med) {
                     $img_url = esc_url($med['url'] ?? $med['preview_url'] ?? '');
@@ -500,16 +528,16 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
                     if ($img_url) {
                         if (!$first_image_url) $first_image_url = $img_url;
                         $title_attr = ($num_imgs > 1) ? 'View full gallery on Mastodon' : 'View image on Mastodon';
-                        $media_html .= '<a href="' . esc_url($post_url) . '" target="_blank" rel="noopener" title="' . esc_attr($title_attr) . '" style="display:block; text-decoration:none;">';
+                        $gallery_html .= '<a href="' . esc_url($post_url) . '" target="_blank" rel="noopener" title="' . esc_attr($title_attr) . '" style="display:block; text-decoration:none;">';
                         if ($num_imgs > 1) {
-                            $media_html .= '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
+                            $gallery_html .= '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
                         } else {
-                            $media_html .= '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="max-width:100%; max-height:400px; width:auto; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
+                            $gallery_html .= '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="max-width:100%; max-height:400px; width:auto; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
                         }
-                        $media_html .= '</a>';
+                        $gallery_html .= '</a>';
                     }
                 }
-                $media_html .= '</div>';
+                $gallery_html .= '</div>';
             }
 
             // Mastodon Video / Animated GIF (gifv) embeds
@@ -527,25 +555,25 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
 
                     if ($is_gifv && $v_url) {
                         // Native HTML5 autoplaying looping muted video for GIFV
-                        $media_html .= '<div class="social-embed-gifv" style="margin:12px 0; position:relative; border-radius:8px; overflow:hidden; background:#0f172a;">';
-                        $media_html .= '<video src="' . $v_url . '" poster="' . $v_thumb . '" autoplay loop muted playsinline style="width:100%; max-height:450px; object-fit:contain; display:block;"></video>';
-                        $media_html .= '<span data-nosnippet style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.75); color:#fff; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; letter-spacing:0.5px;">GIF</span>';
-                        $media_html .= '</div>';
+                        $gallery_html .= '<div class="social-embed-gifv" style="margin:12px 0; position:relative; border-radius:8px; overflow:hidden; background:#0f172a;">';
+                        $gallery_html .= '<video src="' . $v_url . '" poster="' . $v_thumb . '" autoplay loop muted playsinline style="width:100%; max-height:450px; object-fit:contain; display:block;"></video>';
+                        $gallery_html .= '<span data-nosnippet style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.75); color:#fff; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; letter-spacing:0.5px;">GIF</span>';
+                        $gallery_html .= '</div>';
                     } else {
                         // Video with preview poster & play overlay linking to Mastodon
-                        $media_html .= '<div class="social-embed-video" style="margin:12px 0; position:relative; border-radius:8px; overflow:hidden; background:#000;">';
-                        $media_html .= '<a href="' . esc_url($post_url) . '" target="_blank" rel="noopener" title="Watch video on Mastodon" style="display:block; position:relative; text-decoration:none;">';
+                        $gallery_html .= '<div class="social-embed-video" style="margin:12px 0; position:relative; border-radius:8px; overflow:hidden; background:#000;">';
+                        $gallery_html .= '<a href="' . esc_url($post_url) . '" target="_blank" rel="noopener" title="Watch video on Mastodon" style="display:block; position:relative; text-decoration:none;">';
                         if ($v_thumb) {
-                            $media_html .= '<img src="' . $v_thumb . '" alt="' . $alt_txt . '" style="width:100%; max-height:450px; object-fit:contain; display:block; background:#0f172a;" />';
+                            $gallery_html .= '<img src="' . $v_thumb . '" alt="' . $alt_txt . '" style="width:100%; max-height:450px; object-fit:contain; display:block; background:#0f172a;" />';
                         } else {
-                            $media_html .= '<div style="height:220px; width:100%; background:#0f172a; display:flex; align-items:center; justify-content:center;"></div>';
+                            $gallery_html .= '<div style="height:220px; width:100%; background:#0f172a; display:flex; align-items:center; justify-content:center;"></div>';
                         }
-                        $media_html .= '<div class="social-video-play-btn" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:56px; height:56px; border-radius:50%; background:rgba(15,23,42,0.85); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.5); border:2px solid rgba(255,255,255,0.8);">';
-                        $media_html .= '<span style="color:#ffffff; font-size:22px; margin-left:3px; line-height:1;">▶</span>';
-                        $media_html .= '</div>';
-                        $media_html .= '<span data-nosnippet style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.75); color:#fff; font-size:11px; font-weight:700; padding:2px 6px; border-radius:4px; letter-spacing:0.5px;">VIDEO ↗</span>';
-                        $media_html .= '</a>';
-                        $media_html .= '</div>';
+                        $gallery_html .= '<div class="social-video-play-btn" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:56px; height:56px; border-radius:50%; background:rgba(15,23,42,0.85); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.5); border:2px solid rgba(255,255,255,0.8);">';
+                        $gallery_html .= '<span style="color:#ffffff; font-size:22px; margin-left:3px; line-height:1;">▶</span>';
+                        $gallery_html .= '</div>';
+                        $gallery_html .= '<span data-nosnippet style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.75); color:#fff; font-size:11px; font-weight:700; padding:2px 6px; border-radius:4px; letter-spacing:0.5px;">VIDEO ↗</span>';
+                        $gallery_html .= '</a>';
+                        $gallery_html .= '</div>';
                     }
                 }
             }
@@ -572,7 +600,7 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
 
             if ($card_url && ($card_title || $card_thumb)) {
                 $domain = parse_url($card_url, PHP_URL_HOST);
-                $media_html .= social_render_link_card_html($card_url, $card_title, $card_desc, $card_thumb, $card_prov ?: $domain);
+                $card_html .= social_render_link_card_html($card_url, $card_title, $card_desc, $card_thumb, $card_prov ?: $domain);
                 $has_card = true;
                 $primary_card_url = $card_url;
             }
@@ -586,7 +614,7 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
                 if (!$first_image_url && !empty($og_card['image'])) {
                     $first_image_url = $og_card['image'];
                 }
-                $media_html .= social_render_link_card_html(
+                $card_html .= social_render_link_card_html(
                     $target_url,
                     $og_card['title'] ?? '',
                     $og_card['description'] ?? '',
@@ -600,6 +628,9 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
                 if ($fallback_thumb) $first_image_url = $fallback_thumb;
             }
         }
+
+        // Preview card comes before image galleries/media
+        $media_html = $card_html . $gallery_html;
 
         $body_html = social_clean_mastodon_html($body_content, $has_card, $primary_card_url);
         $clean_text = trim(preg_replace('/#[\p{L}\p{N}_]+/u', '', $clean_text));

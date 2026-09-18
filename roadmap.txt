@@ -8,6 +8,11 @@ Social Digest - Feature Roadmap & Release Status
 2. Fediverse Interaction Reply Syndication [Decentralization]:
    - Optional webhook/ActivityPub hook to notify federated networks when a digest referencing their updates is published.
 
+0. Release v5.7.4 Gallery Layout Order & Streamlined Smart Mobile Deep-Linking (Completed in v5.7.4)
+----------------------------------------------------------------------------------------------------
+[x] Image Gallery Placed Below Link Preview Cards (v5.7.4): Reordered media embed rendering so that for posts containing both an article preview card and image galleries/video embeds, the image gallery is positioned below the link preview card rather than above it. Includes dynamic normalization for previously generated workbench items.
+[x] Streamlined Smart Mobile Deep-Linking (v5.7.4): Eliminated redundant, visually cluttered `📲 App` buttons. The primary `🦋 Bluesky` and `🐘 Mastodon` platform badges now handle smart mobile launching (`data-app-url`): opening native mobile apps if installed, or falling back to the web browser tab if not installed, without cluttering the UI. Desktop clicks remain native web links.
+
 0. Release v5.7.3 WordPress 7.1.1 & PHP 7.4 Compatibility & Outage Prevention (Completed in v5.7.3)
 ---------------------------------------------------------------------------------------------------
 [x] PHP 7.4 Backward Compatibility & Site Crash Fix (v5.7.3): Replaced PHP 8.0+ `match()` expressions with associative array maps in `includes/feed-builder.php` and `includes/admin.php`. Prevents fatal parse error and 500 white-screen crash on servers running PHP 7.4 or earlier.

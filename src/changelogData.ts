@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.3',
+  version: '5.7.5',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,34 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.2',
+  rollbackTarget: 'v5.7.4',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.5',
+    tag: 'v5.7.5',
+    isLatest: true,
+    highlights: [
+      'Critical Fix: PHP 8.5 / PHP 8.1+ Compatibility & Outage Prevention: Resolved an uncaught Fatal error: Class "SocialDigest\\DateTimeImmutable" not found in social-digest.php. Fully qualified \\DateTimeImmutable with leading backslash to prevent namespace lookup failure during cron scheduling, settings saves, and plugin activation.',
+      'Fix: PHP 8.1+ TypeError Prevention on WordPress Filters: Added defensive type guards to kses_allowed_protocols, plugin_action_links, and TinyMCE button filters (mce_buttons, mce_external_plugins) to safely handle null or non-array inputs from 3rd-party themes or plugins.',
+      'Reliability: Query Filter Object Guards: Hardened pre_get_posts filter to verify query object existence and method availability, immediately bypassing query modifications when RSS-only mode is inactive.',
+      'Hardening: Admin Bar Hook Defensive Typing: Removed strict object typehint on admin_bar_menu action to prevent fatal TypeErrors if an admin bar wrapper or null is dispatched.'
+    ]
+  },
+  {
+    version: '5.7.4',
+    tag: 'v5.7.4',
+    isLatest: false,
+    highlights: [
+      'Image Galleries Positioned Below Link Preview Cards: Reordered media embed rendering so that posts containing both an article preview card and image galleries/video attachments render the gallery below the link preview card instead of above it, with automatic normalization for staged items.',
+      'Streamlined Smart Mobile Deep-Linking: Replaced separate, cluttered "📲 App" footer buttons with intelligent direct link handling on primary 🦋 Bluesky and 🐘 Mastodon badges (data-app-url). Tapping on mobile opens installed apps, or falls back to web browser tabs if uninstalled; desktop clicks remain native web links.'
+    ]
+  },
+  {
     version: '5.7.3',
     tag: 'v5.7.3',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Critical Fix: PHP 7.4 Compatibility & Outage Prevention: Replaced PHP 8.0+ match() expressions with backwards-compatible array mappings. In previous builds, servers running PHP 7.4 or earlier suffered a fatal parse error on startup, causing a 500 white-screen site outage.',
       'Fix: PHP 8.1+ Type Safety & Fediverse Attribution: Hardened wp_head Fediverse creator attribution tag formatting to use wp_parse_url() and guard against null post content and boolean return types, preventing PHP 8.1+ TypeErrors.',

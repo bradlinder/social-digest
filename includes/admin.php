@@ -33,8 +33,8 @@ add_action('admin_menu', function() {
 });
 
 // Top WordPress Admin Bar Quick-Access Shortcut
-add_action('admin_bar_menu', function(\WP_Admin_Bar $wp_admin_bar) {
-    if (!current_user_can('manage_options')) return;
+add_action('admin_bar_menu', function($wp_admin_bar) {
+    if (!is_object($wp_admin_bar) || !method_exists($wp_admin_bar, 'add_node') || !current_user_can('manage_options')) return;
 
     $wp_admin_bar->add_node([
         'id'    => 'social_digest_admin_bar',
@@ -553,7 +553,7 @@ function social_render_settings_page() {
                                                     <label><input type="checkbox" name="social_digest_options[exclude_titles]" value="1" <?php checked($opts['exclude_titles'] ?? 0, 1); ?> /> Exclude posts matching existing WordPress headlines</label><br>
                                                     <label><input type="checkbox" name="social_digest_options[keep_threads]" value="1" <?php checked($opts['keep_threads'] ?? 1, 1); ?> /> Include self-replies / threads</label><br>
                                                      <label><input type="checkbox" name="social_digest_options[collapse_threads]" value="1" <?php checked(!isset($opts['collapse_threads']) || !empty($opts['collapse_threads'])); ?> /> Collapse multi-post author threads into single unified cards</label><br>
-                                                     <label><input type="checkbox" name="social_digest_options[mobile_deep_links]" value="1" <?php checked(!isset($opts['mobile_deep_links']) || !empty($opts['mobile_deep_links'])); ?> /> Enable mobile app deep-linking (adds 📲 App deep-link buttons for Bluesky &amp; Mastodon apps)</label>
+                                                     <label><input type="checkbox" name="social_digest_options[mobile_deep_links]" value="1" <?php checked(!isset($opts['mobile_deep_links']) || !empty($opts['mobile_deep_links'])); ?> /> Enable smart mobile app deep-linking (opens native Bluesky or Mastodon app if installed; falls back to browser without extra buttons)</label>
                                                 </td>
                                             </tr>
                                             <tr>

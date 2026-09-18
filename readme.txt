@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.3
+Stable tag: 5.7.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,16 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.5 =
+* Critical Fix: PHP 8.5 / PHP 8.1+ Compatibility & Outage Prevention: Resolved an uncaught `Fatal error: Class "SocialDigest\DateTimeImmutable" not found` in `social-digest.php`. The DateTime class in `social_reschedule_cron()` was missing the global root namespace backslash (`\DateTimeImmutable`), which caused PHP to fail looking within the plugin namespace during cron scheduling, settings saves, and activation.
+* Fix: PHP 8.1+ TypeError Prevention on WordPress Filters: Added strict defensive type guards to `kses_allowed_protocols`, `plugin_action_links`, and TinyMCE editor button filters (`mce_buttons`, `mce_external_plugins`) to safely return empty arrays or original inputs instead of triggering fatal TypeErrors if a 3rd-party theme or plugin passes `null` or a non-array.
+* Reliability: Query Filter Object Guards: Hardened `pre_get_posts` to verify query object existence and method availability before inspecting query vars, and immediately bypass queries if RSS-only mode is inactive.
+* Hardening: Admin Bar Hook Defensive Typing: Removed strict object typehint on `admin_bar_menu` action hook to prevent fatal TypeErrors if an admin bar wrapper or null is dispatched.
+
+= 5.7.4 =
+* UX & Layout: Image Gallery Positioned Below Link Preview Cards: Reordered media embed rendering so that for posts containing both an article preview card and image galleries/video attachments, the image gallery renders below the link preview card rather than above it. Includes dynamic normalization for previously generated workbench items.
+* UX & Mobile: Streamlined Smart Mobile App Deep-Linking: Eliminated redundant, visually cluttered `📲 App` footer buttons. Primary `🦋 Bluesky` and `🐘 Mastodon` action badges now feature smart protocol launching (`data-app-url`): opening the native Bluesky or Mastodon app if installed on mobile, and gracefully falling back to standard web URLs in the browser if not. Desktop clicks remain native web links.
 
 = 5.7.3 =
 * Critical Fix: PHP 7.4 Compatibility & Site Outage Prevention: Replaced PHP 8.0+ `match()` expressions in `includes/feed-builder.php` and `includes/admin.php` with backwards-compatible array mappings. In v5.7.1/v5.7.2, servers running PHP 7.4 or earlier crashed with a fatal syntax parse error on file load, causing a 500 white screen site outage.

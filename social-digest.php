@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.7.3
+ * Version: 5.7.5
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) exit;
 
 // Plugin constants
 if (!defined('SOCIAL_DIGEST_VERSION')) {
-    define('SOCIAL_DIGEST_VERSION', '5.7.3');
+    define('SOCIAL_DIGEST_VERSION', '5.7.5');
 }
 if (!defined('SOCIAL_DIGEST_FILE')) {
     define('SOCIAL_DIGEST_FILE', __FILE__);
@@ -31,6 +31,9 @@ if (!defined('SOCIAL_DIGEST_URL')) {
 
 // Whitelist custom mobile app protocols so esc_url() preserves them
 add_filter('kses_allowed_protocols', function($protocols) {
+    if (!is_array($protocols)) {
+        $protocols = is_null($protocols) ? [] : (array)$protocols;
+    }
     if (!in_array('bsky', $protocols, true)) {
         $protocols[] = 'bsky';
     }
@@ -109,11 +112,13 @@ function social_reschedule_cron($opts) {
     }
 
     $site_tz = wp_timezone();
-    $target_time = !empty($opts['schedule_time']) ? $opts['schedule_time'] : '17:00';
-    list($hours, $minutes) = explode(':', $target_time);
+    $target_time = !empty($opts['schedule_time']) ? (string)$opts['schedule_time'] : '17:00';
+    $time_parts = explode(':', $target_time);
+    $hours = isset($time_parts[0]) ? (int)$time_parts[0] : 17;
+    $minutes = isset($time_parts[1]) ? (int)$time_parts[1] : 0;
 
-    $now_local = new DateTimeImmutable('now', $site_tz);
-    $target_run = $now_local->setTime((int)$hours, (int)$minutes, 0);
+    $now_local = new \DateTimeImmutable('now', $site_tz);
+    $target_run = $now_local->setTime($hours, $minutes, 0);
 
     if ($target_run->getTimestamp() <= time()) {
         $target_run = $target_run->modify('+1 day');
@@ -354,14 +359,20 @@ add_action('admin_enqueue_scripts', function($hook) {
 });
 
 add_filter('plugin_action_links_' . plugin_basename(__FILE__), function($links) {
-    $actions_link = '<a href="' . esc_url(admin_url('edit.php?page=social-digest-settings&tab=workbench')) . '"><strong>' . __('Actions & Preview') . '</strong></a>';
-    $settings_link = '<a href="' . esc_url(admin_url('edit.php?page=social-digest-settings&tab=settings')) . '">' . __('Settings') . '</a>';
+    if (!is_array($links)) {
+        $links = [];
+    }
+    $actions_link = '<a href="' . esc_url(admin_url('edit.php?page=social-digest-settings&tab=workbench')) . '"><strong>' . __('Actions & Preview', 'social-digest') . '</strong></a>';
+    $settings_link = '<a href="' . esc_url(admin_url('edit.php?page=social-digest-settings&tab=settings')) . '">' . __('Settings', 'social-digest') . '</a>';
     array_unshift($links, $actions_link, $settings_link);
     return $links;
 });
 
 // Custom TinyMCE Toolbar Button for inserting the Splitter
 add_filter('mce_buttons', function($buttons) {
+    if (!is_array($buttons)) {
+        $buttons = [];
+    }
     if (isset($_GET['page']) && $_GET['page'] === 'social-digest-settings') {
         $buttons[] = 'social_digest_split_button';
     }
@@ -369,6 +380,9 @@ add_filter('mce_buttons', function($buttons) {
 });
 
 add_filter('mce_external_plugins', function($plugins) {
+    if (!is_array($plugins)) {
+        $plugins = [];
+    }
     if (isset($_GET['page']) && $_GET['page'] === 'social-digest-settings') {
         $plugins['social_digest_split_plugin'] = plugin_dir_url(__FILE__) . 'assets/js/social-digest-editor.js';
     }
@@ -377,13 +391,97 @@ add_filter('mce_external_plugins', function($plugins) {
 
 // Hide RSS-Only digests from main public queries if enabled
 add_action('pre_get_posts', function($query) {
-    if (!is_admin() && is_object($query) && method_exists($query, 'is_main_query') && $query->is_main_query() && !$query->is_feed()) {
-        $meta_query = $query->get('meta_query') ?: [];
-        $meta_query[] = [
-            'key'     => '_social_digest_rss_only',
-            'compare' => 'NOT EXISTS'
-        ];
+    if (is_admin() || !is_object($query) || !method_exists($query, 'is_main_query') || !$query->is_main_query() || (method_exists($query, 'is_feed') && $query->is_feed())) {
+        return;
+    }
+    $opts = get_option('social_digest_options', []);
+    if (empty($opts['rss_only_mode'])) {
+        return;
+    }
+    $meta_query = method_exists($query, 'get') ? (array)$query->get('meta_query') : [];
+    $meta_query[] = [
+        'key'     => '_social_digest_rss_only',
+        'compare' => 'NOT EXISTS'
+    ];
+    if (method_exists($query, 'set')) {
         $query->set('meta_query', $meta_query);
+    }
+});
+
+/**
+ * Smart Mobile App Deep-Linking Handler
+ * On mobile devices, clicking a Bluesky or Mastodon badge launches the installed app.
+ * If the native app is not installed, it cleanly opens the web URL in the browser without requiring extra buttons.
+ */
+function social_digest_render_smart_deep_links_script() {
+    $opts = get_option('social_digest_options', []);
+    if (isset($opts['mobile_deep_links']) && empty($opts['mobile_deep_links'])) {
+        return;
+    }
+    ?>
+    <script id="social-digest-smart-deep-links">
+    (function() {
+        function initSocialDeepLinks() {
+            document.addEventListener('click', function(e) {
+                var badge = e.target.closest('a.social-badge[data-app-url]');
+                if (!badge) return;
+
+                var appUrl = badge.getAttribute('data-app-url');
+                var webUrl = badge.getAttribute('href');
+                if (!appUrl) return;
+
+                // Only intercept on mobile / tablet touch devices
+                var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
+                if (!isMobile) return;
+
+                e.preventDefault();
+
+                var appOpened = false;
+                var onVisibilityChange = function() {
+                    if (document.hidden || document.webkitHidden) {
+                        appOpened = true;
+                    }
+                };
+                var onBlurOrHide = function() {
+                    appOpened = true;
+                };
+
+                document.addEventListener('visibilitychange', onVisibilityChange, { once: true });
+                window.addEventListener('pagehide', onBlurOrHide, { once: true });
+                window.addEventListener('blur', onBlurOrHide, { once: true });
+
+                var start = Date.now();
+
+                // Attempt to launch native app via custom URI scheme
+                window.location.href = appUrl;
+
+                // Fallback: If device has not switched focus to native app, open browser URL
+                setTimeout(function() {
+                    document.removeEventListener('visibilitychange', onVisibilityChange);
+                    window.removeEventListener('pagehide', onBlurOrHide);
+                    window.removeEventListener('blur', onBlurOrHide);
+
+                    if (!appOpened && (Date.now() - start < 2000)) {
+                        window.open(webUrl, '_blank', 'noopener,noreferrer');
+                    }
+                }, 800);
+            });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initSocialDeepLinks);
+        } else {
+            initSocialDeepLinks();
+        }
+    })();
+    </script>
+    <?php
+}
+add_action('wp_footer', 'SocialDigest\\social_digest_render_smart_deep_links_script');
+add_action('admin_footer', function() {
+    $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+    if ($screen && strpos($screen->id, 'social-digest') !== false) {
+        social_digest_render_smart_deep_links_script();
     }
 });
 
