@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.18',
+  version: '5.7.19',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,24 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.17',
+  rollbackTarget: 'v5.7.18',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.19',
+    tag: 'v5.7.19',
+    isLatest: true,
+    highlights: [
+      'Fix: Title Case Capitalization: Applied strict Title Case capitalization to all hashtags and topic keywords formatted for WordPress post titles (steamframe -> Steam Frame, minimalphone 2 -> Minimal Phone 2, samsunggalaxytabs 12 -> Samsung Galaxy Tabs 12).',
+      'Enhancement: Word Boundary & Compound Splitting: Added intelligent splitting for compound tech terms (steamframe -> Steam Frame, minimalphone -> Minimal Phone, samsunggalaxytabs -> Samsung Galaxy Tabs) and letter-number transitions (tabs12 -> Tabs 12).',
+      'Enhancement: Preserved Acronyms: Maintained uppercase formatting for tech acronyms, model codes, and hardware terms (e.g. AI, PC, VR, OLED, 5G, S12).'
+    ]
+  },
+  {
     version: '5.7.18',
     tag: 'v5.7.18',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Fix: Auto-Refresh Stale Drafts: Workbench state now tracks versioning. Staged candidate drafts created on prior releases automatically re-generate on load, removing stale markup and broken title formatting instantly.',
       'Enhancement: Topic Keyword Extraction: When posts do not contain explicit #hashtags, key proper nouns and topic words (e.g. Samsung, Valve, Asus, Lenovo) are extracted to populate {hashtags} in post titles.',

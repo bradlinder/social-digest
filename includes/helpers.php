@@ -536,8 +536,67 @@ function social_get_cached_tag_weights() {
 
 function social_split_camelcase_tag($tag) {
     $t = ltrim(trim($tag), '#');
+    if ($t === '') return '';
+
+    // Replace underscores and hyphens with spaces
+    $t = str_replace(['_', '-'], ' ', $t);
+
+    // CamelCase transitions (e.g. "SteamFrame" -> "Steam Frame", "GalaxyTab" -> "Galaxy Tab")
     $t = preg_replace('/([a-z]{2,})([A-Z0-9])/u', '$1 $2', $t);
-    return trim(preg_replace('/([A-Z]+)([A-Z][a-z])/u', '$1 $2', $t));
+    $t = preg_replace('/([A-Z]+)([A-Z][a-z])/u', '$1 $2', $t);
+
+    // Letter-number boundary splitting (e.g. "minimalphone2" -> "minimalphone 2", "tabs12" -> "tabs 12")
+    $t = preg_replace('/([a-zA-Z]{2,})([0-9]+)/u', '$1 $2', $t);
+    $t = preg_replace('/([0-9]+)([a-zA-Z]{2,})/u', '$1 $2', $t);
+
+    // Known compound word splitting for lowercase concatenated tech/product terms
+    $compound_splits = [
+        'steamframe' => 'Steam Frame',
+        'minimalphone' => 'Minimal Phone',
+        'samsunggalaxytabs' => 'Samsung Galaxy Tabs',
+        'samsunggalaxytab' => 'Samsung Galaxy Tab',
+        'samsunggalaxy' => 'Samsung Galaxy',
+        'galaxytabs' => 'Galaxy Tabs',
+        'galaxytab' => 'Galaxy Tab',
+        'thinkbook' => 'ThinkBook',
+        'openclaw' => 'OpenClaw',
+        'steamos' => 'SteamOS',
+        'steamdeck' => 'Steam Deck',
+        'googlepixel' => 'Google Pixel',
+        'applewatch' => 'Apple Watch',
+        'macbook' => 'MacBook',
+        'playstation' => 'PlayStation',
+        'nintendoswitch' => 'Nintendo Switch',
+        'raspberrypi' => 'Raspberry Pi',
+    ];
+
+    $lower_clean = str_replace(' ', '', mb_strtolower($t));
+    foreach ($compound_splits as $k => $v) {
+        if ($lower_clean === $k) {
+            $t = $v;
+            break;
+        } elseif (strpos($lower_clean, $k) === 0) {
+            $rest = trim(substr($lower_clean, strlen($k)));
+            $t = $v . ($rest !== '' ? ' ' . $rest : '');
+            break;
+        }
+    }
+
+    // Capitalize every word in Title Case while preserving special acronyms/models
+    $words = explode(' ', $t);
+    $capitalized = [];
+    foreach ($words as $w) {
+        $w = trim($w);
+        if ($w === '') continue;
+        $w_upper = mb_strtoupper($w);
+        if (in_array($w_upper, ['AI', 'PC', 'VR', '3D', '2K', '4K', '8K', '5G', '4G', 'US', 'UK', 'EU', 'OLED', 'AMOLED', 'RAM', 'CPU', 'GPU', 'S12', 'QN10'])) {
+            $capitalized[] = $w_upper;
+        } else {
+            $capitalized[] = mb_convert_case($w, MB_CASE_TITLE, "UTF-8");
+        }
+    }
+
+    return trim(implode(' ', $capitalized));
 }
 
 function social_extract_topic_keywords_from_posts($items) {
