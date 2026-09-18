@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.15',
+  version: '5.7.17',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,31 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.14',
+  rollbackTarget: 'v5.7.16',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.17',
+    tag: 'v5.7.17',
+    isLatest: true,
+    highlights: [
+      'Fix: Tokenized URL Replacement: Fixed double-nested href attribute parsing where Bluesky facet links were re-processed by plain-URL regexes, ensuring rendered post links remain clean and active without printing raw HTML markup.',
+      'Fix: Cross-Platform Hashtag Extraction: Fixed Mastodon API tag harvesting so Mastodon hashtags are populated into extra_tags before body cleaning, allowing Mastodon tags to populate title templates even when Bluesky posts have no hashtags.'
+    ]
+  },
+  {
+    version: '5.7.16',
+    tag: 'v5.7.16',
+    isLatest: false,
+    highlights: [
+      'Fix & Enhancement: Leading Separator Sanitation for Post Titles: Enhanced post title formatting to automatically trim leading punctuation (such as `: `, `- `, or `| `) when `{hashtags}` resolves to an empty string because no social posts in the batch contained hashtags and no default tags were set. Ensures templates like `{hashtags}: Liliputing News Roundup` render cleanly as `Liliputing News Roundup`.',
+    ]
+  },
+  {
     version: '5.7.15',
     tag: 'v5.7.15',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Feature: Customizable WordPress Post Title Input in Next-Run Workbench: Added an editable WordPress Post Title input box (custom_title) located prominently at the top of the "Actions & preview" (Next-Run Workbench) tab above social candidate posts. Populates with the auto-generated headline template by default, allowing users to freely edit or replace the title before saving, drafting, or publishing.',
     ]

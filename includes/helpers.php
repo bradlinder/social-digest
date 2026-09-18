@@ -189,14 +189,17 @@ function social_clean_body_text($raw_text, $has_card = false, $card_url = '', $l
     // Now escape the text before inserting clickable HTML links
     $escaped = esc_html(trim($text));
 
-    // Convert mapped URLs (from Bluesky facets or parsed URLs) to clickable links
+    // Convert mapped URLs (from Bluesky facets or parsed URLs) to placeholders first
+    $placeholders = [];
     if (!empty($links_map) && is_array($links_map)) {
+        $idx = 0;
         foreach ($links_map as $disp => $full_url) {
             $disp_esc = esc_html($disp);
             if ($disp_esc !== '' && stripos($escaped, $disp_esc) !== false) {
-                // If it wasn't stripped already
-                $link_html = '<a href="' . esc_url($full_url) . '" target="_blank" rel="noopener" style="color:#0284c7; text-decoration:underline;">' . $disp_esc . '</a>';
-                $escaped = str_replace($disp_esc, $link_html, $escaped);
+                $ph = "___SD_LINK_PH_{$idx}___";
+                $placeholders[$ph] = '<a href="' . esc_url($full_url) . '" target="_blank" rel="noopener" style="color:#0284c7; text-decoration:underline;">' . $disp_esc . '</a>';
+                $escaped = str_replace($disp_esc, $ph, $escaped);
+                $idx++;
             }
         }
     }
@@ -204,8 +207,13 @@ function social_clean_body_text($raw_text, $has_card = false, $card_url = '', $l
     // Link any remaining bare http(s):// or www. URLs that weren't converted yet
     $escaped = preg_replace_callback('/\b(https?:\/\/[^\s<"\'\)]+)/i', function($m) {
         $u = $m[1];
-        return '<a href="' . esc_url($u) . '" target="_blank" rel="noopener" style="color:#0284c7; text-decoration:underline;">' . esc_html($u) . '</a>';
+        return '<a href="' . esc_url($u) . '" target="_blank" rel="noopener" style="color:#0284c7; text-decoration:underline;">' . $u . '</a>';
     }, $escaped);
+
+    // Restore placeholders
+    if (!empty($placeholders)) {
+        $escaped = str_replace(array_keys($placeholders), array_values($placeholders), $escaped);
+    }
 
     return nl2br(trim($escaped));
 }

@@ -385,6 +385,10 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
 
         $body_html = social_clean_body_text($text, $has_card, $primary_card_url, $links_map);
 
+        $bsky_record_tags = (array)($post['record']['tags'] ?? []);
+        preg_match_all('/#(\w+)/u', $text, $bsky_text_tags);
+        $bsky_extra_tags = array_values(array_unique(array_merge($bsky_record_tags, $bsky_text_tags[1] ?? [])));
+
         $item_data = [
             'network'        => 'bsky',
             'timestamp'      => $created_at,
@@ -410,7 +414,7 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
                     'reposts'     => $repost_count,
                 ]
             ],
-            'extra_tags'     => [],
+            'extra_tags'     => $bsky_extra_tags,
             'urls'           => $extracted_urls
         ];
 
@@ -631,6 +635,19 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
         $media_html = $card_html . $gallery_html;
 
         $body_html = social_clean_mastodon_html($body_content, $has_card, $primary_card_url);
+
+        $masto_tags = [];
+        if (!empty($post_data['tags']) && is_array($post_data['tags'])) {
+            foreach ($post_data['tags'] as $t) {
+                if (!empty($t['name'])) $masto_tags[] = ltrim($t['name'], '#');
+            }
+        }
+        preg_match_all('/#(\w+)/u', $clean_text, $m_tags_matches);
+        if (!empty($m_tags_matches[1])) {
+            $masto_tags = array_merge($masto_tags, $m_tags_matches[1]);
+        }
+        $masto_extra_tags = array_values(array_unique($masto_tags));
+
         $clean_text = trim(preg_replace('/#[\p{L}\p{N}_]+/u', '', $clean_text));
 
         $item_data = [
@@ -658,7 +675,7 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
                     'boosts'      => $boost_count,
                 ]
             ],
-            'extra_tags'     => [],
+            'extra_tags'     => $masto_extra_tags,
             'urls'           => array_values(array_unique($extracted_urls))
         ];
 

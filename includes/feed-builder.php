@@ -354,7 +354,11 @@ function social_fetch_workbench_candidates() {
     foreach ($raw_tags as $tag) $tag_map[mb_strtolower($tag)] = $tag;
     $tags = array_slice(array_values($tag_map), 0, $max_total_tags);
     $title_tpl = $opts['title_template'] ?? 'Social Digest {hashtags}';
-    $title = trim(preg_replace('/\s*[:\-–]\s*$/u', '', preg_replace('/\s+/', ' ', str_replace(['{hashtags}','{date}','{count}'], [$title_hashtags, wp_date(get_option('date_format'), time(), wp_timezone()), count($candidates)], $title_tpl))));
+    $title = str_replace(['{hashtags}','{date}','{count}'], [$title_hashtags, wp_date(get_option('date_format'), time(), wp_timezone()), count($candidates)], $title_tpl);
+    $title = preg_replace('/\s+/', ' ', $title);
+    $title = preg_replace('/^\s*[:\-–|]\s*/u', '', $title);
+    $title = preg_replace('/\s*[:\-–|]\s*$/u', '', $title);
+    $title = trim($title);
 
 
     $next = [
@@ -503,7 +507,10 @@ function social_publish_workbench_run($state, $force_status = null) {
         global $wpdb;
         $raw_title = !empty($state['title_override']) ? $state['title_override'] : ($state['preview']['title'] ?? 'Social Digest');
         $title = sanitize_text_field($raw_title);
-        $base_title = trim(preg_replace('/\s*[:\-–]\s*$/u', '', preg_replace('/\s+/', ' ', $title)));
+        $base_title = preg_replace('/\s+/', ' ', $title);
+        $base_title = preg_replace('/^\s*[:\-–|]\s*/u', '', $base_title);
+        $base_title = preg_replace('/\s*[:\-–|]\s*$/u', '', $base_title);
+        $base_title = trim($base_title);
         $today = wp_date('Y-m-d', time(), wp_timezone());
         $count_today = (int)$wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(ID) FROM {$wpdb->posts} WHERE post_title LIKE %s AND post_date LIKE %s AND post_status IN ('publish','draft','pending','future')",

@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.15
+Stable tag: 5.7.17
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,14 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.17 =
+* Fix & Enhancement: Tokenized URL Replacement & Cross-Platform Hashtag Extraction:
+  1. Tokenized URL Replacement: Resolved an issue where URLs in Bluesky body text converted from facets were re-matched by subsequent URL regex parsers, resulting in double-nested `href` attributes and raw `<a href="...">` code being displayed in post previews. Tokenized placeholder substitution ensures rendered HTML links remain clean and active.
+  2. Mastodon Hashtag Extraction: Fixed Mastodon API tag harvesting so hashtags from Mastodon statuses (and API tag payloads) are populated into `extra_tags` before body text cleaning. Allows Mastodon hashtags to populate title templates and WordPress tags even when Bluesky posts contain no hashtags.
+
+= 5.7.16 =
+* Fix & Enhancement: Leading Separator Sanitation for Post Titles: Enhanced post title formatting to automatically trim leading punctuation (such as `: `, `- `, or `| `) when `{hashtags}` resolves to an empty string because no social posts in the batch contained hashtags and no default tags were set. Ensures templates like `{hashtags}: Liliputing News Roundup` render cleanly as `Liliputing News Roundup`.
 
 = 5.7.15 =
 * Feature: Customizable WordPress Post Title Input in Next-Run Workbench: Added an editable WordPress Post Title input box (`custom_title`) located prominently at the top of the "Actions & preview" (Next-Run Workbench) tab above social candidate posts. Populates with the auto-generated headline template by default, allowing users to freely edit or replace the title before saving, drafting, or publishing.
