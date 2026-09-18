@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.22',
+  version: '5.7.23',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,24 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.21',
+  rollbackTarget: 'v5.7.22',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.23',
+    tag: 'v5.7.23',
+    isLatest: true,
+    highlights: [
+      'Feature: Organic Site Vocabulary Engine: Learns product names, brands, and terms directly from published local WordPress post titles, tags, and categories.',
+      'Enhancement: Transient Caching: Caches vocabulary index in a high-speed WordPress transient with configurable scan frequencies (24h, 7d, 30d).',
+      'Feature: Admin Re-index Controls: Added "Re-index Site Vocabulary Now" button and status indicator under Tag Formatting settings.'
+    ]
+  },
+  {
     version: '5.7.22',
     tag: 'v5.7.22',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Feature: Zero-Config Automated Title Tag Engine: Combines CamelCase regexes, letter-number transitions, and built-in tech word segmentation.',
       'Feature: Optional Custom Tag Overrides: Added a settings textarea under Hashtag Formatting Rules allowing optional manual tag mappings (rawtag=Formatted Name).'

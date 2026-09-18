@@ -534,6 +534,128 @@ function social_get_cached_tag_weights() {
     return $weights;
 }
 
+/**
+ * Dynamically extract and cache vocabulary terms from local published posts, tags, and categories.
+ * Learns terms organically from the host WordPress site without external API dependencies.
+ */
+function social_get_site_vocabulary_dictionary() {
+    $opts = get_option('social_digest_options', []);
+    $enabled = !isset($opts['learn_site_vocabulary']) || !empty($opts['learn_site_vocabulary']);
+    if (!$enabled) {
+        return [];
+    }
+
+    $ttl_setting = $opts['vocabulary_scan_frequency'] ?? '7_days';
+    $ttl_seconds = 7 * DAY_IN_SECONDS;
+    if ($ttl_setting === '24_hours') {
+        $ttl_seconds = DAY_IN_SECONDS;
+    } elseif ($ttl_setting === '30_days') {
+        $ttl_seconds = 30 * DAY_IN_SECONDS;
+    }
+
+    $cache_key = 'social_digest_site_vocab_cache';
+    $cached = get_transient($cache_key);
+    if (is_array($cached)) {
+        return $cached;
+    }
+
+    $dict = [];
+
+    // 1. Core Default Baseline Terms (out-of-the-box fallback for fresh WP installs)
+    $baseline = [
+        'samsunggalaxytabs' => 'Samsung Galaxy Tabs',
+        'samsunggalaxytab'  => 'Samsung Galaxy Tab',
+        'samsunggalaxy'     => 'Samsung Galaxy',
+        'snapdragonx2'      => 'Snapdragon X2',
+        'snapdragonx1'      => 'Snapdragon X1',
+        'snapdragonx'       => 'Snapdragon X',
+        'snapdragon'        => 'Snapdragon',
+        'eliteminipc'       => 'Elite Mini PC',
+        'minipc'            => 'Mini PC',
+        'minipcs'           => 'Mini PCs',
+        'thinkbookplusgen'  => 'ThinkBook Plus Gen',
+        'thinkbookplus'     => 'ThinkBook Plus',
+        'thinkbook'         => 'ThinkBook',
+        'minimalphone'      => 'Minimal Phone',
+        'steamframe'        => 'Steam Frame',
+        'steamdeck'         => 'Steam Deck',
+        'steamos'           => 'SteamOS',
+        'nintendoswitch'    => 'Nintendo Switch',
+        'raspberrypi'       => 'Raspberry Pi',
+        'openclaw'          => 'OpenClaw',
+        'dimensity'         => 'Dimensity',
+        'qualcomm'          => 'Qualcomm',
+        'adreno'            => 'Adreno',
+    ];
+    foreach ($baseline as $k => $v) {
+        $dict[$k] = $v;
+    }
+
+    // 2. Extract Taxonomy Terms (Post Tags, Categories, Custom Taxonomies)
+    $taxonomies = get_taxonomies(['public' => true], 'names');
+    if (!empty($taxonomies)) {
+        $terms = get_terms([
+            'taxonomy'   => array_values($taxonomies),
+            'hide_empty' => false,
+            'number'     => 1000,
+        ]);
+        if (!is_wp_error($terms) && is_array($terms)) {
+            foreach ($terms as $term) {
+                $name = trim($term->name);
+                if ($name === '') continue;
+                $key = mb_strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $name));
+                if ($key !== '' && strlen($key) >= 2) {
+                    $dict[$key] = $name;
+                }
+            }
+        }
+    }
+
+    // 3. Extract Capitalized Brand & Product Phrases from Recent Published Post Titles
+    $posts = get_posts([
+        'numberposts' => 150,
+        'post_status' => 'publish',
+        'post_type'   => 'post',
+        'fields'      => 'post_title',
+    ]);
+    if (is_array($posts)) {
+        foreach ($posts as $title_obj) {
+            $title = is_object($title_obj) ? ($title_obj->post_title ?? '') : (string)$title_obj;
+            $title = wp_strip_all_tags($title);
+            if (empty($title)) continue;
+
+            // Match capitalized multi-word sequences (e.g. "ThinkBook Plus Gen 7", "Snapdragon X Elite")
+            preg_match_all('/(?:\b[A-Z0-9][a-zA-Z0-9\-\+\.]*\b\s*){1,4}/u', $title, $matches);
+            if (!empty($matches[0])) {
+                foreach ($matches[0] as $match) {
+                    $m = trim($match);
+                    if (strlen($m) < 3 || is_numeric($m)) continue;
+                    $key = mb_strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $m));
+                    if ($key !== '' && !isset($dict[$key])) {
+                        $dict[$key] = $m;
+                    }
+                }
+            }
+        }
+    }
+
+    // Sort keys by length descending so longer compound terms match first (greedy segmentation)
+    uksort($dict, function($a, $b) {
+        return strlen($b) - strlen($a);
+    });
+
+    set_transient($cache_key, $dict, $ttl_seconds);
+    return $dict;
+}
+
+/**
+ * Flush the site vocabulary transient cache and force immediate re-index.
+ */
+function social_flush_site_vocabulary_cache() {
+    delete_transient('social_digest_site_vocab_cache');
+    return social_get_site_vocabulary_dictionary();
+}
+
 function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
     $t = ltrim(trim($tag), '#');
     if ($t === '') return '';
@@ -553,6 +675,9 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
         }
     }
 
+    // Get dynamic vocabulary dictionary learned from site content + baseline terms
+    $compound_map = social_get_site_vocabulary_dictionary();
+
     // Replace underscores and hyphens with spaces
     $t = str_replace(['_', '-'], ' ', $t);
 
@@ -569,73 +694,6 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
     $t = preg_replace('/(elite)(mini)(pc)/i', '$1 $2 $3', $t);
     $t = preg_replace('/(mini)(pc|pcs)/i', '$1 $2', $t);
 
-    // Map of recognized compound terms to properly capitalized phrases
-    $compound_map = [
-        'samsunggalaxytabs' => 'Samsung Galaxy Tabs',
-        'samsunggalaxytab'  => 'Samsung Galaxy Tab',
-        'samsunggalaxy'     => 'Samsung Galaxy',
-        'snapdragonx2'      => 'Snapdragon X2',
-        'snapdragonx1'      => 'Snapdragon X1',
-        'snapdragonx'       => 'Snapdragon X',
-        'snapdragon'        => 'Snapdragon',
-        'eliteminipc'       => 'Elite Mini PC',
-        'minipc'            => 'Mini PC',
-        'minipcs'           => 'Mini PCs',
-        'elite'             => 'Elite',
-        'mini'              => 'Mini',
-        'pc'                => 'PC',
-        'pcs'               => 'PCs',
-        'thinkbookplusgen'  => 'ThinkBook Plus Gen',
-        'thinkbookplus'     => 'ThinkBook Plus',
-        'thinkbookgen'      => 'ThinkBook Gen',
-        'thinkbook'         => 'ThinkBook',
-        'thinkpad'          => 'ThinkPad',
-        'minimalphone'      => 'Minimal Phone',
-        'steamframe'        => 'Steam Frame',
-        'steamdeck'         => 'Steam Deck',
-        'steamos'           => 'SteamOS',
-        'vrgames'           => 'VR Games',
-        'androidgames'      => 'Android Games',
-        'autotwist'         => 'Auto Twist',
-        'googlepixel'       => 'Google Pixel',
-        'applewatch'        => 'Apple Watch',
-        'macbook'           => 'MacBook',
-        'playstation'       => 'PlayStation',
-        'nintendoswitch'    => 'Nintendo Switch',
-        'raspberrypi'       => 'Raspberry Pi',
-        'openclaw'          => 'OpenClaw',
-        'samsung'           => 'Samsung',
-        'galaxy'            => 'Galaxy',
-        'lenovo'            => 'Lenovo',
-        'asus'              => 'Asus',
-        'ascent'            => 'Ascent',
-        'adreno'            => 'Adreno',
-        'qualcomm'          => 'Qualcomm',
-        'dimensity'         => 'Dimensity',
-        'lepton'            => 'Lepton',
-        'valve'             => 'Valve',
-        'quest'             => 'Quest',
-        'meta'              => 'Meta',
-        'minimal'           => 'Minimal',
-        'phone'             => 'Phone',
-        'steam'             => 'Steam',
-        'frame'             => 'Frame',
-        'deck'              => 'Deck',
-        'think'             => 'Think',
-        'book'              => 'Book',
-        'plus'              => 'Plus',
-        'gen'               => 'Gen',
-        'auto'              => 'Auto',
-        'twist'             => 'Twist',
-        'games'             => 'Games',
-        'game'              => 'Game',
-        'tabs'              => 'Tabs',
-        'tab'               => 'Tab',
-        'laptop'            => 'Laptop',
-        'desktop'           => 'Desktop',
-        'tablet'            => 'Tablet',
-    ];
-
     $segment_word = function($w) use (&$segment_word, $compound_map) {
         $clean = mb_strtolower(trim($w));
         if ($clean === '' || is_numeric($clean)) return $w;
@@ -646,7 +704,7 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
 
         // Try greedy prefix matching against compound map keys
         foreach ($compound_map as $k => $v) {
-            if (strpos($clean, $k) === 0 && strlen($clean) > strlen($k)) {
+            if (strlen($k) >= 3 && strpos($clean, $k) === 0 && strlen($clean) > strlen($k)) {
                 $rest = substr($clean, strlen($k));
                 $seg_rest = $segment_word($rest);
                 return $v . ' ' . $seg_rest;
@@ -671,8 +729,11 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
             if ($sw === '') continue;
 
             $sw_upper = mb_strtoupper($sw);
-            if (in_array($sw_upper, ['AI', 'PC', 'PCS', 'VR', 'X', 'X1', 'X2', 'X3', '3D', '2K', '4K', '8K', '5G', '4G', 'US', 'UK', 'EU', 'OLED', 'AMOLED', 'RAM', 'CPU', 'GPU', 'S12', 'QN10', 'OS', 'UI', 'HD'])) {
+            if (in_array($sw_upper, ['AI', 'PC', 'PCS', 'VR', 'X', 'X1', 'X2', 'X3', '3D', '2K', '4K', '8K', '5G', '4G', 'US', 'UK', 'EU', 'OLED', 'AMOLED', 'RAM', 'CPU', 'GPU', 'S12', 'QN10', 'OS', 'UI', 'HD'], true)) {
                 $processed_phrases[] = $sw_upper;
+            } elseif (preg_match('/^[A-Z0-9\-\.]/u', $sw)) {
+                // Preserve exact capitalization if provided by site vocabulary term
+                $processed_phrases[] = $sw;
             } else {
                 $processed_phrases[] = mb_convert_case($sw, MB_CASE_TITLE, "UTF-8");
             }

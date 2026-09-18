@@ -100,6 +100,9 @@ add_action('admin_init', function() {
             'title_tag_delimiter'          => 'oxford',
             'title_tag_max_count'          => 3,
             'title_tag_selection_strategy' => 'first',
+            'learn_site_vocabulary'        => 1,
+            'vocabulary_scan_frequency'    => '7_days',
+            'title_tag_custom_overrides'   => '',
             'same_day_suffix_tpl'    => ' (Part {part})',
             'excluded_words'         => '#ad, sponsored',
             'header_text'            => '<p>Here is what we shared across social channels today:</p>',
@@ -197,6 +200,12 @@ add_action('admin_init', function() {
             add_settings_error('sd53', 'cutoff', 'Please select a date and time to set a custom cutoff.', 'error');
         }
     }
+
+    if (isset($_POST['sd53_reindex_vocab']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+        $dict = social_flush_site_vocabulary_cache();
+        $count = count($dict);
+        add_settings_error('sd53', 'vocab', sprintf('Site vocabulary index refreshed successfully! %d terms indexed from your published post titles, tags, and categories.', $count), 'updated');
+    }
 });
 
 function social_sanitize_settings($input) {
@@ -273,6 +282,11 @@ function social_sanitize_settings($input) {
 
     $allowed_strategies = ['first', 'popularity', 'random'];
     $output['title_tag_selection_strategy'] = in_array($input['title_tag_selection_strategy'] ?? '', $allowed_strategies, true) ? $input['title_tag_selection_strategy'] : 'first';
+
+    $output['learn_site_vocabulary']     = !empty($input['learn_site_vocabulary']) ? 1 : 0;
+    $allowed_frequencies                 = ['24_hours', '7_days', '30_days'];
+    $output['vocabulary_scan_frequency'] = in_array($input['vocabulary_scan_frequency'] ?? '', $allowed_frequencies, true) ? $input['vocabulary_scan_frequency'] : '7_days';
+    $output['title_tag_custom_overrides']= sanitize_textarea_field($input['title_tag_custom_overrides'] ?? '');
 
     $output['same_day_suffix_tpl'] = sanitize_text_field($input['same_day_suffix_tpl'] ?? ' (Part {part})');
     $output['excluded_words']      = sanitize_textarea_field($input['excluded_words'] ?? '');
@@ -772,6 +786,29 @@ function social_render_settings_page() {
                                                                 <option value="pipe" <?php selected($opts['title_tag_delimiter'] ?? '', 'pipe'); ?>>Tag 1 | Tag 2 | Tag 3</option>
                                                                 <option value="slash" <?php selected($opts['title_tag_delimiter'] ?? '', 'slash'); ?>>Tag 1 / Tag 2 / Tag 3</option>
                                                             </select>
+                                                        </div>
+                                                        <div style="margin-top: 12px; border-top: 1px dashed #ccd0d4; padding-top: 10px;">
+                                                            <label style="display:block; font-weight:600; margin-bottom: 6px;">🧠 Site Vocabulary Engine (Organic Learning):</label>
+                                                            <div style="margin-bottom: 6px;">
+                                                                <label><input type="checkbox" name="social_digest_options[learn_site_vocabulary]" value="1" <?php checked(!isset($opts['learn_site_vocabulary']) || !empty($opts['learn_site_vocabulary'])); ?>> Automatically learn vocabulary from published WordPress post titles, tags &amp; categories</label>
+                                                            </div>
+                                                            <div style="margin-bottom: 8px;">
+                                                                <label style="display:inline-block; width: 140px; font-size: 12px;">Scan Frequency:</label>
+                                                                <select name="social_digest_options[vocabulary_scan_frequency]" style="font-size: 12px;">
+                                                                    <option value="24_hours" <?php selected($opts['vocabulary_scan_frequency'] ?? '', '24_hours'); ?>>Every 24 Hours</option>
+                                                                    <option value="7_days" <?php selected($opts['vocabulary_scan_frequency'] ?? '7_days', '7_days'); ?>>Every 7 Days (Recommended)</option>
+                                                                    <option value="30_days" <?php selected($opts['vocabulary_scan_frequency'] ?? '', '30_days'); ?>>Every 30 Days</option>
+                                                                </select>
+                                                            </div>
+                                                            <?php 
+                                                            $current_vocab = social_get_site_vocabulary_dictionary();
+                                                            $vocab_count = count($current_vocab);
+                                                            ?>
+                                                            <div style="background: #f6f7f7; border: 1px solid #dcdcde; padding: 8px 12px; border-radius: 4px; font-size: 11px; margin-bottom: 6px;">
+                                                                <strong>Vocabulary Cache Status:</strong> Currently indexed <strong><?php echo $vocab_count; ?></strong> brand &amp; topic terms from your local WordPress site content.
+                                                                <button type="submit" name="sd53_reindex_vocab" class="button button-small" style="margin-left: 10px;">Re-index Site Vocabulary Now</button>
+                                                            </div>
+                                                            <p class="description" style="margin-top: 2px; font-size: 11px;">Extracts proper nouns and product terms from your site so all-lowercase social hashtags (e.g. <code>#eliteminipc</code>) map automatically to your site's exact terminology.</p>
                                                         </div>
                                                         <div style="margin-top: 10px; border-top: 1px dashed #ccd0d4; padding-top: 8px;">
                                                             <label style="display:block; font-weight:600; margin-bottom: 4px;">Custom Tag Title Overrides (Optional):</label>

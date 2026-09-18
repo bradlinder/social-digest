@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.22
+Stable tag: 5.7.23
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,12 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.23 =
+* Feature & Architecture: Organic Site Vocabulary Learning Engine & Vocabulary Settings Controls:
+  1. Organic Vocabulary Extraction: Replaced static dictionaries with a dynamic learning engine (`social_get_site_vocabulary_dictionary()`) that extracts brand names, product terms, and proper nouns directly from your local WordPress site's published post titles, tags, and categories.
+  2. Transient Caching & Performance: Caches extracted site vocabulary terms in a high-performance WordPress transient (`social_digest_site_vocab_cache`), causing zero query overhead during social digest generation.
+  3. Settings Controls: Added controls under Tag Formatting settings to toggle site vocabulary learning, configure scan frequency (`24 Hours`, `7 Days`, `30 Days`), view current indexed term count, and trigger manual "Re-index Site Vocabulary Now" operations.
 
 = 5.7.22 =
 * Feature & Architecture: Zero-Config Automated Title Tag Formatting Engine & Custom Tag Overrides:
