@@ -263,9 +263,11 @@ export default function App() {
             >
               {/* Card Header */}
               <div className="flex items-center gap-3 pb-3 mb-3 border-b border-slate-100">
-                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-inner flex-shrink-0">
-                  BL
-                </div>
+                <img
+                  className="w-11 h-11 rounded-full object-cover border border-slate-200 flex-shrink-0"
+                  src="https://cdn.bsky.app/img/avatar/plain/did:plc:wxhudjcwjjwsfklsq4advde6/bafkreibo2w77hgid4sz4sn6w6lq7atbi2giiaykudrbhxolqaur4nvfjdy"
+                  alt="Liliputing"
+                />
                 <div className="min-w-0 flex-1 leading-snug">
                   <div className="font-bold text-[15px] text-slate-900 truncate">
                     Liliputing
@@ -296,22 +298,73 @@ export default function App() {
 
               {/* Card Body */}
               <div className="text-[15px] leading-relaxed text-slate-800 mb-3 break-words">
-                A look at the refreshed Social Digest post card formatting. Image embeds now feature accessible ALT badges, and multi-part posts collapse cleanly into single cards.
+                The MINISFORUM S5 is a fanless PC or NAS with 16GB LPDDR5 RAM, an Intel Core 3 304 chip, 5 M.2 slots for PCIe 4.0 x1 NVMe storage, 10 GbE and 2.5 GbE LAN, WiFi 7, 40 Gbps USB4, plus a compact aluminum chassis with heatsink fins. <a href="https://store.minisforum.com/products/minisforum-ai-nas-s5-304" target="_blank" rel="noopener noreferrer" className="text-[#0284c7] hover:underline">store.minisforum.com/products/min...</a>
               </div>
 
-              {/* Embedded Media with ALT badge */}
-              <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-900/5 mb-3">
-                <div className="h-44 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 flex items-center justify-center text-slate-400 text-xs font-mono">
-                  [Sample Image Gallery / Preview]
+              {/* Native Link Embed Card (v5.7.10 Design Hierarchy) */}
+              <div className="social-link-card border border-slate-200 rounded-lg overflow-hidden my-3 bg-slate-50/80 shadow-xs hover:border-slate-300 transition-colors">
+                <a href="https://store.minisforum.com/products/minisforum-ai-nas-s5-304" target="_blank" rel="noopener noreferrer" className="block text-inherit no-underline">
+                  <div className="p-3">
+                    <div className="font-bold text-[14px] text-slate-900 mb-1 leading-snug">
+                      MINISFORUM AI NAS S5 304 Fanless PC
+                    </div>
+                    <div className="font-normal text-[12.5px] text-slate-600 leading-normal mb-1.5">
+                      Intel Core 3 304 fanless Mini PC with 5x M.2 NVMe slots, dual 10G/2.5G LAN ports, and aluminum heatsink chassis.
+                    </div>
+                    <div className="flex items-center gap-1 text-[12px] text-slate-500 font-normal mt-1">
+                      <span className="text-[11px] opacity-80">🔗</span> store.minisforum.com
+                    </div>
+                  </div>
+                </a>
+              </div>
+
+              {/* 3-Image Single-Row Social Gallery with ALT Overlay */}
+              <div className="grid grid-cols-3 gap-2 my-3 w-full">
+                <div className="relative group">
+                  <img
+                    src="https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:wxhudjcwjjwsfklsq4advde6/bafkreigqnojxmiohiw75kkagzi2t3ooferz67ehnj7pv5enhkri23snyhy"
+                    alt="MINISFORUM S5 chassis"
+                    className="w-full aspect-square object-cover rounded-lg block"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => alert('ALT: MINISFORUM S5 fanless chassis profile view.')}
+                    className="absolute bottom-1.5 left-1.5 bg-slate-900/85 hover:bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wider shadow cursor-help transition-colors"
+                    title="ALT: MINISFORUM S5 fanless chassis profile view."
+                  >
+                    ALT
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => alert('ALT: A demonstration photo illustrating the new accessibility overlay badges.')}
-                  className="absolute bottom-2 left-2 bg-slate-900/85 hover:bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wider shadow cursor-help transition-colors"
-                  title="ALT: A demonstration photo illustrating the new accessibility overlay badges."
-                >
-                  ALT
-                </button>
+                <div className="relative group">
+                  <img
+                    src="https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:wxhudjcwjjwsfklsq4advde6/bafkreiga4h4hxetzx2dwbqk542n5rqvo5zg6ywaks35wcfbbkeqojvi37y"
+                    alt="MINISFORUM S5 ports and internal layout"
+                    className="w-full aspect-square object-cover rounded-lg block"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => alert('ALT: MINISFORUM S5 internal layout showing 5x M.2 NVMe slots.')}
+                    className="absolute bottom-1.5 left-1.5 bg-slate-900/85 hover:bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wider shadow cursor-help transition-colors"
+                    title="ALT: MINISFORUM S5 internal layout showing 5x M.2 NVMe slots."
+                  >
+                    ALT
+                  </button>
+                </div>
+                <div className="relative group">
+                  <img
+                    src="https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:wxhudjcwjjwsfklsq4advde6/bafkreiambm2ccrza3se7adwhnbgwgpgfj4pxqeb4cqydoytm3banfv4iw4"
+                    alt="MINISFORUM S5 heatsink fins"
+                    className="w-full aspect-square object-cover rounded-lg block"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => alert('ALT: MINISFORUM S5 aluminum heatsink fin array.')}
+                    className="absolute bottom-1.5 left-1.5 bg-slate-900/85 hover:bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wider shadow cursor-help transition-colors"
+                    title="ALT: MINISFORUM S5 aluminum heatsink fin array."
+                  >
+                    ALT
+                  </button>
+                </div>
               </div>
 
               {/* Collapsible Thread Preview */}
@@ -320,42 +373,42 @@ export default function App() {
                   <span>🧵 View full thread (1 follow-up post)</span>
                 </summary>
                 <div className="mt-2 pl-3 border-l-2 border-[#0284c7] space-y-2 py-1 text-slate-700">
-                  <div className="text-[11px] text-slate-400 font-semibold">Oct 14, 2026 · 3:47 PM</div>
-                  <div>Part 2: Follow-up reply automatically grouped without creating separate digest cards!</div>
+                  <div className="text-[11px] text-slate-400 font-semibold">Sep 17, 2026 · 2:47 PM</div>
+                  <div>Detailed teardown and benchmarks will be published on Liliputing later this week! #Minisforum #FanlessPC</div>
                 </div>
               </details>
 
               {/* Card Footer (Clean Date + Platform Badges + Deep Links) */}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 text-[13px] text-slate-500">
                 <div className="flex items-center">
-                  <span>Oct 14, 2026 · 3:45 PM</span>
+                  <span>Sep 17, 2026 · 2:45 PM</span>
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <a
-                    href="https://bsky.app"
+                    href="https://bsky.app/profile/liliputing.bsky.social/post/3mvqcrk4unr2e"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded bg-sky-50 text-[#0284c7] border border-sky-200 hover:bg-sky-100 transition-colors"
                   >
                     <span>🦋 Bluesky</span>
-                    <span className="text-[11px] bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-full">❤️ 42</span>
+                    <span className="text-[11px] bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-full">❤️ 1</span>
                     <span className="text-[10px]">↗</span>
                   </a>
                   <a
-                    href="bsky://profile/liliputing.bsky.social/post/3lbexample"
+                    href="bsky://profile/liliputing.bsky.social/post/3mvqcrk4unr2e"
                     className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded bg-sky-100/70 text-[#0369a1] border border-sky-300 hover:bg-sky-200 transition-colors"
                     title="Open directly in installed Bluesky mobile app"
                   >
                     <span>📲 App</span>
                   </a>
                   <a
-                    href="https://fosstodon.org"
+                    href="https://fosstodon.org/@bradlinder/117287859662444785"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded bg-purple-50 text-[#7e22ce] border border-purple-200 hover:bg-purple-100 transition-colors"
                   >
                     <span>🐘 Mastodon</span>
-                    <span className="text-[11px] bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded-full">⭐ 18 · 🔁 5</span>
+                    <span className="text-[11px] bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded-full">⭐ 1</span>
                     <span className="text-[10px]">↗</span>
                   </a>
                 </div>
