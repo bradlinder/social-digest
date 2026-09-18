@@ -152,20 +152,20 @@ function social_render_link_card_html($card_url, $card_title, $card_desc, $card_
     $card_thumb = esc_url($card_thumb);
     $display_title = esc_html($card_title ?: ($card_domain ?: $card_url));
     $display_desc  = esc_html($card_desc ? wp_trim_words($card_desc, 25) : '');
-    $display_domain = esc_html(strtoupper(preg_replace('/^www\./i', '', $card_domain ?: parse_url($card_url, PHP_URL_HOST))));
+    $display_domain = esc_html(strtolower(preg_replace('/^www\./i', '', $card_domain ?: parse_url($card_url, PHP_URL_HOST))));
 
-    $html = '<div class="social-link-card" style="border:1px solid #e1e8ed; border-radius:8px; overflow:hidden; margin:12px 0; max-width:500px; background:#f8fafc; box-shadow:0 1px 3px rgba(0,0,0,0.05);">';
+    $html = '<div class="social-link-card" style="border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin:12px 0; max-width:500px; background:#f8fafc; box-shadow:0 1px 3px rgba(0,0,0,0.04);">';
     $html .= '<a href="' . $card_url . '" target="_blank" rel="noopener" style="text-decoration:none; color:inherit; display:block;">';
     if ($card_thumb) {
         $html .= '<img src="' . $card_thumb . '" alt="' . esc_attr($card_title) . '" style="width:100%; max-height:220px; object-fit:cover; display:block;" />';
     }
     $html .= '<div style="padding:10px 14px;">';
-    if ($display_domain) {
-        $html .= '<div class="social-link-card-domain" data-nosnippet style="font-size:0.75em; text-transform:uppercase; color:#657786; margin-bottom:3px; font-weight:600; letter-spacing:0.5px;">' . $display_domain . '</div>';
-    }
-    $html .= '<div class="social-link-card-title" style="font-weight:700; font-size:1em; margin-bottom:4px; color:#0284c7; line-height:1.35;">' . $display_title . '</div>';
+    $html .= '<div class="social-link-card-title" style="font-weight:700; font-size:14px; margin-bottom:4px; color:#0f172a; line-height:1.35;">' . $display_title . '</div>';
     if ($display_desc) {
-        $html .= '<div class="social-link-card-desc" style="font-size:0.85em; color:#475569; line-height:1.4;">' . $display_desc . '</div>';
+        $html .= '<div class="social-link-card-desc" style="font-weight:400; font-size:12.5px; color:#475569; line-height:1.45; margin-bottom:6px;">' . $display_desc . '</div>';
+    }
+    if ($display_domain) {
+        $html .= '<div class="social-link-card-domain" data-nosnippet style="display:flex; align-items:center; gap:5px; font-size:12px; color:#64748b; font-weight:400; margin-top:4px;"><span style="font-size:11px; opacity:0.8;">🔗</span> ' . $display_domain . '</div>';
     }
     $html .= '</div>';
     $html .= '</a>';
