@@ -733,6 +733,12 @@ function social_render_settings_page() {
                                                                 <option value="5" <?php selected($opts['excerpt_max_items'] ?? '', '5'); ?>>First 5 Posts</option>
                                                             </select>
                                                         </div>
+                                                        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #dcdcde;">
+                                                            <label style="font-weight: 500; cursor: pointer;">
+                                                                <input type="checkbox" name="social_digest_options[excerpt_append_ellipsis]" id="social_excerpt_append_ellipsis" value="1" <?php checked(!empty($opts['excerpt_append_ellipsis'])); ?> />
+                                                                Append trailing ellipsis ( ... ) to end of excerpt
+                                                            </label>
+                                                        </div>
                                                     </div>
                                                 </td>
                                             </tr>
