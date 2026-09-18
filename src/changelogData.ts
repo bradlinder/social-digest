@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.6.4',
+  version: '5.6.5',
   requiresWP: '6.0+',
   testedUpTo: '6.7',
   requiresPHP: '7.4+',
@@ -17,14 +17,23 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.6.3',
+  rollbackTarget: 'v5.6.4',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.6.5',
+    tag: 'v5.6.5',
+    isLatest: true,
+    highlights: [
+      'Fixed search snippet and RSS excerpt bloat: Explicitly generates a clean, plain-text `post_excerpt` stripped of social metadata to ensure WordPress excerpts and SEO meta descriptions remain readable.',
+      'Added `data-nosnippet` tags to social card headers, footers, and repost banners to prevent them from bleeding into Google Search results.'
+    ]
+  },
+  {
     version: '5.6.4',
     tag: 'v5.6.4',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Multiple images within a single post are now displayed as a grid gallery instead of sequential large images.',
       'Automatically prioritizes hashtags from the selected featured image post for the generated digest title.'

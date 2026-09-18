@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.6.4
+ * Version: 5.6.5
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -857,9 +857,20 @@ function social_publish_workbench_run($state, $force_status = null) {
 
         $status_to_use = ($force_status !== null) ? $force_status : ($opts['post_status'] ?? 'publish');
 
+        // Generate a clean, plain-text excerpt to prevent social handles/links from appearing in summaries
+        $use_override = !empty($state['framing_override_enabled']);
+        $header = $use_override ? trim($state['header_override'] ?? '') : trim($opts['header_text'] ?? '');
+        $excerpt_text = wp_strip_all_tags($header) . ' ';
+        foreach ((array)($state['candidates'] ?? []) as $c) {
+            if (!empty($c['excluded'])) continue;
+            $excerpt_text .= wp_strip_all_tags($c['text'] ?? '') . ' ';
+        }
+        $post_excerpt = wp_trim_words(trim($excerpt_text), 55, ' [&hellip;]');
+
         $post_args = [
             'post_title'   => $title,
             'post_content' => $built['content'],
+            'post_excerpt' => $post_excerpt,
             'post_status'  => $status_to_use,
             'post_author'  => $author_id,
             'post_type'    => 'post',
@@ -1642,18 +1653,17 @@ function social_render_native_card($item, $opts = []) {
     // Repost / Boost banner
     $repost_html = '';
     if ($is_repost && $repost_user) {
-        $repost_html = '<div class="social-repost-banner" style="font-size:12px; font-weight:700; color:#0284c7; margin-bottom:10px; display:flex; align-items:center; gap:5px;">&#x1F501; Reposted by @' . $repost_user . '</div>';
+        $repost_html = '<div class="social-repost-banner" data-nosnippet style="font-size:12px; font-weight:700; color:#0284c7; margin-bottom:10px; display:flex; align-items:center; gap:5px;">&#x1F501; Reposted by @' . $repost_user . '</div>';
     }
 
     // Build the Native Card HTML
     $html = '<div class="social-post social-card" style="border:1px solid #e2e8f0; border-left:4px solid #0284c7; border-radius:12px; padding:18px; margin:26px auto; background:#ffffff; box-shadow:0 2px 6px rgba(0,0,0,0.04); max-width:600px; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif;">';
-
     if ($repost_html) {
         $html .= $repost_html;
     }
 
     // Card Header (Avatar + Name + Inline Handles with Follow Links)
-    $html .= '<div class="social-card-header" style="display:flex; align-items:center; gap:12px; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #f1f5f9;">';
+    $html .= '<div class="social-card-header" data-nosnippet style="display:flex; align-items:center; gap:12px; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #f1f5f9;">';
     if ($avatar_url) {
         $html .= '<img src="' . esc_url($avatar_url) . '" alt="' . esc_attr($author_name) . '" class="social-avatar" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:1px solid #e2e8f0; flex-shrink:0;" />';
     }
@@ -1674,7 +1684,7 @@ function social_render_native_card($item, $opts = []) {
     }
 
     // Card Footer (Date on left + Interactive Platform badges on right)
-    $html .= '<div class="social-card-footer" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin-top:14px; padding-top:12px; border-top:1px solid #f1f5f9; font-size:13px; color:#64748b;">';
+    $html .= '<div class="social-card-footer" data-nosnippet style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin-top:14px; padding-top:12px; border-top:1px solid #f1f5f9; font-size:13px; color:#64748b;">';
     $html .= '<div class="social-timestamp" style="display:flex; align-items:center;">';
     $html .= '<span>' . esc_html($formatted_date) . '</span>';
     $html .= '</div>';
