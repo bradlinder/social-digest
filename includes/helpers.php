@@ -563,7 +563,6 @@ function social_get_site_vocabulary_dictionary() {
 
     // 1. Core Default Baseline Terms (out-of-the-box fallback for fresh WP installs)
     $baseline = [
-        'samsunggalaxytabs' => 'Samsung Galaxy Tabs',
         'samsunggalaxytab'  => 'Samsung Galaxy Tab',
         'samsunggalaxy'     => 'Samsung Galaxy',
         'snapdragonx2'      => 'Snapdragon X2',
@@ -785,10 +784,47 @@ function social_extract_topic_keywords_from_posts($items) {
     return array_values(array_unique($phrases));
 }
 
+/**
+ * Detect if two tag phrases represent the same or heavily overlapping topics
+ * (e.g. "Samsung Galaxy Tab S12" vs "Samsung Galaxy Tabs 12" or "Samsung Galaxy Tab").
+ */
+function social_are_tags_fuzzy_duplicates($tag1, $tag2) {
+    if (empty($tag1) || empty($tag2)) return false;
+
+    $clean1 = mb_strtolower(trim($tag1));
+    $clean2 = mb_strtolower(trim($tag2));
+    if ($clean1 === $clean2) return true;
+
+    // Remove non-alphanumeric except spaces
+    $a1 = preg_replace('/[^a-z0-9\s]/u', '', $clean1);
+    $a2 = preg_replace('/[^a-z0-9\s]/u', '', $clean2);
+
+    // Stemming (trim trailing 's' from words)
+    $words1 = array_filter(array_map(fn($w) => rtrim($w, 's'), explode(' ', $a1)));
+    $words2 = array_filter(array_map(fn($w) => rtrim($w, 's'), explode(' ', $a2)));
+
+    $str1 = implode(' ', $words1);
+    $str2 = implode(' ', $words2);
+
+    if ($str1 === $str2) return true;
+    if ($str1 !== '' && $str2 !== '') {
+        if (strpos($str1, $str2) !== false || strpos($str2, $str1) !== false) {
+            return true;
+        }
+    }
+
+    $intersect = array_intersect($words1, $words2);
+    $min_count = min(count($words1), count($words2));
+    if ($min_count > 0 && (count($intersect) / $min_count) >= 0.6) {
+        return true;
+    }
+
+    return false;
+}
+
 function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $enclosure = 'parentheses', $delimiter = 'oxford', $max_tags_count = 3, $strategy = 'first', $custom_overrides_str = '') {
     $max_tags = max(1, min(5, (int)$max_tags_count));
     $selected_tags = [];
-    $seen_normalized = [];
     $tag_weights = social_get_cached_tag_weights();
 
     if (!empty($candidate_tags)) {
@@ -801,7 +837,7 @@ function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $
         }
 
         if ($is_grouped) {
-            // Select at most 1 distinct tag per post based on strategy
+            // Select at most 1 distinct, non-duplicate tag per social post
             foreach ($candidate_tags as $post_tags) {
                 if (!is_array($post_tags)) {
                     $post_tags = [$post_tags];
@@ -818,15 +854,22 @@ function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $
                 } elseif ($strategy === 'random' && count($post_tags_copy) > 1) {
                     shuffle($post_tags_copy);
                 }
-                // 'first' maintains original appearance order in the post
 
                 foreach ($post_tags_copy as $tag) {
                     $clean_tag = social_split_camelcase_tag($tag, $custom_overrides_str);
-                    $norm = mb_strtolower(trim($clean_tag));
-                    if ($norm !== '' && !isset($seen_normalized[$norm])) {
-                        $seen_normalized[$norm] = true;
+                    if ($clean_tag === '') continue;
+
+                    $is_duplicate = false;
+                    foreach ($selected_tags as $existing_tag) {
+                        if (social_are_tags_fuzzy_duplicates($existing_tag, $clean_tag)) {
+                            $is_duplicate = true;
+                            break;
+                        }
+                    }
+
+                    if (!$is_duplicate) {
                         $selected_tags[] = $clean_tag;
-                        break; // Pick only 1 tag from this post, then move to the next post
+                        break; // Strictly max 1 tag from this post!
                     }
                 }
                 if (count($selected_tags) >= $max_tags) {
@@ -848,9 +891,17 @@ function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $
 
             foreach ($flat_tags as $tag) {
                 $clean_tag = social_split_camelcase_tag($tag, $custom_overrides_str);
-                $norm = mb_strtolower(trim($clean_tag));
-                if ($norm !== '' && !isset($seen_normalized[$norm])) {
-                    $seen_normalized[$norm] = true;
+                if ($clean_tag === '') continue;
+
+                $is_duplicate = false;
+                foreach ($selected_tags as $existing_tag) {
+                    if (social_are_tags_fuzzy_duplicates($existing_tag, $clean_tag)) {
+                        $is_duplicate = true;
+                        break;
+                    }
+                }
+
+                if (!$is_duplicate) {
                     $selected_tags[] = $clean_tag;
                 }
                 if (count($selected_tags) >= $max_tags) {
@@ -865,9 +916,17 @@ function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $
         $defaults = array_filter(array_map('trim', explode(',', $default_tags_str)));
         foreach ($defaults as $d) {
             $clean_tag = social_split_camelcase_tag($d, $custom_overrides_str);
-            $norm = mb_strtolower(trim($clean_tag));
-            if ($norm !== '' && !isset($seen_normalized[$norm])) {
-                $seen_normalized[$norm] = true;
+            if ($clean_tag === '') continue;
+
+            $is_duplicate = false;
+            foreach ($selected_tags as $existing_tag) {
+                if (social_are_tags_fuzzy_duplicates($existing_tag, $clean_tag)) {
+                    $is_duplicate = true;
+                    break;
+                }
+            }
+
+            if (!$is_duplicate) {
                 $selected_tags[] = $clean_tag;
             }
             if (count($selected_tags) >= $max_tags) {

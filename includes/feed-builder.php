@@ -307,6 +307,7 @@ function social_fetch_workbench_candidates() {
 
     $featured = '';
     $featured_post_tags = [];
+    $featured_sel_id = null;
     if (!empty($opts['auto_thumb'])) {
         $thumbs = [];
         $ordered = $chronological_posts;
@@ -319,6 +320,7 @@ function social_fetch_workbench_candidates() {
             else $sel = $thumbs[min(count($thumbs)-1, max(0, (int)$mode_thumb-1))];
             
             $featured = esc_url_raw($sel['thumb_image']);
+            $featured_sel_id = $sel['id'] ?? null;
             $featured_post_tags = array_merge((array)($sel['extra_tags'] ?? []), preg_match_all('/#(\w+)/u', $sel['text'] ?? '', $tm) ? $tm[1] : []);
             $featured_post_tags = array_values(array_unique(array_filter($featured_post_tags, fn($t) => mb_strlen($t) >= $min_tag_length)));
         }
@@ -333,6 +335,10 @@ function social_fetch_workbench_candidates() {
     }
 
     foreach ($eligible as $item) {
+        // Skip featured post if its tags were already prioritized in post_tags_list
+        if ($featured_sel_id !== null && isset($item['id']) && $item['id'] === $featured_sel_id && !empty($featured_post_tags)) {
+            continue;
+        }
         $tags = array_merge((array)($item['extra_tags'] ?? []), preg_match_all('/#(\w+)/u', $item['text'] ?? '', $tm) ? $tm[1] : []);
         $valid_post_tags = array_slice(array_values(array_unique(array_filter($tags, fn($t) => mb_strlen($t) >= $min_tag_length))), 0, $max_tags_per_post);
         $raw_tags = array_merge($raw_tags, $valid_post_tags);
