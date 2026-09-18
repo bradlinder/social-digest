@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 5.6.10
+Stable tag: 5.7.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,22 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.1 =
+* Feature: Gutenberg Block Editor Markup: Outputs digest content wrapped into native WordPress block comments (`<!-- wp:core/html -->`), preventing "Attempt Block Recovery" warnings and allowing effortless visual editing in the modern block editor.
+* Feature: Video & Animated GIF Embeds: Added rich video preview cards with play badges for Bluesky (`app.bsky.embed.video`) and native autoplaying, looping, muted `<video>` players for Mastodon animated GIFs (`gifv`) and video attachments.
+* Feature: Fediverse Creator Attribution: Injects `<meta name="fediverse:creator" content="@user@instance.social">` into published digest posts to provide author profile attribution on Mastodon 4.3+ and Threads.
+* Reliability: Network Fallback & Exponential Backoff: Added intelligent retries with exponential backoff (`1s`, `2s`) for transient API failures (HTTP 429/503) and 24-hour stale cache fallback snapshots.
+* Feature: Advanced Content Exclusions: Upgraded blacklist filtering from simple substring matches to support whole hashtags (e.g. `#ad`), full regular expressions (e.g. `/giveaway/i`), and plain keywords.
+
+= 5.7.0 =
+* Architectural Modularization: Refactored core codebase from a single monolithic file into a clean, modern WordPress module architecture under `includes/`.
+* Lightweight Bootstrap Loader (`social-digest.php`): Streamlined entrypoint down to ~240 lines handling core WordPress lifecycle hooks, cron schedules, protocol whitelisting, and module loading.
+* Modular Subsystems:
+  - `includes/helpers.php`: String manipulation, OpenGraph metadata scrapers, WebP/AVIF image format conversion, and excerpt generation.
+  - `includes/api-clients.php`: Bluesky (AT Protocol) and Mastodon (ActivityPub) API fetchers and native card HTML renderer.
+  - `includes/feed-builder.php`: Workbench state machine, candidate aggregation, thread unrolling, and WordPress post publication engine.
+  - `includes/admin.php`: Admin menu integration, tabbed settings, sanitization, and interactive drag-and-drop workbench UI.
 
 = 5.6.10 =
 * Fix: Allowed Protocols Whitelist: Registered `bsky` and `mastodon` in `kses_allowed_protocols` filter to prevent WordPress core `esc_url()` from stripping `bsky://` and `mastodon://` mobile deep links to empty strings.

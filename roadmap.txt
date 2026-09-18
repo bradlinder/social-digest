@@ -3,12 +3,28 @@ Social Digest - Feature Roadmap & Release Status
 
 🎯 Immediate Recommended Next Steps (To Do List)
 ------------------------------------------------
-1. Automated Social Thread Collapsing & Unrolling [Feature Path]:
-   - Automatically identify multi-post threads authored by the account owner and roll them into a unified, collapsible thread block rather than discrete independent cards.
-2. Local Media Attachment Auto-Sideloading Cache [Performance & Resilience]:
+1. Interactive Post Card Dark Mode Stylesheet Toggle [Accessibility]:
+   - Provide high-contrast dark theme styles for native cards matching dark WordPress theme parent containers and CSS prefers-color-scheme.
+2. Direct Sideloading for All Post Media Attachments [Performance & Resilience]:
    - Directly sideload all post images/media attachments into the WordPress Media Library to serve all assets strictly from the local origin and protect against remote server outages.
-3. Interactive Post Card Dark Mode Stylesheet Toggle [Accessibility]:
-   - Provide high-contrast dark theme styles for native cards matching dark WordPress theme parent containers.
+3. Batch Tag Popularity Transients [Database Optimization]:
+   - Implement temporary 5-minute WordPress transients for batch `get_terms()` lookups to reduce database query loads during high-frequency manual test cycles.
+
+0. Release v5.7.1 Gutenberg Block Editor, Video/GIFs, Fediverse Attribution & Resilience (Completed in v5.7.1)
+--------------------------------------------------------------------------------------------------------------
+[x] Gutenberg Block Editor Support (v5.7.1): Formats published post content as native WordPress block comments (`<!-- wp:core/html -->`), enabling seamless visual editing without "Attempt Block Recovery" warnings. Configurable via Publishing settings.
+[x] Video & Animated GIF Support (v5.7.1): Added rich video preview cards with play badges for Bluesky (`app.bsky.embed.video`) and native autoplaying, looping, muted `<video>` players for Mastodon animated GIFs (`gifv`) and video attachments.
+[x] Fediverse Creator Attribution (v5.7.1): Injects `<meta name="fediverse:creator" content="@user@instance.social">` into published digest posts to provide author profile attribution on Mastodon 4.3+ and Threads.
+[x] Network Resilience & Exponential Backoff (v5.7.1): Added intelligent retries with exponential backoff (`1s`, `2s`) for transient API failures (HTTP 429/503) and 24-hour stale cache fallback snapshots.
+[x] Advanced Content Exclusions (v5.7.1): Upgraded blacklist filtering from simple substring matches to support whole hashtags (e.g. `#ad`), full regular expressions (e.g. `/giveaway/i`), and plain keywords.
+[x] Mastodon Alt-Text Parity (v5.7.1): Full attachment description extraction, tooltip preview, and clickable ALT badges for Mastodon image and media cards.
+[x] Automated Social Thread Collapsing & Unrolling (v5.7.1): Automatically identifies multi-post reply threads authored by the account owner and collapses them into a clean, interactive `<details>` accordion attached to the parent post.
+
+0.1. Release v5.7.0 Codebase Modularization (Completed in v5.7.0)
+-----------------------------------------------------------------
+[x] Architectural Modularization (v5.7.0): Refactored monolithic codebase into dedicated modules under `includes/` (`helpers.php`, `api-clients.php`, `feed-builder.php`, `admin.php`).
+[x] Streamlined Bootstrap Loader (v5.7.0): Retained `social-digest.php` as lightweight orchestrator.
+[x] Editor Splitter Regex Normalization (v5.7.0): Handled nested paragraphs and whitespace variations for `<!--digest_split-->` markers across TinyMCE visual editor instances.
 
 0. Release v5.6.2 Inline Follow Links & Embed Styling Symmetry (Completed in v5.6.2)
 ------------------------------------------------------------------------------------
@@ -90,82 +106,26 @@ Social Digest - Feature Roadmap & Release Status
 [x] Tab & Staging Improvements (v5.3.2): Unified all staging queue features, toggles, actions, preview, and editor into the Actions, Staging & Diagnostics tab, and made "General Settings" the default primary tab.
 [x] Server-Side Action Handlers (v5.3.3 & v5.3.4): Implemented live WordPress server-side POST operational handlers for publishing, saving drafts, pending review, and curation actions.
 
-8. Future Refactoring & Edge Case Hardening Roadmap (Planned)
---------------------------------------------------------------
-[ ] Codebase Modularization: Split the monolithic `social-digest.php` into a dedicated `includes/` directory structure (cron, fetchers, tag engine, admin settings) to resolve LLM token limitations and improve target maintainability.
-[ ] Editor Splitter Regex Normalization: Make the regex boundary for the TinyMCE `<!--digest_split-->` marker whitespace-insensitive and capable of handling nested `wpautop` paragraph wrappers to prevent data loss.
-[ ] Visual Editor Delimiter Lock: Add `contenteditable="false"` to the TinyMCE `<hr>` split marker to prevent accidental cursor fragmentation.
-[ ] Multi-Divider Cleanup: Strip extraneous `<!--digest_split-->` tokens from the footer payload to prevent multiple splitters from leaking into production.
-[ ] API Ingestion Timeout Reduction: Lower external `wp_remote_get()` timeouts to 10-12 seconds to prevent long-running requests from causing PHP timeouts and hanging `wp-cron`.
-[ ] Tag Popularity Caching: Implement temporary 5-minute WordPress transients for batch `get_terms()` lookups to reduce database query loads during manual test cycles.
-[ ] Mastodon Alt-Text Parity: Ensure Mastodon image alt-text extraction correctly falls back to attachment descriptions, maintaining accessibility parity with Bluesky embeds.
+8. Edge Case Hardening & Performance Status
+-------------------------------------------
+[x] Codebase Modularization (v5.7.0): Monolithic architecture split into dedicated `/includes/` directory modules.
+[x] Editor Splitter Regex Normalization (v5.7.0): Handles nested paragraphs and spacing around `<!--digest_split-->`.
+[x] Mastodon Alt-Text Parity (v5.7.1): Full attachment description extraction, tooltip preview, and clickable ALT badges.
+[ ] Tag Popularity Caching: Implement temporary 5-minute WordPress transients for batch `get_terms()` lookups.
 
-9. Workbench Stabilization & Architectural Hardening (Planned)
---------------------------------------------------------------
-Phase 1 — Critical Fixes (Blocking, Prioritized for Next Release)
-[ ] Persist Cutoff Timestamps on Publish:
-    - In `social_fetch_workbench_candidates()`, after a successful publish (not on mere fetch/preview), call `update_option('bsky_last_digest_time', $new_bsky)` and `update_option('masto_last_digest_time', $new_masto)`.
-    - Advance cutoffs only when the run actually publishes — inside `social_publish_workbench_run()` on success — not at fetch time, so a discarded/unpublished fetch never causes posts to be silently skipped later.
-    - Test: fetch -> publish -> refresh again, and confirm the same posts don't reappear as candidates.
-[ ] Fix Nonce Action Mismatches:
-    - Change `check_admin_referer('sd53_manual_run', 'sd53_nonce')` -> `check_admin_referer('sd53_workbench_action', 'sd53_nonce')`.
-    - Same fix for `check_admin_referer('sd53_reset_cutoff', 'sd53_nonce')`.
-    - Test: click "Run Standard Automated Import Now" and "Clear Cutoff Markers" and confirm neither hits the "Are you sure?" die screen.
+9. Workbench Stabilization & Architectural Status
+-------------------------------------------------
+[x] Persist Cutoff Timestamps on Publish (v5.5 / v5.7.0): Advanced strictly on successful publish or draft creation inside `social_publish_workbench_run()`.
+[x] Fix Nonce Action Mismatches (v5.5 / v5.7.0): Verified and unified on `check_admin_referer('sd53_workbench_action', 'sd53_nonce')`.
+[x] Harmonize `network_mode` Default: Standardized default setting fallback to `'both'`.
+[x] Remove Dead Transient Code: Deprecated simulation transients stripped from state clear handlers.
+[ ] Cron vs. Manual Staging Collision Warning: Add warning banner when cron schedule is active while a manual draft is uncommitted.
+[ ] Refresh Confirmation Dialog: Add browser confirmation prompt before refreshing next-run workbench if unsaved notes or exclusions exist.
 
-Phase 2 — Architectural Decisions & Collision Prevention
-[ ] Cron vs. Manual Staging Collision Prevention (Option A: Mutually Exclusive by Policy):
-    - Document clearly (in settings screen and/or README) that scheduling and manual workbench curation are not meant to run concurrently: if staging by hand, turn the schedule off until published or discarded.
-    - Add a visible warning notice in the Workbench tab when a schedule is active and unpublished candidates exist in `social_digest_next_run` (e.g. "A schedule is active and will overwrite this draft when it next fires. Disable scheduling before curating, or publish/discard this draft first.").
-
-Phase 3 — Editorial Workflow Improvements
-[ ] Refresh Confirmation Dialog:
-    - Add a JS `confirm()` on "Refresh / Fetch Next Run" button (e.g., "Refreshing will discard your current exclusions, pin, and notes — continue?") so data loss is explicit rather than silent.
-    - Only prompt when there is existing state to lose (skip confirmation if candidate list is empty or unchanged from defaults).
-[ ] Candidate Key Stability:
-    - Low priority evaluation; revisit only if preservation-on-refresh across candidate pools is desired later (not needed for confirm-dialog approach).
-
-Phase 4 — Polish & Hygiene
-[ ] Harmonize `network_mode` Default:
-    - Ensure settings tab displayed fallback matches registered setting default (`'both'`), eliminating stray `'bsky'` fallbacks.
-[ ] Remove Dead Code:
-    - Strip `delete_transient('social_digest_simulation_data')` from `social_clear_workbench_state()` as simulation data transient is deprecated in state machine architecture.
-
-10. Future UX & Visual Enhancements Roadmap (Planned)
----------------------------------------------------
-[ ] Dual-Platform Back-Links:
-    - Render links back to both Mastodon and Bluesky at the bottom of each social entry/embed when updates are matched across networks or when enabled via feed options.
-[ ] CSS Harmonization for Social Embeds (Mastodon & Bluesky Parity):
-    - Refine plugin frontend styling so Mastodon embeds visually match Bluesky embeds cleanly (centered/600px width constraint, clean word breaking, matching card borders, background, padding, and subtle drop shadows).
-    - Reference CSS pattern:
-      ```css
-      /* Center and constrain both Bluesky and Mastodon embeds */
-      blockquote.social-post {
-          margin-left: auto !important;
-          margin-right: auto !important;
-          max-width: 600px !important;
-          box-sizing: border-box !important;
-          overflow-wrap: anywhere !important;
-          word-break: break-word !important;
-      }
-
-      /* Ensure link tags and URLs wrap cleanly */
-      blockquote.social-post a,
-      blockquote.social-post .masto-body,
-      blockquote.social-post p {
-          overflow-wrap: anywhere !important;
-          word-break: break-word !important;
-      }
-
-      /* Card framing for Mastodon to match Bluesky */
-      blockquote.social-post.mastodon-post {
-          border: 1px solid #0085ff !important;
-          border-left: 4px solid #0085ff !important;
-          border-radius: 8px !important;
-          padding: 16px !important;
-          background: #ffffff !important;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
-      }
-      ```
+10. UX & Visual Embed Status
+----------------------------
+[x] Dual-Platform Back-Links (v5.6.0): Native cards render badges and interaction counts for both Bluesky and Mastodon on cross-posts.
+[x] CSS Harmonization for Social Embeds (v5.5.3 / v5.6.0 / v5.6.2): Center/600px width constraint, responsive wrapping, subtle drop shadows, and brand accents across both platforms.
 
 
 

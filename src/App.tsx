@@ -9,6 +9,11 @@ import JSZip from 'jszip';
 import { PLUGIN_META, CHANGELOG_DATA } from './changelogData';
 import socialDigestCode from '../social-digest.php?raw';
 import readmeTextCode from '../readme.txt?raw';
+import helpersCode from '../includes/helpers.php?raw';
+import apiClientsCode from '../includes/api-clients.php?raw';
+import feedBuilderCode from '../includes/feed-builder.php?raw';
+import adminCode from '../includes/admin.php?raw';
+import editorJsCode from '../assets/js/social-digest-editor.js?raw';
 
 export default function App() {
   const [copiedZip, setCopiedZip] = useState(false);
@@ -24,11 +29,30 @@ export default function App() {
       // Standard WordPress plugin zip folder hierarchy:
       // social-digest/
       //   ├── social-digest.php
-      //   └── readme.txt
+      //   ├── readme.txt
+      //   ├── assets/js/social-digest-editor.js
+      //   └── includes/
+      //       ├── helpers.php
+      //       ├── api-clients.php
+      //       ├── feed-builder.php
+      //       └── admin.php
       const pluginFolder = zip.folder('social-digest');
       if (pluginFolder) {
         pluginFolder.file('social-digest.php', socialDigestCode);
         pluginFolder.file('readme.txt', readmeTextCode);
+
+        const includesFolder = pluginFolder.folder('includes');
+        if (includesFolder) {
+          includesFolder.file('helpers.php', helpersCode);
+          includesFolder.file('api-clients.php', apiClientsCode);
+          includesFolder.file('feed-builder.php', feedBuilderCode);
+          includesFolder.file('admin.php', adminCode);
+        }
+
+        const jsFolder = pluginFolder.folder('assets')?.folder('js');
+        if (jsFolder) {
+          jsFolder.file('social-digest-editor.js', editorJsCode);
+        }
       }
 
       const content = await zip.generateAsync({ type: 'blob' });
@@ -212,14 +236,14 @@ export default function App() {
           </div>
         </div>
 
-        {/* Live Visual Card Design Preview (v5.6.10) */}
+        {/* Live Visual Card Design Preview (v5.7.0) */}
         <section className="bg-slate-800/50 border border-slate-700/70 rounded-xl p-5 sm:p-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-700/60">
             <div>
               <div className="flex items-center space-x-2">
                 <Sparkles className="w-4 h-4 text-blue-400" />
                 <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                  Native Post Card Design Preview (v5.6.10)
+                  Native Post Card Design Preview (v{PLUGIN_META.version})
                 </h2>
                 <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
                   Live Style
@@ -336,6 +360,73 @@ export default function App() {
                   </a>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Modular Architecture Map (v5.7.0) */}
+        <section className="bg-slate-800/40 border border-slate-700/60 rounded-xl p-5 space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-700/60">
+            <div className="flex items-center space-x-2">
+              <FileCode className="w-4 h-4 text-emerald-400" />
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+                Modular Codebase Architecture (v5.7.0)
+              </h2>
+            </div>
+            <span className="text-[11px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 px-2 py-0.5 rounded font-mono">
+              includes/ Structure
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            <div className="bg-slate-900/60 border border-slate-700/40 rounded-lg p-3.5 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs text-blue-400 font-semibold">social-digest.php</span>
+                <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">Bootstrap Loader</span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Streamlined entrypoint (~240 lines) managing WordPress activation/deactivation hooks, cron intervals, custom protocols, assets, and module loading.
+              </p>
+            </div>
+
+            <div className="bg-slate-900/60 border border-slate-700/40 rounded-lg p-3.5 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs text-emerald-400 font-semibold">includes/feed-builder.php</span>
+                <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">Digest Engine</span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Workbench state management, candidate aggregation, thread unrolling, preview assembly, and draft/publish execution.
+              </p>
+            </div>
+
+            <div className="bg-slate-900/60 border border-slate-700/40 rounded-lg p-3.5 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs text-cyan-400 font-semibold">includes/api-clients.php</span>
+                <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">APIs &amp; Cards</span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Bluesky (AT Protocol) &amp; Mastodon (ActivityPub) API fetchers, plus native card HTML generation with live engagement counters and deep links.
+              </p>
+            </div>
+
+            <div className="bg-slate-900/60 border border-slate-700/40 rounded-lg p-3.5 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs text-amber-400 font-semibold">includes/helpers.php</span>
+                <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">Media &amp; Utils</span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Cached OpenGraph scrapers (SSRF-protected), WebP/AVIF format conversion, text/hashtag cleaners, and automated excerpt builder.
+              </p>
+            </div>
+
+            <div className="bg-slate-900/60 border border-slate-700/40 rounded-lg p-3.5 space-y-1.5 md:col-span-2">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs text-purple-400 font-semibold">includes/admin.php</span>
+                <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">Admin UI &amp; Workbench</span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Submenu placement under Posts &amp; Settings, tabbed options sanitization, workbench POST dispatching, and drag-and-drop sortable candidate controls.
+              </p>
             </div>
           </div>
         </section>

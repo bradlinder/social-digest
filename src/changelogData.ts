@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.6.10',
+  version: '5.7.1',
   requiresWP: '6.0+',
   testedUpTo: '6.7',
   requiresPHP: '7.4+',
@@ -17,14 +17,39 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.6.9',
+  rollbackTarget: 'v5.7.0',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.1',
+    tag: 'v5.7.1',
+    isLatest: true,
+    highlights: [
+      'Gutenberg Block Editor Support: Output digest articles using native WordPress block comment structures (<!-- wp:core/html -->) to avoid "Attempt Block Recovery" warnings when editing digests.',
+      'Native Video & GIF Embeds: Added rich video preview cards with play badges for Bluesky video embeds and native looping muted video players for Mastodon video/GIFv attachments.',
+      'Fediverse Attribution: Injects <meta name="fediverse:creator" content="@user@instance.social"> into published digest posts for author attribution across Mastodon 4.3+ and Threads.',
+      'Network Resilience & Backoff: Implemented safe HTTP requests with exponential backoff (1s, 2s) for transient errors (429/503) and 24-hour stale cache fallback snapshots.',
+      'Advanced Content Exclusions: Upgraded blacklist filtering to seamlessly support whole hashtags (#ad), full regular expressions (/pattern/i), and plain keywords.'
+    ]
+  },
+  {
+    version: '5.7.0',
+    tag: 'v5.7.0',
+    isLatest: false,
+    highlights: [
+      'Architectural Modularization: Refactored monolithic 2,900+ line codebase into clean, dedicated modules under `/includes/` while preserving 100% backwards compatibility.',
+      'Helpers Module (`includes/helpers.php`): Extracted OpenGraph metadata scrapers, image sideloaders, WebP/AVIF format converters, text sanitizers, and excerpt generators.',
+      'API Clients Module (`includes/api-clients.php`): Isolated Bluesky and Mastodon API fetchers and the native social post card renderer.',
+      'Feed Builder Engine (`includes/feed-builder.php`): Decoupled next-run candidate aggregation, thread unrolling, preview calculation, and WordPress post publishing.',
+      'Admin & Workbench Module (`includes/admin.php`): Modularized administrative menu registration, tabbed interfaces, settings sanitization, and drag-and-drop sortable workbench.',
+      'Lightweight Bootstrap (`social-digest.php`): Streamlined entrypoint down to ~240 lines managing core lifecycle hooks, cron schedules, asset enqueuing, and module loading.'
+    ]
+  },
+  {
     version: '5.6.10',
     tag: 'v5.6.10',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Protocol Whitelisting: Added bsky and mastodon to kses_allowed_protocols so WordPress esc_url() preserves mobile deep links.',
       'Thread & Thumbnail Order: Fixed timestamp sorting so thread collapsing runs prior to post truncation and newest-first order is preserved for thumbnail exclusion.',
