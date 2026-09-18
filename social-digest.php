@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.7.8
+ * Version: 5.7.9
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) exit;
 
 // Plugin constants
 if (!defined('SOCIAL_DIGEST_VERSION')) {
-    define('SOCIAL_DIGEST_VERSION', '5.7.8');
+    define('SOCIAL_DIGEST_VERSION', '5.7.9');
 }
 if (!defined('SOCIAL_DIGEST_FILE')) {
     define('SOCIAL_DIGEST_FILE', __FILE__);
@@ -196,7 +196,7 @@ add_action('wp_head', function() {
 
         <?php if ($dark_mode_mode === 'auto' || $dark_mode_mode === 'dark'): ?>
         /* =========================================================================
-           Dark Mode Styles: High-contrast typography & theme-aware dynamic matching
+           Dark Mode Styles: High-contrast pure white typography & theme matching
            ========================================================================= */
         div.social-post.social-card.is-dark,
         div.social-post.social-card[data-social-theme="dark"],
@@ -214,23 +214,25 @@ add_action('wp_head', function() {
             background: #0f172a !important;
             border-color: #334155 !important;
             border-left: 4px solid #38bdf8 !important;
-            color: #f1f5f9 !important;
+            color: #ffffff !important;
             box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
         }
 
-        /* Body & Content Text in Dark Mode (High-contrast slate-100 / #f1f5f9) */
+        /* Body & Content Text in Dark Mode (Crisp pure white #ffffff) */
         div.social-post.social-card.is-dark .social-card-body,
+        div.social-post.social-card.is-dark .social-card-body p,
         div.social-post.social-card[data-social-theme="dark"] .social-card-body,
+        div.social-post.social-card[data-social-theme="dark"] .social-card-body p,
         .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body,
         .dark-theme div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body,
         .dark-mode div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body,
         [data-theme="dark"] div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body,
         [data-bs-theme="dark"] div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body
-        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-card-body'; ?> {
-            color: #f1f5f9 !important;
+        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-card-body, div.social-post.social-card .social-card-body p'; ?> {
+            color: #ffffff !important;
         }
 
-        /* Author Name in Dark Mode (Crisp white #f8fafc) */
+        /* Author Name in Dark Mode (Pure white #ffffff) */
         div.social-post.social-card.is-dark .social-author-name,
         div.social-post.social-card[data-social-theme="dark"] .social-author-name,
         .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-name,
@@ -239,10 +241,10 @@ add_action('wp_head', function() {
         [data-theme="dark"] div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-name,
         [data-bs-theme="dark"] div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-name
         <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-author-name'; ?> {
-            color: #f8fafc !important;
+            color: #ffffff !important;
         }
 
-        /* Author Handles, Timestamps & Footer Metadata in Dark Mode (#94a3b8) */
+        /* Author Handles, Timestamps & Footer Metadata in Dark Mode (High-contrast slate-200 #e2e8f0) */
         div.social-post.social-card.is-dark .social-author-handles,
         div.social-post.social-card.is-dark .social-author-handles a,
         div.social-post.social-card.is-dark .social-identity a,
@@ -262,7 +264,7 @@ add_action('wp_head', function() {
         .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-footer,
         .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-identity-sep
         <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-author-handles, div.social-post.social-card .social-author-handles a, div.social-post.social-card .social-identity a, div.social-post.social-card .social-timestamp, div.social-post.social-card .social-card-footer, div.social-post.social-card .social-identity-sep'; ?> {
-            color: #94a3b8 !important;
+            color: #e2e8f0 !important;
         }
 
         /* Links in Dark Mode (Vibrant sky-blue #38bdf8) */
@@ -297,7 +299,7 @@ add_action('wp_head', function() {
         }
         div.social-post.social-card.is-dark .social-link-card .social-link-card-domain,
         div.social-post.social-card[data-social-theme="dark"] .social-link-card .social-link-card-domain {
-            color: #94a3b8 !important;
+            color: #cbd5e1 !important;
         }
         div.social-post.social-card.is-dark .social-link-card .social-link-card-title,
         div.social-post.social-card[data-social-theme="dark"] .social-link-card .social-link-card-title {
@@ -305,7 +307,7 @@ add_action('wp_head', function() {
         }
         div.social-post.social-card.is-dark .social-link-card .social-link-card-desc,
         div.social-post.social-card[data-social-theme="dark"] .social-link-card .social-link-card-desc {
-            color: #cbd5e1 !important;
+            color: #ffffff !important;
         }
 
         /* Thread Replies in Dark Mode */
@@ -325,7 +327,7 @@ add_action('wp_head', function() {
         div.social-post.social-card[data-social-theme="dark"] .social-thread-reply-item,
         .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-thread-reply-item
         <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-thread-reply-item'; ?> {
-            color: #cbd5e1 !important;
+            color: #ffffff !important;
         }
 
         /* Badges & Stat Pills in Dark Mode */
@@ -344,72 +346,9 @@ add_action('wp_head', function() {
         div.social-post.social-card.is-dark .social-stat-pill,
         div.social-post.social-card[data-social-theme="dark"] .social-stat-pill {
             background: #1e293b !important;
-            color: #f1f5f9 !important;
+            color: #ffffff !important;
             border: 1px solid #334155 !important;
         }
-
-        <?php if ($dark_mode_mode === 'auto'): ?>
-        /* Media Query fallback for system preferences (only when page is not detected as light) */
-        @media (prefers-color-scheme: dark) {
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) {
-                background: #0f172a !important;
-                border-color: #334155 !important;
-                border-left-color: #38bdf8 !important;
-                color: #f1f5f9 !important;
-                box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
-            }
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body {
-                color: #f1f5f9 !important;
-            }
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-name {
-                color: #f8fafc !important;
-            }
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-handles,
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-handles a,
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-identity a,
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-timestamp,
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-footer,
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-identity-sep {
-                color: #94a3b8 !important;
-            }
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) a,
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body a {
-                color: #38bdf8 !important;
-            }
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-header,
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-footer {
-                border-color: #334155 !important;
-            }
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-link-card {
-                background: #1e293b !important;
-                border-color: #334155 !important;
-            }
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-link-card-domain {
-                color: #94a3b8 !important;
-            }
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-link-card-title {
-                color: #38bdf8 !important;
-            }
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-link-card-desc {
-                color: #cbd5e1 !important;
-            }
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-badge.bsky-badge {
-                background: #082f49 !important;
-                border-color: #0284c7 !important;
-                color: #7dd3fc !important;
-            }
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-badge.masto-badge {
-                background: #2e1065 !important;
-                border-color: #7e22ce !important;
-                color: #d8b4fe !important;
-            }
-            body:not(.light):not(.light-theme):not(.light-mode):not(.is-light-theme):not(.theme-light):not([data-theme="light"]):not([data-bs-theme="light"]):not([data-color-scheme="light"]) div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-stat-pill {
-                background: #1e293b !important;
-                color: #f1f5f9 !important;
-                border: 1px solid #334155 !important;
-            }
-        }
-        <?php endif; ?>
         <?php endif; ?>
         </style>
         <?php
@@ -668,11 +607,7 @@ function social_digest_render_smart_theme_script() {
                 } catch(e) {}
             }
 
-            // 4. Fallback to OS / browser preference if website background is neutral/transparent
-            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                return 'dark';
-            }
-
+            // 4. Default to 'light' for websites (prevents dark cards on standard white WordPress themes)
             return 'light';
         }
 

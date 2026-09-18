@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.8
+Stable tag: 5.7.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,10 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.9 =
+* UI/UX & Readability: Pure White High-Contrast Dark Mode Typography: Overhauled all dark mode text selectors to render in crisp, pure white (`#ffffff`) for post content, paragraphs, author titles, reply threads, and link preview descriptions, eliminating any hard-to-read dark gray or black text on dark backgrounds.
+* Fix: Prevent False-Positive Dark Mode on Light Websites: Removed OS-level `prefers-color-scheme` overrides that forced social cards to display as dark boxes on white website backgrounds. Cards now match the website's actual visual canvas and stay in clean light mode unless a dark website theme is actively detected or explicitly forced.
 
 = 5.7.8 =
 * UI/UX & Readability: Enhanced Dark Mode Contrast & Typography: Overhauled the embedded native social card dark mode color system with crisp Slate-50 (#f8fafc) author titles, high-contrast Slate-100 (#f1f5f9) post copy, vibrant Sky-380 (#38bdf8) links and preview titles, and subtle Slate-800 card borders, significantly improving readability on dark backgrounds.

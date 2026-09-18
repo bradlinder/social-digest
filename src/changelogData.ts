@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.8',
+  version: '5.7.9',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,23 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.7',
+  rollbackTarget: 'v5.7.8',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.9',
+    tag: 'v5.7.9',
+    isLatest: true,
+    highlights: [
+      'UI/UX & Readability: Pure White High-Contrast Dark Mode Typography: Overhauled all dark mode text selectors to render in crisp, pure white (#ffffff) for post content, paragraphs, author titles, reply threads, and link preview descriptions, eliminating any hard-to-read dark gray or black text on dark backgrounds.',
+      'Fix: Prevent False-Positive Dark Mode on Light Websites: Removed OS-level prefers-color-scheme overrides that forced social cards to display as dark boxes on white website backgrounds. Cards now match the website\'s actual visual canvas and stay in clean light mode unless a dark website theme is actively detected or explicitly forced.'
+    ]
+  },
+  {
     version: '5.7.8',
     tag: 'v5.7.8',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'UI/UX & Readability: Enhanced Dark Mode Contrast & Typography: Overhauled the embedded native social card dark mode color system with crisp Slate-50 (#f8fafc) author titles, high-contrast Slate-100 (#f1f5f9) post copy, vibrant Sky-380 (#38bdf8) links and preview titles, and subtle Slate-800 card borders, significantly improving readability on dark backgrounds.',
       'Feature: Smart Website & Browser Theme Detection: Added dynamic theme intelligence that prioritizes the active website or theme color preference over conflicting system-level OS settings. Automatically inspects document root/body theme classes and computed background luminance (getComputedStyle), ensuring light-themed websites render light-mode cards even if the user\'s OS or browser is set to dark mode (and vice versa). Features live dynamic adaptation via MutationObserver when users toggle site dark mode switches.'
