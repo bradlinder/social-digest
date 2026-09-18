@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.5',
+  version: '5.7.6',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,23 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.4',
+  rollbackTarget: 'v5.7.5',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.6',
+    tag: 'v5.7.6',
+    isLatest: true,
+    highlights: [
+      'Critical Fix: 100% Self-Contained Standalone Architecture: Consolidated all core helper functions, API clients, feed builders, and admin UI views directly into social-digest.php. When updating the plugin via direct file replacement or single-file uploads where subdirectories are not present, the plugin previously threw a fatal error (require_once includes/helpers.php: Failed to open stream). social-digest.php is now completely self-contained and zero-dependency, ensuring flawless execution across all WordPress deployment methods.',
+      'Fix: TinyMCE Editor Splitter Inline Fallback: Added an inline TinyMCE plugin fallback in admin_footer to guarantee the "Insert Post Splitter" toolbar button functions properly even if external JS assets are missing from disk.'
+    ]
+  },
+  {
     version: '5.7.5',
     tag: 'v5.7.5',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Critical Fix: PHP 8.5 / PHP 8.1+ Compatibility & Outage Prevention: Resolved an uncaught Fatal error: Class "SocialDigest\\DateTimeImmutable" not found in social-digest.php. Fully qualified \\DateTimeImmutable with leading backslash to prevent namespace lookup failure during cron scheduling, settings saves, and plugin activation.',
       'Fix: PHP 8.1+ TypeError Prevention on WordPress Filters: Added defensive type guards to kses_allowed_protocols, plugin_action_links, and TinyMCE button filters (mce_buttons, mce_external_plugins) to safely handle null or non-array inputs from 3rd-party themes or plugins.',

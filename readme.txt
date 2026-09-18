@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.5
+Stable tag: 5.7.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,10 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.6 =
+* Critical Fix: 100% Self-Contained Standalone Architecture: Consolidated all core helper functions, API clients, feed builders, and admin UI views directly into `social-digest.php`. When updating the plugin via direct file replacement or FTP where subdirectories are not present, the plugin previously threw a fatal error (`require_once(/.../includes/helpers.php): Failed to open stream`). `social-digest.php` is now completely self-contained and zero-dependency, ensuring flawless execution across all WordPress deployment methods.
+* Fix: TinyMCE Editor Splitter Inline Fallback: Added an inline TinyMCE plugin fallback in `admin_footer` to guarantee the "Insert Post Splitter" toolbar button functions properly even if the external JS asset is not present on disk.
 
 = 5.7.5 =
 * Critical Fix: PHP 8.5 / PHP 8.1+ Compatibility & Outage Prevention: Resolved an uncaught `Fatal error: Class "SocialDigest\DateTimeImmutable" not found` in `social-digest.php`. The DateTime class in `social_reschedule_cron()` was missing the global root namespace backslash (`\DateTimeImmutable`), which caused PHP to fail looking within the plugin namespace during cron scheduling, settings saves, and activation.

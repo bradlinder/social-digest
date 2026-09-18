@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.7.5
+ * Version: 5.7.6
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) exit;
 
 // Plugin constants
 if (!defined('SOCIAL_DIGEST_VERSION')) {
-    define('SOCIAL_DIGEST_VERSION', '5.7.5');
+    define('SOCIAL_DIGEST_VERSION', '5.7.6');
 }
 if (!defined('SOCIAL_DIGEST_FILE')) {
     define('SOCIAL_DIGEST_FILE', __FILE__);
@@ -482,14 +482,3176 @@ add_action('admin_footer', function() {
     $screen = function_exists('get_current_screen') ? get_current_screen() : null;
     if ($screen && strpos($screen->id, 'social-digest') !== false) {
         social_digest_render_smart_deep_links_script();
+        ?>
+        <script>
+        if (window.tinymce && !tinymce.PluginManager.get('social_digest_split_plugin')) {
+            tinymce.PluginManager.add('social_digest_split_plugin', function(editor) {
+                var insertSplitter = function() {
+                    editor.insertContent(
+                        '<p class="social-digest-split-marker" style="text-align:center;background:#eee;padding:6px;border:1px dashed #999;color:#555;font-weight:bold;user-select:none;">' +
+                        '<!--digest_split-->--- POSTS APPEAR HERE (Header / Footer Split) ---' +
+                        '</p><p></p>'
+                    );
+                };
+                if (editor.ui && editor.ui.registry) {
+                    editor.ui.registry.addButton('social_digest_split_button', {
+                        text: 'Insert Post Splitter',
+                        tooltip: 'Insert Post Splitter (Separates Header and Footer)',
+                        onAction: insertSplitter
+                    });
+                } else if (typeof editor.addButton === 'function') {
+                    editor.addButton('social_digest_split_button', {
+                        text: 'Insert Post Splitter',
+                        icon: 'hr',
+                        tooltip: 'Insert Post Splitter (Separates Header and Footer)',
+                        onclick: insertSplitter
+                    });
+                }
+                return {
+                    getMetadata: function() {
+                        return { name: 'Social Digest Splitter' };
+                    }
+                };
+            });
+        }
+        </script>
+        <?php
     }
 });
 
 // ==========================================
-// 4. CORE MODULE LOADERS
+// 7. STRING, IMAGE & HASHTAG HELPERS
 // ==========================================
 
-require_once SOCIAL_DIGEST_PATH . 'includes/helpers.php';
-require_once SOCIAL_DIGEST_PATH . 'includes/api-clients.php';
-require_once SOCIAL_DIGEST_PATH . 'includes/feed-builder.php';
-require_once SOCIAL_DIGEST_PATH . 'includes/admin.php';
+function social_get_og_image_cached($url) {
+    if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) return '';
+    $transient_key = 'sd_og_img_' . md5($url);
+    $cached = get_transient($transient_key);
+    if ($cached !== false) return (string)$cached;
+
+    $res = wp_safe_remote_get($url, [
+        'timeout'     => 3,
+        'user-agent'  => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) WordPress-SocialDigest/1.0',
+        'redirection' => 2,
+    ]);
+
+    if (is_wp_error($res)) {
+        set_transient($transient_key, '', DAY_IN_SECONDS);
+        return '';
+    }
+
+    $body = wp_remote_retrieve_body($res);
+    if (empty($body)) {
+        set_transient($transient_key, '', DAY_IN_SECONDS);
+        return '';
+    }
+
+    $img_url = '';
+    if (preg_match('/<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']/i', $body, $m)) {
+        $img_url = $m[1];
+    } elseif (preg_match('/<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']/i', $body, $m)) {
+        $img_url = $m[1];
+    } elseif (preg_match('/<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)["\']/i', $body, $m)) {
+        $img_url = $m[1];
+    }
+
+    $img_url = esc_url_raw(html_entity_decode($img_url));
+    set_transient($transient_key, $img_url, DAY_IN_SECONDS);
+    return $img_url;
+}
+
+function social_get_og_card_cached($url) {
+    if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) return null;
+    $transient_key = 'sd_og_card_' . md5($url);
+    $cached = get_transient($transient_key);
+    if ($cached !== false && is_array($cached)) {
+        return !empty($cached['error']) ? null : $cached;
+    }
+
+    $res = wp_safe_remote_get($url, [
+        'timeout'     => 4,
+        'user-agent'  => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) WordPress-SocialDigest/1.0',
+        'redirection' => 3,
+    ]);
+
+    if (is_wp_error($res)) {
+        set_transient($transient_key, ['error' => true], HOUR_IN_SECONDS * 6);
+        return null;
+    }
+
+    $body = wp_remote_retrieve_body($res);
+    if (empty($body)) {
+        set_transient($transient_key, ['error' => true], HOUR_IN_SECONDS * 6);
+        return null;
+    }
+
+    if (strlen($body) > 204800) {
+        $body = substr($body, 0, 204800);
+    }
+
+    $title = '';
+    if (preg_match('/<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']+)["\']/i', $body, $m)) {
+        $title = $m[1];
+    } elseif (preg_match('/<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:title["\']/i', $body, $m)) {
+        $title = $m[1];
+    } elseif (preg_match('/<meta[^>]+name=["\']twitter:title["\'][^>]+content=["\']([^"\']+)["\']/i', $body, $m)) {
+        $title = $m[1];
+    } elseif (preg_match('/<title[^>]*>(.*?)<\/title>/is', $body, $m)) {
+        $title = $m[1];
+    }
+    $title = trim(html_entity_decode(wp_strip_all_tags($title), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+    $desc = '';
+    if (preg_match('/<meta[^>]+property=["\']og:description["\'][^>]+content=["\']([^"\']+)["\']/i', $body, $m)) {
+        $desc = $m[1];
+    } elseif (preg_match('/<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:description["\']/i', $body, $m)) {
+        $desc = $m[1];
+    } elseif (preg_match('/<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']+)["\']/i', $body, $m)) {
+        $desc = $m[1];
+    } elseif (preg_match('/<meta[^>]+name=["\']twitter:description["\'][^>]+content=["\']([^"\']+)["\']/i', $body, $m)) {
+        $desc = $m[1];
+    }
+    $desc = trim(html_entity_decode(wp_strip_all_tags($desc), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+    $img_url = '';
+    if (preg_match('/<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']/i', $body, $m)) {
+        $img_url = $m[1];
+    } elseif (preg_match('/<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']/i', $body, $m)) {
+        $img_url = $m[1];
+    } elseif (preg_match('/<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)["\']/i', $body, $m)) {
+        $img_url = $m[1];
+    }
+
+    if ($img_url) {
+        $img_url = trim(html_entity_decode($img_url, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        if (strpos($img_url, '//') === 0) {
+            $scheme = parse_url($url, PHP_URL_SCHEME) ?: 'https';
+            $img_url = $scheme . ':' . $img_url;
+        } elseif (strpos($img_url, '/') === 0) {
+            $host = parse_url($url, PHP_URL_HOST);
+            $scheme = parse_url($url, PHP_URL_SCHEME) ?: 'https';
+            $img_url = $scheme . '://' . $host . $img_url;
+        }
+        $img_url = esc_url_raw($img_url);
+    }
+
+    $site_name = '';
+    if (preg_match('/<meta[^>]+property=["\']og:site_name["\'][^>]+content=["\']([^"\']+)["\']/i', $body, $m)) {
+        $site_name = trim(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    }
+
+    $domain = parse_url($url, PHP_URL_HOST);
+    if ($domain) {
+        $domain = preg_replace('/^www\./i', '', $domain);
+    }
+
+    if (!$title && !$img_url && !$desc) {
+        set_transient($transient_key, ['error' => true], HOUR_IN_SECONDS * 6);
+        return null;
+    }
+
+    $card = [
+        'url'         => $url,
+        'title'       => $title,
+        'description' => $desc,
+        'image'       => $img_url,
+        'provider'    => $site_name ?: $domain,
+        'domain'      => $domain,
+    ];
+
+    set_transient($transient_key, $card, DAY_IN_SECONDS);
+    return $card;
+}
+
+function social_render_link_card_html($card_url, $card_title, $card_desc, $card_thumb, $card_domain) {
+    $card_url = esc_url($card_url);
+    $card_thumb = esc_url($card_thumb);
+    $display_title = esc_html($card_title ?: ($card_domain ?: $card_url));
+    $display_desc  = esc_html($card_desc ? wp_trim_words($card_desc, 25) : '');
+    $display_domain = esc_html(strtoupper(preg_replace('/^www\./i', '', $card_domain ?: parse_url($card_url, PHP_URL_HOST))));
+
+    $html = '<div class="social-link-card" style="border:1px solid #e1e8ed; border-radius:8px; overflow:hidden; margin:12px 0; max-width:500px; background:#f8fafc; box-shadow:0 1px 3px rgba(0,0,0,0.05);">';
+    $html .= '<a href="' . $card_url . '" target="_blank" rel="noopener" style="text-decoration:none; color:inherit; display:block;">';
+    if ($card_thumb) {
+        $html .= '<img src="' . $card_thumb . '" alt="' . esc_attr($card_title) . '" style="width:100%; max-height:220px; object-fit:cover; display:block;" />';
+    }
+    $html .= '<div style="padding:10px 14px;">';
+    if ($display_domain) {
+        $html .= '<div data-nosnippet style="font-size:0.75em; text-transform:uppercase; color:#657786; margin-bottom:3px; font-weight:600; letter-spacing:0.5px;">' . $display_domain . '</div>';
+    }
+    $html .= '<div style="font-weight:700; font-size:1em; margin-bottom:4px; color:#0284c7; line-height:1.35;">' . $display_title . '</div>';
+    if ($display_desc) {
+        $html .= '<div style="font-size:0.85em; color:#475569; line-height:1.4;">' . $display_desc . '</div>';
+    }
+    $html .= '</div>';
+    $html .= '</a>';
+    $html .= '</div>';
+    return $html;
+}
+
+function social_clean_body_text($raw_text, $has_card = false, $card_url = '', $links_map = []) {
+    if (empty($raw_text)) return '';
+
+    // Strip hashtags
+    $text = preg_replace('/#[\p{L}\p{N}_]+/u', '', $raw_text);
+
+    // If a preview card is present, strip trailing redundant URL that leads to the card
+    if ($has_card) {
+        // Strip trailing URL (including truncated URLs with ellipsis like store.minisforum.com/products/min...)
+        $text = preg_replace('/(?:\s+|[\r\n]+|\s*[:\-–]\s*)(?:https?:\/\/|www\.)[^\s<"\'\)]+(?:\.\.\.)?\s*$/iu', '', $text);
+        $text = preg_replace('/\s*[:\-–]\s*$/u', '.', $text);
+    }
+
+    // Now escape the text before inserting clickable HTML links
+    $escaped = esc_html(trim($text));
+
+    // Convert mapped URLs (from Bluesky facets or parsed URLs) to clickable links
+    if (!empty($links_map) && is_array($links_map)) {
+        foreach ($links_map as $disp => $full_url) {
+            $disp_esc = esc_html($disp);
+            if ($disp_esc !== '' && stripos($escaped, $disp_esc) !== false) {
+                // If it wasn't stripped already
+                $link_html = '<a href="' . esc_url($full_url) . '" target="_blank" rel="noopener" style="color:#0284c7; text-decoration:underline;">' . $disp_esc . '</a>';
+                $escaped = str_replace($disp_esc, $link_html, $escaped);
+            }
+        }
+    }
+
+    // Link any remaining bare http(s):// or www. URLs that weren't converted yet
+    $escaped = preg_replace_callback('/\b(https?:\/\/[^\s<"\'\)]+)/i', function($m) {
+        $u = $m[1];
+        return '<a href="' . esc_url($u) . '" target="_blank" rel="noopener" style="color:#0284c7; text-decoration:underline;">' . esc_html($u) . '</a>';
+    }, $escaped);
+
+    return nl2br(trim($escaped));
+}
+
+function social_clean_mastodon_html($html, $has_card = false, $card_url = '') {
+    if (empty($html)) return '';
+
+    // Strip hashtag anchor elements
+    $html = preg_replace('/<a[^>]*class=["\'][^"\']*hashtag[^"\']*["\'][^>]*>.*?<\/a>/isu', '', $html);
+    // Strip plain-text hashtags
+    $html = preg_replace('/#[\p{L}\p{N}_]+/u', '', $html);
+
+    if ($has_card) {
+        // Strip trailing anchor link if it's the last element before closing </p>
+        $html = preg_replace('/(?:\s*[:\-–]\s*|\s*)<a[^>]+href=["\'][^"\']*["\'][^>]*>.*?<\/a>\s*(<\/p>\s*)$/isu', '$1', $html);
+    }
+
+    // Add target="_blank" and styling to remaining links
+    $html = preg_replace('/<a\s+(?![^>]*\btarget=)([^>]+)>/i', '<a target="_blank" rel="noopener" style="color:#0284c7; text-decoration:underline;" $1>', $html);
+
+    // Clean up empty paragraphs or dangling breaks
+    $html = preg_replace('/<p>\s*(?:<br\s*\/?>|&nbsp;|\s)*<\/p>/i', '', $html);
+
+    return wp_kses_post(trim($html));
+}
+
+function social_extract_first_line_or_sentence($text) {
+    if (empty($text)) return '';
+    $t = wp_strip_all_tags($text);
+    $t = preg_replace('/#[\p{L}\p{N}_]+/u', '', $t);
+    $t = preg_replace('/\b(?:https?:\/\/|www\.)[^\s<"\'\)]+/i', '', $t);
+    $t = html_entity_decode($t, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+    $lines = preg_split('/\r\n|\r|\n/', $t);
+    $first_line = '';
+    foreach ($lines as $line) {
+        $l = trim(preg_replace('/\s+/', ' ', $line));
+        if ($l !== '') {
+            $first_line = $l;
+            break;
+        }
+    }
+    if ($first_line === '') {
+        $first_line = trim(preg_replace('/\s+/', ' ', $t));
+    }
+    if ($first_line === '') return '';
+
+    // Match first sentence ending with . ! ? or … followed by space and capital/digit/quote or end of line
+    if (preg_match('/^(.+?[.!?…])(?:\s+[A-Z0-9"“‘]|\s*$)/u', $first_line, $m)) {
+        return trim($m[1]);
+    }
+
+    return trim($first_line);
+}
+
+function social_build_first_lines_excerpt($candidates, $delimiter = ' // ', $max_items = 0) {
+    $lines = [];
+    $count = 0;
+    foreach ((array)$candidates as $c) {
+        if (!empty($c['excluded'])) continue;
+        $raw = $c['full_text'] ?? $c['text'] ?? '';
+        $first = social_extract_first_line_or_sentence($raw);
+        if ($first !== '') {
+            $lines[] = $first;
+            $count++;
+            if ($max_items > 0 && $count >= $max_items) break;
+        }
+    }
+    if (empty($lines)) return '';
+
+    $delim_clean = trim($delimiter);
+    if ($delim_clean === '.' || $delim_clean === '. ' || $delimiter === '.') {
+        $formatted = array_map(function($line) {
+            return rtrim($line, " \t\n\r\0\x0B.") . '.';
+        }, $lines);
+        return implode(' ', $formatted);
+    } else {
+        $glue = ' ' . $delim_clean . ' ';
+        $formatted = array_map(function($line) use ($delim_clean) {
+            if ($delim_clean === '//' || $delim_clean === '...' || $delim_clean === '—' || $delim_clean === '•') {
+                return rtrim($line, " \t\n\r\0\x0B.");
+            }
+            return $line;
+        }, $lines);
+        return implode($glue, $formatted);
+    }
+}
+
+function social_normalize_for_matching($text) {
+    $t = wp_strip_all_tags($text);
+    $t = preg_replace('/\b(?:https?:\/\/|www\.)\S+/i', '', $t);
+    $t = preg_replace('/[#@]\w+/u', '', $t);
+    $t = preg_replace('/[^\p{L}\p{N}\s]/u', '', html_entity_decode($t, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    return trim(preg_replace('/\s+/', ' ', mb_strtolower($t)));
+}
+
+function social_clean_url($url) {
+    if (empty($url)) return '';
+    $clean = strtok(html_entity_decode((string)$url, ENT_QUOTES | ENT_HTML5, 'UTF-8'), '?#');
+    $clean = preg_replace('#^https?://#i', '', $clean);
+    $clean = preg_replace('#^www\.#i', '', $clean);
+    return strtolower(trim(preg_replace('#[\./]+$#', '', $clean)));
+}
+
+function social_post_links_to_site($item) {
+    $site_host = wp_parse_url(home_url(), PHP_URL_HOST);
+    if (empty($site_host)) {
+        $site_host = wp_parse_url(site_url(), PHP_URL_HOST);
+    }
+    if (empty($site_host)) return false;
+    $site_host = strtolower(preg_replace('#^www\.#i', '', (string)$site_host));
+    if ($site_host === '') return false;
+
+    // Check extracted structured URLs from facets/entities
+    foreach ((array)($item['urls'] ?? []) as $u) {
+        $u_host = wp_parse_url((string)$u, PHP_URL_HOST);
+        if ($u_host) {
+            $u_host = strtolower(preg_replace('#^www\.#i', '', (string)$u_host));
+            if ($u_host === $site_host || (strlen($u_host) > strlen($site_host) && substr($u_host, -strlen('.' . $site_host)) === '.' . $site_host)) {
+                return true;
+            }
+        }
+    }
+
+    // Also inspect any unparsed inline URLs in the post text
+    $text = (string)($item['text'] ?? '');
+    if ($text !== '' && preg_match_all('/\bhttps?:\/\/[^\s<>"\'\)]+/i', $text, $matches)) {
+        foreach ($matches[0] as $match_url) {
+            $u_host = wp_parse_url($match_url, PHP_URL_HOST);
+            if ($u_host) {
+                $u_host = strtolower(preg_replace('#^www\.#i', '', (string)$u_host));
+                if ($u_host === $site_host || (strlen($u_host) > strlen($site_host) && substr($u_host, -strlen('.' . $site_host)) === '.' . $site_host)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+function social_check_posts_match($p1, $p2) {
+    $urls1 = array_map(__NAMESPACE__ . '\\social_clean_url', (array)($p1['urls'] ?? []));
+    $urls2 = array_map(__NAMESPACE__ . '\\social_clean_url', (array)($p2['urls'] ?? []));
+    if (!empty(array_intersect(array_filter($urls1), array_filter($urls2)))) return true;
+
+    $t1 = social_normalize_for_matching($p1['text'] ?? '');
+    $t2 = social_normalize_for_matching($p2['text'] ?? '');
+    $len1 = mb_strlen($t1, 'UTF-8');
+    $len2 = mb_strlen($t2, 'UTF-8');
+
+    if ($len1 >= 15 && $len2 >= 15) {
+        $short = $len1 <= $len2 ? $t1 : $t2;
+        $long  = $len1 <= $len2 ? $t2 : $t1;
+        if (mb_strpos($long, $short) !== false) return true;
+        similar_text($t1, $t2, $sim);
+        if ($sim >= 68) return true;
+    }
+    return false;
+}
+
+function social_get_clean_text_length($text) {
+    $t = preg_replace('/\bhttps?:\/\/\S+/i', '', wp_strip_all_tags($text));
+    $t = preg_replace('/#[\p{L}\p{N}_]+/u', '', $t);
+    return mb_strlen(trim(preg_replace('/\s+/', ' ', html_entity_decode($t, ENT_QUOTES | ENT_HTML5, 'UTF-8'))), 'UTF-8');
+}
+
+function social_sideload_image_by_mime($url, $post_id, $desc = '') {
+    if (empty($url)) return false;
+
+    // Temporary memory elevation for GD/Imagick thumbnail processing
+    if (function_exists('wp_raise_memory_limit')) {
+        wp_raise_memory_limit('image');
+    }
+
+    // Guard: Prevent downloading massive non-thumbnail images (cap at 12MB)
+    $response = wp_safe_remote_get($url, [
+        'timeout' => 25,
+        'stream'  => false,
+    ]);
+    if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) return false;
+    
+    $headers = wp_remote_retrieve_headers($response);
+    $content_length = (int)($headers['content-length'] ?? 0);
+    if ($content_length > 12 * 1024 * 1024) {
+        return false; // Skip excessive remote assets
+    }
+
+    $image_data = wp_remote_retrieve_body($response);
+    if (empty($image_data) || strlen($image_data) > 12 * 1024 * 1024) return false;
+
+    $filename = 'digest-thumb-' . $post_id . '-' . wp_generate_password(6, false) . '.jpg';
+    $upload = wp_upload_bits($filename, null, $image_data);
+    if (!empty($upload['error'])) return false;
+
+    $attach_id = wp_insert_attachment([
+        'post_mime_type' => 'image/jpeg',
+        'post_title'     => sanitize_file_name($desc ?: $filename),
+        'post_status'    => 'inherit'
+    ], $upload['file'], $post_id);
+
+    if ($attach_id && !is_wp_error($attach_id)) {
+        if (!function_exists('wp_generate_attachment_metadata')) {
+            require_once(ABSPATH . 'wp-admin/includes/image.php');
+        }
+        if (!function_exists('wp_handle_sideload')) {
+            require_once(ABSPATH . 'wp-admin/includes/file.php');
+        }
+        if (!function_exists('media_sideload_image')) {
+            require_once(ABSPATH . 'wp-admin/includes/media.php');
+        }
+
+        // CPU & Memory Mitigation: Limit thumbnail resizing to essential standard sizes
+        $size_limiter = function($sizes) {
+            $allowed = ['thumbnail', 'medium', 'medium_large', 'large', 'post-thumbnail'];
+            return array_intersect_key((array)$sizes, array_flip($allowed));
+        };
+        add_filter('intermediate_image_sizes_advanced', $size_limiter, 99);
+
+        $metadata = wp_generate_attachment_metadata($attach_id, $upload['file']);
+        remove_filter('intermediate_image_sizes_advanced', $size_limiter, 99);
+
+        if (!empty($metadata) && !is_wp_error($metadata)) {
+            wp_update_attachment_metadata($attach_id, $metadata);
+        }
+        return $attach_id;
+    }
+    return false;
+}
+
+/**
+ * Sideloads all external images referenced in post HTML content directly into the WordPress Media Library.
+ * Replaces remote image src URLs with local attachment URLs to protect against link rot and server outages.
+ *
+ * @param string $content HTML content containing potential remote image references.
+ * @param int $post_id WordPress post ID to attach the media items to.
+ * @return string Content with remote image URLs replaced with local attachment URLs.
+ */
+function social_sideload_content_media($content, $post_id) {
+    if (empty($content) || empty($post_id)) {
+        return $content;
+    }
+
+    $site_url = home_url();
+    $site_host = wp_parse_url($site_url, PHP_URL_HOST);
+
+    // Static cache for URLs already processed in this request to prevent duplicate downloads
+    static $processed_media_urls = [];
+
+    // Find all img tags with src
+    if (preg_match_all('/<img[^>]+src=["\']([^"\']+)["\']/i', $content, $matches)) {
+        $urls = array_unique($matches[1]);
+        foreach ($urls as $img_url) {
+            $img_url_clean = trim($img_url);
+            $parsed_host = wp_parse_url($img_url_clean, PHP_URL_HOST);
+
+            // Skip relative URLs or URLs already hosted on this site
+            if (empty($parsed_host) || ($site_host && strcasecmp($parsed_host, $site_host) === 0)) {
+                continue;
+            }
+
+            // Check if already sideloaded in this request
+            if (isset($processed_media_urls[$img_url_clean])) {
+                $local_url = $processed_media_urls[$img_url_clean];
+                if ($local_url) {
+                    $content = str_replace($img_url, $local_url, $content);
+                }
+                continue;
+            }
+
+            // Sideload the image
+            $attachment_id = social_sideload_image_by_mime($img_url_clean, $post_id, 'Digest media asset');
+            if ($attachment_id && !is_wp_error($attachment_id)) {
+                $local_url = wp_get_attachment_url($attachment_id);
+                if ($local_url) {
+                    $processed_media_urls[$img_url_clean] = $local_url;
+                    $content = str_replace($img_url, $local_url, $content);
+                }
+            } else {
+                $processed_media_urls[$img_url_clean] = false;
+            }
+        }
+    }
+
+    return $content;
+}
+
+/**
+ * Retrieves cached post tag usage counts using a 5-minute transient.
+ * Reduces SQL taxonomy lookup overhead during batch candidate processing and manual workbench tests.
+ *
+ * @return array Associative array of lowercase tag name => post count.
+ */
+function social_get_cached_tag_weights() {
+    $cache_key = 'social_digest_tag_weights';
+    $cached = get_transient($cache_key);
+    if ($cached !== false && is_array($cached)) {
+        return $cached;
+    }
+
+    $terms = get_terms([
+        'taxonomy'   => 'post_tag',
+        'hide_empty' => false,
+        'number'     => 500,
+        'orderby'    => 'count',
+        'order'      => 'DESC',
+    ]);
+
+    $weights = [];
+    if (!is_wp_error($terms) && is_array($terms)) {
+        foreach ($terms as $term) {
+            $weights[mb_strtolower($term->name)] = (int)$term->count;
+        }
+    }
+
+    set_transient($cache_key, $weights, 300); // 5-minute transient
+    return $weights;
+}
+
+function social_split_camelcase_tag($tag) {
+    $t = ltrim(trim($tag), '#');
+    $t = preg_replace('/([a-z]{2,})([A-Z0-9])/u', '$1 $2', $t);
+    return trim(preg_replace('/([A-Z]+)([A-Z][a-z])/u', '$1 $2', $t));
+}
+
+function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $enclosure = 'parentheses', $delimiter = 'oxford') {
+    $selected_tags = [];
+    $seen_normalized = [];
+    $tag_weights = social_get_cached_tag_weights();
+
+    if (!empty($candidate_tags)) {
+        $is_grouped = false;
+        foreach ($candidate_tags as $elem) {
+            if (is_array($elem)) {
+                $is_grouped = true;
+                break;
+            }
+        }
+
+        if ($is_grouped) {
+            // Select at most 1 distinct tag per post, prioritizing higher taxonomy frequency
+            foreach ($candidate_tags as $post_tags) {
+                if (!is_array($post_tags)) {
+                    $post_tags = [$post_tags];
+                }
+
+                // Sort tags within the post by cached tag popularity if available
+                if (count($post_tags) > 1 && !empty($tag_weights)) {
+                    usort($post_tags, function($a, $b) use ($tag_weights) {
+                        $w_a = $tag_weights[mb_strtolower(trim(ltrim($a, '#')))] ?? 0;
+                        $w_b = $tag_weights[mb_strtolower(trim(ltrim($b, '#')))] ?? 0;
+                        return $w_b <=> $w_a;
+                    });
+                }
+
+                foreach ($post_tags as $tag) {
+                    $clean_tag = social_split_camelcase_tag($tag);
+                    $norm = mb_strtolower(trim($clean_tag));
+                    if ($norm !== '' && !isset($seen_normalized[$norm])) {
+                        $seen_normalized[$norm] = true;
+                        $selected_tags[] = $clean_tag;
+                        break; // Pick only 1 tag from this post, then move to the next post
+                    }
+                }
+                if (count($selected_tags) >= 3) {
+                    break;
+                }
+            }
+        } else {
+            // Flat array fallback - sort by popularity if available
+            $flat_tags = $candidate_tags;
+            if (count($flat_tags) > 1 && !empty($tag_weights)) {
+                usort($flat_tags, function($a, $b) use ($tag_weights) {
+                    $w_a = $tag_weights[mb_strtolower(trim(ltrim($a, '#')))] ?? 0;
+                    $w_b = $tag_weights[mb_strtolower(trim(ltrim($b, '#')))] ?? 0;
+                    return $w_b <=> $w_a;
+                });
+            }
+
+            foreach ($flat_tags as $tag) {
+                $clean_tag = social_split_camelcase_tag($tag);
+                $norm = mb_strtolower(trim($clean_tag));
+                if ($norm !== '' && !isset($seen_normalized[$norm])) {
+                    $seen_normalized[$norm] = true;
+                    $selected_tags[] = $clean_tag;
+                }
+                if (count($selected_tags) >= 3) {
+                    break;
+                }
+            }
+        }
+    }
+
+    // Fall back to default tags if no post hashtags were found
+    if (empty($selected_tags)) {
+        $defaults = array_filter(array_map('trim', explode(',', $default_tags_str)));
+        foreach ($defaults as $d) {
+            $clean_tag = social_split_camelcase_tag($d);
+            $norm = mb_strtolower(trim($clean_tag));
+            if ($norm !== '' && !isset($seen_normalized[$norm])) {
+                $seen_normalized[$norm] = true;
+                $selected_tags[] = $clean_tag;
+            }
+            if (count($selected_tags) >= 3) {
+                break;
+            }
+        }
+    }
+
+    $c = count($selected_tags);
+    if ($c === 0) return '';
+
+    $joined = '';
+    switch ($delimiter) {
+        case 'commas':
+            $joined = implode(', ', $selected_tags);
+            break;
+        case 'ampersand':
+            if ($c === 1) $joined = $selected_tags[0];
+            elseif ($c === 2) $joined = $selected_tags[0] . ' & ' . $selected_tags[1];
+            else $joined = $selected_tags[0] . ', ' . $selected_tags[1] . ' & ' . $selected_tags[2];
+            break;
+        case 'pipe':
+            $joined = implode(' | ', $selected_tags);
+            break;
+        case 'slash':
+            $joined = implode(' / ', $selected_tags);
+            break;
+        case 'oxford':
+        default:
+            if ($c === 1) $joined = $selected_tags[0];
+            elseif ($c === 2) $joined = $selected_tags[0] . ' and ' . $selected_tags[1];
+            else $joined = $selected_tags[0] . ', ' . $selected_tags[1] . ', and ' . $selected_tags[2];
+            break;
+    }
+
+    if ($enclosure === 'brackets') {
+        return '[' . $joined . ']';
+    } elseif ($enclosure === 'none') {
+        return $joined;
+    }
+
+    return '(' . $joined . ')';
+}
+
+function social_log_run($success, $message, $post_id = 0) {
+    $logs = get_option('social_digest_logs', []);
+    $logs[] = ['time' => time(), 'success' => (bool)$success, 'message' => sanitize_text_field($message), 'post_id' => (int)$post_id];
+    update_option('social_digest_logs', array_slice($logs, -10));
+}
+
+/**
+ * Evaluates whether a post text matches any exclusion filter patterns.
+ * Supports:
+ * - Plain keywords / phrases (case-insensitive substring match)
+ * - Hashtags (#tag, case-insensitive whole-hashtag or substring match)
+ * - Regular expressions (/pattern/i or #pattern#i) with error safety
+ *
+ * @param string $text Post text content to check.
+ * @param array|string $filter_rules Array of rules or raw comma/newline delimited string.
+ * @return bool True if excluded/filtered, false otherwise.
+ */
+function social_post_matches_filter($text, $filter_rules) {
+    if (empty($text) || empty($filter_rules)) return false;
+
+    if (!is_array($filter_rules)) {
+        // Split by newlines or commas
+        $filter_rules = preg_split('/[\r\n,]+/', (string)$filter_rules);
+    }
+
+    $clean_text = html_entity_decode((string)$text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+    foreach ($filter_rules as $rule) {
+        $rule = trim((string)$rule);
+        if ($rule === '') continue;
+
+        // 1. Regular expression check (e.g. /pattern/i or #pattern#i)
+        $first_char = substr($rule, 0, 1);
+        $last_slash = strrpos($rule, $first_char);
+        if (
+            ($first_char === '/' || $first_char === '~' || $first_char === '@') &&
+            $last_slash > 0 &&
+            strlen($rule) >= 3
+        ) {
+            // Test if it's a valid regex
+            $matched = @preg_match($rule, $clean_text);
+            if ($matched === 1) {
+                return true;
+            }
+            if ($matched === 0) {
+                continue;
+            }
+            // If regex syntax was malformed, fall through to literal check
+        }
+
+        // 2. Hashtag rule check (e.g. #ad, #sponsored, #giveaway)
+        if ($first_char === '#') {
+            $tag_term = ltrim($rule, '#');
+            if ($tag_term !== '') {
+                // Check exact hashtag boundary
+                $pattern = '/(?:^|\s|[^\p{L}\p{N}_])#' . preg_quote($tag_term, '/') . '(?=$|\s|[^\p{L}\p{N}_])/iu';
+                if (@preg_match($pattern, $clean_text)) {
+                    return true;
+                }
+            }
+            // Also fall through to case-insensitive substring
+            if (stripos($clean_text, $rule) !== false) {
+                return true;
+            }
+            continue;
+        }
+
+        // 3. Plain keyword / phrase match (case-insensitive)
+        if (stripos($clean_text, $rule) !== false) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Performs a network GET request with exponential backoff and stale-cache fallback.
+ * Automatically retries transient network errors / HTTP 429/503 responses.
+ *
+ * @param string $url Target endpoint URL.
+ * @param array  $args wp_remote_get options.
+ * @param int    $max_retries Number of attempts (default 2 retries, total 3 attempts).
+ * @param string $cache_key Optional transient cache key to store/retrieve stale cache on failure.
+ * @return array|WP_Error Response array or WP_Error.
+ */
+function social_safe_remote_get_with_backoff($url, $args = [], $max_retries = 2, $cache_key = '') {
+    $default_args = [
+        'timeout'    => 15,
+        'user-agent' => 'SocialDigestWordPress/5.7; +' . home_url(),
+    ];
+    $parsed_args = wp_parse_args($args, $default_args);
+
+    $attempt = 0;
+    $response = null;
+
+    while ($attempt <= $max_retries) {
+        $attempt++;
+        $response = wp_safe_remote_get($url, $parsed_args);
+
+        // Success if not WP_Error and HTTP 200-299
+        if (!is_wp_error($response)) {
+            $code = (int)wp_remote_retrieve_response_code($response);
+            if ($code >= 200 && $code < 300) {
+                // If cache key is supplied, refresh 24-hour stale cache snapshot
+                if ($cache_key) {
+                    set_transient('sd_stale_' . md5($cache_key), wp_remote_retrieve_body($response), DAY_IN_SECONDS);
+                }
+                return $response;
+            }
+
+            // If client error (400, 401, 403, 404) that is NOT rate limit (429), don't retry
+            if ($code >= 400 && $code < 500 && $code !== 429) {
+                break;
+            }
+        }
+
+        // Delay with backoff before next attempt: 1s, 2s...
+        if ($attempt <= $max_retries) {
+            usleep($attempt * 1000000); // 1.0s, 2.0s
+        }
+    }
+
+    // If all retries failed and stale cache key exists, try serving stale cache
+    if ($cache_key) {
+        $stale_body = get_transient('sd_stale_' . md5($cache_key));
+        if ($stale_body !== false && $stale_body !== '') {
+            return [
+                'response' => ['code' => 200, 'message' => 'OK (Stale Cache Fallback)'],
+                'body'     => $stale_body,
+                'headers'  => ['x-social-digest-fallback' => 'stale-cache']
+            ];
+        }
+    }
+
+    return $response;
+}
+
+/**
+ * Wraps content elements into native Gutenberg HTML blocks (wp:html, wp:paragraph, wp:heading).
+ *
+ * @param string $html_chunk Raw HTML string to wrap as a block.
+ * @param string $block_name Gutenberg block name, defaults to 'core/html'.
+ * @return string Gutenberg formatted block comment markup.
+ */
+function social_wrap_as_gutenberg_block($html_chunk, $block_name = 'core/html') {
+    $trimmed = trim((string)$html_chunk);
+    if ($trimmed === '') return '';
+    return "<!-- wp:{$block_name} -->\n" . $trimmed . "\n<!-- /wp:{$block_name} -->";
+}
+
+// ==========================================
+// 6. CORE FETCHERS, NATIVE RENDERER & ADAPTERS
+// ==========================================
+
+function social_render_native_card($item, $opts = []) {
+    $mode = $opts['network_mode'] ?? 'both';
+    $avatar_pref = $opts['avatar_source'] ?? 'auto';
+    $timestamp = (int)($item['timestamp'] ?? time());
+    $site_tz = wp_timezone();
+    $formatted_date = wp_date('M j, Y · g:i A', $timestamp, $site_tz);
+
+    $is_repost = !empty($item['is_repost']);
+    $repost_user = esc_html($item['repost_user'] ?? '');
+
+    // Resolve active platform links based on network_mode
+    $links = (array)($item['platform_links'] ?? []);
+    $has_bsky = !empty($links['bsky']['url']) && ($mode === 'bsky' || $mode === 'both');
+    $has_masto = !empty($links['mastodon']['url']) && ($mode === 'mastodon' || $mode === 'both');
+
+    // Determine author name & primary handle
+    $author_name = esc_html($item['author_name'] ?? 'Author');
+
+    // Avatar resolution
+    $avatar_url = '';
+    if ($avatar_pref !== 'none') {
+        if ($avatar_pref === 'bsky' && !empty($links['bsky']['avatar'])) {
+            $avatar_url = $links['bsky']['avatar'];
+        } elseif ($avatar_pref === 'mastodon' && !empty($links['mastodon']['avatar'])) {
+            $avatar_url = $links['mastodon']['avatar'];
+        } elseif (!empty($item['author_avatar'])) {
+            $avatar_url = $item['author_avatar'];
+        } elseif (!empty($links['bsky']['avatar'])) {
+            $avatar_url = $links['bsky']['avatar'];
+        } elseif (!empty($links['mastodon']['avatar'])) {
+            $avatar_url = $links['mastodon']['avatar'];
+        }
+    }
+
+    // Platform handles & inline follow links
+    $social_identities = [];
+
+    if ($has_bsky && !empty($links['bsky']['handle'])) {
+        $b_raw_handle = ltrim($links['bsky']['handle'], '@');
+        $b_handle = '@' . esc_html($b_raw_handle);
+        $b_profile = esc_url($links['bsky']['profile_url'] ?? ('https://bsky.app/profile/' . $b_raw_handle));
+        $b_html  = '<span class="social-identity bsky-identity" style="display:inline-flex; align-items:center; white-space:nowrap;">';
+        $b_html .= '<a href="' . $b_profile . '" target="_blank" rel="noopener" style="color:#64748b; text-decoration:none;">' . $b_handle . '</a>';
+        $b_html .= '<span style="color:#94a3b8; margin:0 5px;">·</span>';
+        $b_html .= '<a href="' . $b_profile . '" target="_blank" rel="noopener" class="social-follow-link bsky-follow" style="color:#0284c7; font-weight:600; text-decoration:none;" title="Follow ' . $b_handle . ' on Bluesky">Follow</a>';
+        $b_html .= '</span>';
+        $social_identities[] = $b_html;
+    }
+
+    if ($has_masto && !empty($links['mastodon']['handle'])) {
+        $m_raw_handle = ltrim($links['mastodon']['handle'], '@');
+        if (strpos($m_raw_handle, '@') === false && !empty($links['mastodon']['profile_url'])) {
+            $p_host = parse_url($links['mastodon']['profile_url'], PHP_URL_HOST);
+            if ($p_host) {
+                $m_raw_handle .= '@' . $p_host;
+            }
+        }
+        $m_handle = '@' . esc_html($m_raw_handle);
+        $m_profile = esc_url($links['mastodon']['profile_url'] ?? '');
+        $m_html  = '<span class="social-identity masto-identity" style="display:inline-flex; align-items:center; white-space:nowrap;">';
+        $m_html .= '<a href="' . $m_profile . '" target="_blank" rel="noopener" style="color:#64748b; text-decoration:none;">' . $m_handle . '</a>';
+        $m_html .= '<span style="color:#94a3b8; margin:0 5px;">·</span>';
+        $m_html .= '<a href="' . $m_profile . '" target="_blank" rel="noopener" class="social-follow-link masto-follow" style="color:#7e22ce; font-weight:600; text-decoration:none;" title="Follow ' . $m_handle . ' on Mastodon">Follow</a>';
+        $m_html .= '</span>';
+        $social_identities[] = $m_html;
+    }
+
+    if (empty($social_identities) && !empty($item['author_handle'])) {
+        $fallback_handle = '@' . ltrim(esc_html($item['author_handle']), '@');
+        $social_identities[] = '<span style="color:#64748b;">' . $fallback_handle . '</span>';
+    }
+
+    // Repost / Boost banner
+    $repost_html = '';
+    if ($is_repost && $repost_user) {
+        $repost_html = '<div class="social-repost-banner" data-nosnippet style="font-size:12px; font-weight:700; color:#0284c7; margin-bottom:10px; display:flex; align-items:center; gap:5px;">&#x1F501; Reposted by @' . $repost_user . '</div>';
+    }
+
+    // Build the Native Card HTML
+    $html = '<div class="social-post social-card" style="border:1px solid #e2e8f0; border-left:4px solid #0284c7; border-radius:12px; padding:18px; margin:26px auto; background:#ffffff; box-shadow:0 2px 6px rgba(0,0,0,0.04); max-width:600px; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif;">';
+    if ($repost_html) {
+        $html .= $repost_html;
+    }
+
+    // Card Header (Avatar + Name + Inline Handles with Follow Links)
+    $html .= '<div class="social-card-header" data-nosnippet style="display:flex; align-items:center; gap:12px; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #f1f5f9;">';
+    if ($avatar_url) {
+        $html .= '<img src="' . esc_url($avatar_url) . '" alt="' . esc_attr($author_name) . '" class="social-avatar" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:1px solid #e2e8f0; flex-shrink:0;" />';
+    }
+    $html .= '<div style="min-width:0; line-height:1.35; flex:1;">';
+    $html .= '<div class="social-author-name" style="font-weight:700; font-size:15px; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' . $author_name . '</div>';
+    $html .= '<div class="social-author-handles" style="font-size:13px; color:#64748b; display:flex; flex-wrap:wrap; align-items:center; column-gap:8px; row-gap:2px;">' . implode('<span style="color:#cbd5e1; margin:0 2px;">·</span>', $social_identities) . '</div>';
+    $html .= '</div>';
+    $html .= '</div>';
+
+    // Body content
+    $html .= '<div class="social-card-body" style="font-size:15px; line-height:1.6; color:#1e293b; margin-bottom:14px; overflow-wrap:anywhere; word-break:break-word;">';
+    if (!empty($item['body_html'])) {
+        $body_text = $item['body_html'];
+    } else {
+        $has_card = !empty($item['media_html']) && (strpos($item['media_html'], 'social-link-card') !== false);
+        $body_text = social_clean_body_text($item['text'] ?? '', $has_card);
+    }
+    $html .= $body_text;
+    $html .= '</div>';
+
+    $media_content = $item['media_html'] ?? '';
+    // In posts with both link preview cards and image galleries/videos,
+    // ensure the link preview card always displays above the gallery
+    if ($media_content !== '' && strpos($media_content, 'social-link-card') !== false) {
+        $first_embed_pos = false;
+        foreach (['social-embed-images', 'social-embed-media', 'social-embed-video', 'social-embed-gifv'] as $embed_class) {
+            $pos = strpos($media_content, $embed_class);
+            if ($pos !== false && ($first_embed_pos === false || $pos < $first_embed_pos)) {
+                $first_embed_pos = $pos;
+            }
+        }
+        $card_pos = strpos($media_content, 'social-link-card');
+        if ($first_embed_pos !== false && $card_pos !== false && $card_pos > $first_embed_pos) {
+            if (preg_match('/(<div class="social-link-card"[^>]*>.*?<\/div>\s*<\/div>)/s', $media_content, $m)) {
+                $card_snippet = $m[1];
+                $gallery_snippet = trim(str_replace($card_snippet, '', $media_content));
+                $media_content = $card_snippet . $gallery_snippet;
+            }
+        }
+    }
+
+    if (!empty($media_content)) {
+        $html .= $media_content;
+    }
+
+    // Card Footer (Date on left + Interactive Platform badges on right)
+    $html .= '<div class="social-card-footer" data-nosnippet style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin-top:14px; padding-top:12px; border-top:1px solid #f1f5f9; font-size:13px; color:#64748b;">';
+    $html .= '<div class="social-timestamp" style="display:flex; align-items:center;">';
+    $html .= '<span>' . esc_html($formatted_date) . '</span>';
+    $html .= '</div>';
+
+    // Platform action badges with live engagement counters and smart mobile deep-linking
+    $enable_deep_links = !isset($opts['mobile_deep_links']) || !empty($opts['mobile_deep_links']);
+    $badges = [];
+    if ($has_bsky) {
+        $bsky_data = $links['bsky'];
+        $b_url = esc_url($bsky_data['url'] ?? '');
+        $b_likes = absint($bsky_data['likes'] ?? 0);
+        $like_str = ($b_likes > 0) ? ' <span style="font-size:11px; background:#eff6ff; color:#1d4ed8; padding:1px 6px; border-radius:9999px; margin-left:3px;">❤️ ' . $b_likes . '</span>' : '';
+        $b_deep_attr = '';
+        if ($enable_deep_links && preg_match('/bsky\.app\/profile\/([^\/]+)\/post\/([^\/]+)/i', $b_url, $bm)) {
+            $b_deep_url = 'bsky://profile/' . $bm[1] . '/post/' . $bm[2];
+            $b_deep_attr = ' data-app-url="' . esc_attr($b_deep_url) . '"';
+        }
+        $badges[] = '<a href="' . $b_url . '"' . $b_deep_attr . ' target="_blank" rel="noopener" class="social-badge bsky-badge" style="display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:6px; background:#f0f9ff; color:#0284c7; text-decoration:none; border:1px solid #bae6fd; font-weight:600; font-size:12px;" title="View on Bluesky">🦋 Bluesky' . $like_str . ' ↗</a>';
+    }
+    if ($has_masto) {
+        $masto_data = $links['mastodon'];
+        $m_url = esc_url($masto_data['url'] ?? '');
+        $m_favs = absint($masto_data['favs'] ?? 0);
+        $m_boosts = absint($masto_data['boosts'] ?? 0);
+        $m_stats = [];
+        if ($m_favs > 0) $m_stats[] = '⭐ ' . $m_favs;
+        if ($m_boosts > 0) $m_stats[] = '🔁 ' . $m_boosts;
+        $m_stat_str = $m_stats ? ' <span style="font-size:11px; background:#faf5ff; color:#6b21a8; padding:1px 6px; border-radius:9999px; margin-left:3px;">' . implode(' · ', $m_stats) . '</span>' : '';
+        $m_deep_attr = '';
+        if ($enable_deep_links && !empty($m_url)) {
+            $m_deep_url = 'mastodon://' . preg_replace('/^https?:\/\//i', '', $m_url);
+            $m_deep_attr = ' data-app-url="' . esc_attr($m_deep_url) . '"';
+        }
+        $badges[] = '<a href="' . $m_url . '"' . $m_deep_attr . ' target="_blank" rel="noopener" class="social-badge masto-badge" style="display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:6px; background:#faf5ff; color:#7e22ce; text-decoration:none; border:1px solid #e9d5ff; font-weight:600; font-size:12px;" title="View on Mastodon">🐘 Mastodon' . $m_stat_str . ' ↗</a>';
+    }
+
+    if ($badges) {
+        $html .= '<div class="social-platform-badges" style="display:flex; flex-wrap:wrap; align-items:center; gap:6px;">' . implode('', $badges) . '</div>';
+    }
+
+    $html .= '</div>';
+    $html .= '</div>';
+
+    return $html;
+}
+
+function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_reposts) {
+    if (empty($handle)) return ['posts' => [], 'newest_timestamp' => $last_check];
+
+    $opts = get_option('social_digest_options', []);
+    $api_url = 'https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed?actor=' . urlencode($handle) . '&limit=50';
+    $cache_key = 'bsky_feed_' . $handle;
+    $response = social_safe_remote_get_with_backoff($api_url, ['timeout' => 20], 2, $cache_key);
+    if (is_wp_error($response)) return ['posts' => [], 'newest_timestamp' => $last_check];
+
+    $body = json_decode(wp_remote_retrieve_body($response), true);
+    if (empty($body['feed'])) return ['posts' => [], 'newest_timestamp' => $last_check];
+
+    $items = [];
+    $newest_timestamp = $last_check;
+
+    foreach ($body['feed'] as $item) {
+        if (!isset($item['post']) || !is_array($item['post'])) continue;
+        $post = $item['post'];
+        $is_repost = isset($item['reason']);
+
+        if ($is_repost && !$include_reposts) continue;
+
+        if ($is_repost && !empty($item['reason']['indexedAt'])) {
+            $created_at = strtotime($item['reason']['indexedAt']);
+        } elseif (!empty($post['record']['createdAt'])) {
+            $created_at = strtotime($post['record']['createdAt']);
+        } elseif (!empty($post['indexedAt'])) {
+            $created_at = strtotime($post['indexedAt']);
+        } else {
+            $created_at = time();
+        }
+
+        if ($created_at <= $last_check) continue;
+        if ($created_at > $newest_timestamp) $newest_timestamp = $created_at;
+
+        if (!$is_repost && !empty($post['record']['reply'])) {
+            if (!$keep_threads) continue;
+            $parent_author_did = $item['reply']['parent']['author']['did'] ?? '';
+            $author_did        = $post['author']['did'] ?? '';
+            if ($parent_author_did !== $author_did) continue;
+        }
+
+        $text = $post['record']['text'] ?? '';
+        $post_uri = $post['uri'];
+        $rkey     = substr($post_uri, strrpos($post_uri, '/') + 1);
+        $author_handle = $post['author']['handle'] ?? $handle;
+        $author_name   = esc_html($post['author']['displayName'] ?? $author_handle);
+        $author_avatar = esc_url_raw($post['author']['avatar'] ?? '');
+        $author_profile_url = 'https://bsky.app/profile/' . $author_handle;
+        $web_url       = 'https://bsky.app/profile/' . $author_handle . '/post/' . $rkey;
+
+        $first_image_url = null;
+        $gallery_html = '';
+        $card_html = '';
+
+        if (isset($post['embed']['images']) && is_array($post['embed']['images'])) {
+            $images = $post['embed']['images'];
+            $num_imgs = count($images);
+            if ($num_imgs > 1) {
+                $cols = $num_imgs == 2 || $num_imgs == 4 ? 2 : 3;
+                $gallery_html .= '<div class="social-embed-images" style="display:grid; grid-template-columns: repeat(' . $cols . ', 1fr); gap:10px; margin:12px 0;">';
+            } else {
+                $gallery_html .= '<div class="social-embed-images" style="margin:12px 0;">';
+            }
+            foreach ($images as $img) {
+                $img_url = esc_url($img['fullsize'] ?? $img['thumb'] ?? '');
+                $alt_raw = trim($img['alt'] ?? '');
+                $alt_txt = esc_attr($alt_raw ?: 'Bluesky image');
+                $alt_badge = '';
+                if ($alt_raw !== '' && strtolower($alt_raw) !== 'bluesky image') {
+                    $alt_badge = '<span data-nosnippet class="social-alt-badge" onclick="event.preventDefault(); event.stopPropagation(); alert(this.getAttribute(\'title\'));" style="position:absolute; bottom:6px; left:6px; background:rgba(15,23,42,0.85); color:#ffffff; font-size:10px; font-weight:700; padding:2px 5px; border-radius:4px; letter-spacing:0.5px; backdrop-filter:blur(4px); box-shadow:0 1px 3px rgba(0,0,0,0.3); z-index:3; pointer-events:auto; cursor:help;" title="ALT: ' . $alt_txt . '">ALT</span>';
+                }
+                if ($img_url) {
+                    if (!$first_image_url) $first_image_url = $img_url;
+                    $title_attr = ($num_imgs > 1) ? 'View full gallery on Bluesky' : 'View image on Bluesky';
+                    $gallery_html .= '<a href="' . esc_url($web_url) . '" target="_blank" rel="noopener" title="' . esc_attr($title_attr) . '" style="display:block; text-decoration:none;">';
+                    if ($num_imgs > 1) {
+                        $gallery_html .= '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
+                    } else {
+                        $gallery_html .= '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="max-width:100%; max-height:400px; width:auto; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
+                    }
+                    $gallery_html .= '</a>';
+                }
+            }
+            $gallery_html .= '</div>';
+        }
+
+        // Bluesky Video Embed Support (app.bsky.embed.video)
+        if (
+            (isset($post['embed']['$type']) && $post['embed']['$type'] === 'app.bsky.embed.video') ||
+            isset($post['embed']['playlist'])
+        ) {
+            $video_thumb = esc_url($post['embed']['thumbnail'] ?? '');
+            $alt_raw = trim($post['embed']['alt'] ?? '');
+            $alt_txt = esc_attr($alt_raw ?: 'Bluesky video');
+            if ($video_thumb && !$first_image_url) {
+                $first_image_url = $video_thumb;
+            }
+            $gallery_html .= '<div class="social-embed-video" style="margin:12px 0; position:relative; border-radius:8px; overflow:hidden; background:#000;">';
+            $gallery_html .= '<a href="' . esc_url($web_url) . '" target="_blank" rel="noopener" title="Watch video on Bluesky" style="display:block; position:relative; text-decoration:none;">';
+            if ($video_thumb) {
+                $gallery_html .= '<img src="' . $video_thumb . '" alt="' . $alt_txt . '" style="width:100%; max-height:450px; object-fit:contain; display:block; background:#0f172a;" />';
+            } else {
+                $gallery_html .= '<div style="height:220px; width:100%; background:#0f172a; display:flex; align-items:center; justify-content:center;"></div>';
+            }
+            // Play Button Overlay
+            $gallery_html .= '<div class="social-video-play-btn" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:56px; height:56px; border-radius:50%; background:rgba(15,23,42,0.85); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.5); border:2px solid rgba(255,255,255,0.8);">';
+            $gallery_html .= '<span style="color:#ffffff; font-size:22px; margin-left:3px; line-height:1;">▶</span>';
+            $gallery_html .= '</div>';
+            $gallery_html .= '<span data-nosnippet style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.75); color:#fff; font-size:11px; font-weight:700; padding:2px 6px; border-radius:4px; letter-spacing:0.5px;">VIDEO ↗</span>';
+            $gallery_html .= '</a>';
+            $gallery_html .= '</div>';
+        }
+
+        $extracted_urls = [];
+        $links_map = [];
+
+        // Check facets
+        if (!empty($post['record']['facets']) && is_array($post['record']['facets'])) {
+            foreach ($post['record']['facets'] as $facet) {
+                if (!empty($facet['features']) && is_array($facet['features'])) {
+                    foreach ($facet['features'] as $feat) {
+                        if (($feat['$type'] ?? '') === 'app.bsky.richtext.facet#link' && !empty($feat['uri'])) {
+                            $u = esc_url_raw($feat['uri']);
+                            $extracted_urls[] = $u;
+                            if (isset($facet['index']['byteStart'], $facet['index']['byteEnd'])) {
+                                $start = (int)$facet['index']['byteStart'];
+                                $end   = (int)$facet['index']['byteEnd'];
+                                $disp_text = substr($text, $start, $end - $start);
+                                if ($disp_text) {
+                                    $links_map[$disp_text] = $u;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (isset($post['embed']['external']['uri'])) $extracted_urls[] = esc_url_raw($post['embed']['external']['uri']);
+        if (preg_match_all('/\b(?:https?:\/\/|www\.)[^\s<"\'\)]+/i', $text, $u_m)) {
+            foreach ($u_m[0] as $match_url) {
+                $extracted_urls[] = esc_url_raw($match_url);
+            }
+        }
+        $extracted_urls = array_values(array_unique(array_filter($extracted_urls)));
+
+        $has_card = false;
+        $primary_card_url = '';
+
+        if (isset($post['embed']['external'])) {
+            $ext = $post['embed']['external'];
+            $link_url   = esc_url_raw($ext['uri'] ?? '');
+            $link_title = $ext['title'] ?? '';
+            $link_desc  = $ext['description'] ?? '';
+            $link_thumb = esc_url_raw($ext['thumb'] ?? '');
+
+            if (!$link_thumb && $link_url) {
+                $link_thumb = social_get_og_image_cached($link_url);
+            }
+
+            if (!$first_image_url && $link_thumb) $first_image_url = $link_thumb;
+
+            $domain = parse_url($link_url, PHP_URL_HOST);
+            $card_html .= social_render_link_card_html($link_url, $link_title, $link_desc, $link_thumb, $domain);
+            $has_card = true;
+            $primary_card_url = $link_url;
+        } elseif (!empty($extracted_urls[0])) {
+            // Fallback: If Bluesky post contained a link without external embed metadata, fetch OG card
+            $target_url = $extracted_urls[0];
+            $og_card = social_get_og_card_cached($target_url);
+            if ($og_card && (!empty($og_card['title']) || !empty($og_card['image']))) {
+                if (!$first_image_url && !empty($og_card['image'])) {
+                    $first_image_url = $og_card['image'];
+                }
+                $card_html .= social_render_link_card_html(
+                    $target_url,
+                    $og_card['title'] ?? '',
+                    $og_card['description'] ?? '',
+                    $og_card['image'] ?? '',
+                    $og_card['domain'] ?? parse_url($target_url, PHP_URL_HOST)
+                );
+                $has_card = true;
+                $primary_card_url = $target_url;
+            } elseif (!$first_image_url) {
+                $fallback_thumb = social_get_og_image_cached($target_url);
+                if ($fallback_thumb) $first_image_url = $fallback_thumb;
+            }
+        }
+
+        // Preview card comes before image galleries/media
+        $media_html = $card_html . $gallery_html;
+
+        $like_count   = absint($post['likeCount'] ?? 0);
+        $repost_count = absint($post['repostCount'] ?? 0);
+
+        $body_html = social_clean_body_text($text, $has_card, $primary_card_url, $links_map);
+
+        $item_data = [
+            'network'        => 'bsky',
+            'timestamp'      => $created_at,
+            'text'           => $text,
+            'body_html'      => $body_html,
+            'author_name'    => $author_name,
+            'author_handle'  => $author_handle,
+            'author_avatar'  => $author_avatar,
+            'media_html'     => $media_html,
+            'thumb_image'    => $first_image_url,
+            'is_repost'        => $is_repost,
+            'repost_user'      => $handle,
+            'post_uri'         => $post_uri,
+            'reply_root_uri'   => $post['record']['reply']['root']['uri'] ?? $post_uri,
+            'reply_parent_uri' => $post['record']['reply']['parent']['uri'] ?? '',
+            'platform_links'   => [
+                'bsky' => [
+                    'url'         => $web_url,
+                    'profile_url' => $author_profile_url,
+                    'handle'      => $author_handle,
+                    'avatar'      => $author_avatar,
+                    'likes'       => $like_count,
+                    'reposts'     => $repost_count,
+                ]
+            ],
+            'extra_tags'     => [],
+            'urls'           => $extracted_urls
+        ];
+
+        $item_data['html'] = social_render_native_card($item_data, $opts);
+        $items[] = $item_data;
+    }
+
+    return ['posts' => $items, 'newest_timestamp' => $newest_timestamp];
+}
+
+function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include_reposts) {
+    if (empty($handle_raw)) return ['posts' => [], 'newest_timestamp' => $last_check];
+
+    $opts = get_option('social_digest_options', []);
+    $raw = trim($handle_raw);
+    if (preg_match('#^https?://([^/]+)/@?([^/?\#]+)#i', $raw, $url_parts)) {
+        $instance = $url_parts[1];
+        $username = $url_parts[2];
+    } else {
+        $clean = ltrim($raw, '@');
+        $parts = explode('@', $clean);
+        if (count($parts) === 2) {
+            $username = $parts[0];
+            $instance = $parts[1];
+        } else {
+            return ['posts' => [], 'newest_timestamp' => $last_check];
+        }
+    }
+
+    $lookup_url = "https://{$instance}/api/v1/accounts/lookup?acct=" . urlencode($username);
+    $res = social_safe_remote_get_with_backoff($lookup_url, ['timeout' => 15], 2, 'masto_lookup_' . $instance . '_' . $username);
+    if (is_wp_error($res)) return ['posts' => [], 'newest_timestamp' => $last_check];
+
+    $account = json_decode(wp_remote_retrieve_body($res), true);
+    $account_id = $account['id'] ?? null;
+    if (!$account_id) return ['posts' => [], 'newest_timestamp' => $last_check];
+
+    $exclude_param = $include_reposts ? 'false' : 'true';
+    $statuses_url = "https://{$instance}/api/v1/accounts/{$account_id}/statuses?exclude_reblogs={$exclude_param}&limit=40";
+    $cache_key = 'masto_feed_' . $instance . '_' . $account_id;
+    $res = social_safe_remote_get_with_backoff($statuses_url, ['timeout' => 20], 2, $cache_key);
+    if (is_wp_error($res)) return ['posts' => [], 'newest_timestamp' => $last_check];
+
+    $statuses = json_decode(wp_remote_retrieve_body($res), true);
+    if (!is_array($statuses)) return ['posts' => [], 'newest_timestamp' => $last_check];
+
+    $items = [];
+    $newest_timestamp = $last_check;
+
+    foreach ($statuses as $st) {
+        if (!is_array($st)) continue;
+        $created_at = !empty($st['created_at']) ? strtotime($st['created_at']) : time();
+        if ($created_at <= $last_check) continue;
+        if ($created_at > $newest_timestamp) $newest_timestamp = $created_at;
+
+        $is_reblog = !empty($st['reblog']) && is_array($st['reblog']);
+        $post_data = $is_reblog ? $st['reblog'] : $st;
+        if (!is_array($post_data)) continue;
+
+        if (!$is_reblog && !empty($post_data['in_reply_to_id'])) {
+            if (!$keep_threads) continue;
+            if (($post_data['in_reply_to_account_id'] ?? '') !== $account_id) continue;
+        }
+
+        $body_content = $post_data['content'] ?? '';
+        $clean_text   = wp_strip_all_tags($body_content);
+        $clean_handle = $username;
+        $author_acct  = !empty($post_data['account']['acct']) ? $post_data['account']['acct'] : ($post_data['account']['username'] ?? $username);
+        $full_acct    = (strpos($author_acct, '@') === false && !empty($instance)) ? "{$author_acct}@{$instance}" : $author_acct;
+        $author_avatar = esc_url_raw($post_data['account']['avatar'] ?? $post_data['account']['avatar_static'] ?? '');
+        $author_profile_url = esc_url_raw($post_data['account']['url'] ?? "https://{$instance}/@{$username}");
+        $author_name = esc_html(!empty($post_data['account']['display_name']) ? $post_data['account']['display_name'] : $post_data['account']['username']);
+        $post_url    = esc_url($post_data['url'] ?? "https://{$instance}/@{$username}/{$post_data['id']}");
+        $first_image_url = null;
+        $gallery_html = '';
+        $card_html = '';
+
+        $fav_count   = absint($post_data['favourites_count'] ?? $post_data['favorites_count'] ?? 0);
+        $boost_count = absint($post_data['reblogs_count'] ?? 0);
+
+        $extracted_urls = [];
+        if (!empty($post_data['card']['url'])) $extracted_urls[] = $post_data['card']['url'];
+        if (preg_match_all('/\b(?:https?:\/\/|www\.)[^\s<"\'\)]+/i', $clean_text, $u_m)) $extracted_urls = array_merge($extracted_urls, $u_m[0]);
+        $extracted_urls = array_values(array_unique($extracted_urls));
+
+        if (!empty($post_data['media_attachments']) && is_array($post_data['media_attachments'])) {
+            $images = [];
+            $videos = [];
+            foreach ($post_data['media_attachments'] as $med) {
+                if ($med['type'] === 'image') {
+                    $images[] = $med;
+                } elseif ($med['type'] === 'video' || $med['type'] === 'gifv') {
+                    $videos[] = $med;
+                }
+            }
+            if (!empty($images)) {
+                $num_imgs = count($images);
+                if ($num_imgs > 1) {
+                    $cols = $num_imgs == 2 || $num_imgs == 4 ? 2 : 3;
+                    $gallery_html .= '<div class="social-embed-media" style="display:grid; grid-template-columns: repeat(' . $cols . ', 1fr); gap:10px; margin:12px 0;">';
+                } else {
+                    $gallery_html .= '<div class="social-embed-media" style="margin:12px 0;">';
+                }
+                foreach ($images as $med) {
+                    $img_url = esc_url($med['url'] ?? $med['preview_url'] ?? '');
+                    $alt_raw = trim($med['description'] ?? '');
+                    $alt_txt = esc_attr($alt_raw ?: 'Mastodon image');
+                    $alt_badge = '';
+                    if ($alt_raw !== '' && strtolower($alt_raw) !== 'mastodon image') {
+                        $alt_badge = '<span data-nosnippet class="social-alt-badge" onclick="event.preventDefault(); event.stopPropagation(); alert(this.getAttribute(\'title\'));" style="position:absolute; bottom:6px; left:6px; background:rgba(15,23,42,0.85); color:#ffffff; font-size:10px; font-weight:700; padding:2px 5px; border-radius:4px; letter-spacing:0.5px; backdrop-filter:blur(4px); box-shadow:0 1px 3px rgba(0,0,0,0.3); z-index:3; pointer-events:auto; cursor:help;" title="ALT: ' . $alt_txt . '">ALT</span>';
+                    }
+                    if ($img_url) {
+                        if (!$first_image_url) $first_image_url = $img_url;
+                        $title_attr = ($num_imgs > 1) ? 'View full gallery on Mastodon' : 'View image on Mastodon';
+                        $gallery_html .= '<a href="' . esc_url($post_url) . '" target="_blank" rel="noopener" title="' . esc_attr($title_attr) . '" style="display:block; text-decoration:none;">';
+                        if ($num_imgs > 1) {
+                            $gallery_html .= '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
+                        } else {
+                            $gallery_html .= '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="max-width:100%; max-height:400px; width:auto; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
+                        }
+                        $gallery_html .= '</a>';
+                    }
+                }
+                $gallery_html .= '</div>';
+            }
+
+            // Mastodon Video / Animated GIF (gifv) embeds
+            if (!empty($videos)) {
+                foreach ($videos as $vmed) {
+                    $is_gifv = ($vmed['type'] === 'gifv');
+                    $v_thumb = esc_url($vmed['preview_url'] ?? '');
+                    $v_url   = esc_url($vmed['url'] ?? '');
+                    $alt_raw = trim($vmed['description'] ?? '');
+                    $alt_txt = esc_attr($alt_raw ?: ($is_gifv ? 'Mastodon animated GIF' : 'Mastodon video'));
+
+                    if ($v_thumb && !$first_image_url) {
+                        $first_image_url = $v_thumb;
+                    }
+
+                    if ($is_gifv && $v_url) {
+                        // Native HTML5 autoplaying looping muted video for GIFV
+                        $gallery_html .= '<div class="social-embed-gifv" style="margin:12px 0; position:relative; border-radius:8px; overflow:hidden; background:#0f172a;">';
+                        $gallery_html .= '<video src="' . $v_url . '" poster="' . $v_thumb . '" autoplay loop muted playsinline style="width:100%; max-height:450px; object-fit:contain; display:block;"></video>';
+                        $gallery_html .= '<span data-nosnippet style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.75); color:#fff; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; letter-spacing:0.5px;">GIF</span>';
+                        $gallery_html .= '</div>';
+                    } else {
+                        // Video with preview poster & play overlay linking to Mastodon
+                        $gallery_html .= '<div class="social-embed-video" style="margin:12px 0; position:relative; border-radius:8px; overflow:hidden; background:#000;">';
+                        $gallery_html .= '<a href="' . esc_url($post_url) . '" target="_blank" rel="noopener" title="Watch video on Mastodon" style="display:block; position:relative; text-decoration:none;">';
+                        if ($v_thumb) {
+                            $gallery_html .= '<img src="' . $v_thumb . '" alt="' . $alt_txt . '" style="width:100%; max-height:450px; object-fit:contain; display:block; background:#0f172a;" />';
+                        } else {
+                            $gallery_html .= '<div style="height:220px; width:100%; background:#0f172a; display:flex; align-items:center; justify-content:center;"></div>';
+                        }
+                        $gallery_html .= '<div class="social-video-play-btn" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:56px; height:56px; border-radius:50%; background:rgba(15,23,42,0.85); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.5); border:2px solid rgba(255,255,255,0.8);">';
+                        $gallery_html .= '<span style="color:#ffffff; font-size:22px; margin-left:3px; line-height:1;">▶</span>';
+                        $gallery_html .= '</div>';
+                        $gallery_html .= '<span data-nosnippet style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.75); color:#fff; font-size:11px; font-weight:700; padding:2px 6px; border-radius:4px; letter-spacing:0.5px;">VIDEO ↗</span>';
+                        $gallery_html .= '</a>';
+                        $gallery_html .= '</div>';
+                    }
+                }
+            }
+        }
+
+        $has_card = false;
+        $primary_card_url = '';
+
+        if (!empty($post_data['card']) && is_array($post_data['card'])) {
+            $card       = $post_data['card'];
+            $card_url   = esc_url_raw($card['url'] ?? '');
+            $card_title = $card['title'] ?? '';
+            $card_desc  = $card['description'] ?? '';
+            $card_thumb = esc_url_raw($card['image'] ?? '');
+            $card_prov  = $card['provider_name'] ?? '';
+
+            if (!$card_thumb && $card_url) {
+                $card_thumb = social_get_og_image_cached($card_url);
+            }
+
+            if (!$first_image_url && $card_thumb) {
+                $first_image_url = $card_thumb;
+            }
+
+            if ($card_url && ($card_title || $card_thumb)) {
+                $domain = parse_url($card_url, PHP_URL_HOST);
+                $card_html .= social_render_link_card_html($card_url, $card_title, $card_desc, $card_thumb, $card_prov ?: $domain);
+                $has_card = true;
+                $primary_card_url = $card_url;
+            }
+        }
+
+        // Fallback: If Mastodon post has links but no card attached, fetch OG card
+        if (!$has_card && !empty($extracted_urls[0])) {
+            $target_url = $extracted_urls[0];
+            $og_card = social_get_og_card_cached($target_url);
+            if ($og_card && (!empty($og_card['title']) || !empty($og_card['image']))) {
+                if (!$first_image_url && !empty($og_card['image'])) {
+                    $first_image_url = $og_card['image'];
+                }
+                $card_html .= social_render_link_card_html(
+                    $target_url,
+                    $og_card['title'] ?? '',
+                    $og_card['description'] ?? '',
+                    $og_card['image'] ?? '',
+                    $og_card['domain'] ?? parse_url($target_url, PHP_URL_HOST)
+                );
+                $has_card = true;
+                $primary_card_url = $target_url;
+            } elseif (!$first_image_url) {
+                $fallback_thumb = social_get_og_image_cached($target_url);
+                if ($fallback_thumb) $first_image_url = $fallback_thumb;
+            }
+        }
+
+        // Preview card comes before image galleries/media
+        $media_html = $card_html . $gallery_html;
+
+        $body_html = social_clean_mastodon_html($body_content, $has_card, $primary_card_url);
+        $clean_text = trim(preg_replace('/#[\p{L}\p{N}_]+/u', '', $clean_text));
+
+        $item_data = [
+            'network'        => 'mastodon',
+            'timestamp'      => $created_at,
+            'text'           => $clean_text,
+            'body_html'      => $body_html,
+            'author_name'    => $author_name,
+            'author_handle'  => $full_acct,
+            'author_avatar'  => $author_avatar,
+            'media_html'     => $media_html,
+            'thumb_image'    => $first_image_url,
+            'is_repost'        => $is_reblog,
+            'repost_user'      => $clean_handle,
+            'post_uri'         => $post_data['id'] ?? '',
+            'reply_root_uri'   => $post_data['in_reply_to_id'] ?? ($post_data['id'] ?? ''),
+            'reply_parent_uri' => $post_data['in_reply_to_id'] ?? '',
+            'platform_links'   => [
+                'mastodon' => [
+                    'url'         => $post_url,
+                    'profile_url' => $author_profile_url,
+                    'handle'      => $full_acct,
+                    'avatar'      => $author_avatar,
+                    'favs'        => $fav_count,
+                    'boosts'      => $boost_count,
+                ]
+            ],
+            'extra_tags'     => [],
+            'urls'           => array_values(array_unique($extracted_urls))
+        ];
+
+        $item_data['html'] = social_render_native_card($item_data, $opts);
+        $items[] = $item_data;
+    }
+
+    return ['posts' => $items, 'newest_timestamp' => $newest_timestamp];
+}
+
+// ==========================================
+// 4. WORKBENCH LOGIC & DATA HELPERS
+// ==========================================
+
+function social_workbench_state() {
+    $state = get_option('social_digest_next_run', []);
+    return is_array($state) ? $state : [];
+}
+
+function social_save_workbench_state($state) {
+    update_option('social_digest_next_run', $state, false);
+}
+
+function social_clear_workbench_state() {
+    delete_option('social_digest_next_run');
+}
+
+function social_make_candidate_key($html, $index) {
+    $plain = trim(wp_strip_all_tags($html));
+    return 'item_' . substr(md5($plain . '|' . $index), 0, 16);
+}
+
+function social_collapse_thread_posts($eligible, $opts) {
+    if (isset($opts['collapse_threads']) && empty($opts['collapse_threads'])) {
+        return $eligible;
+    }
+    if (count($eligible) < 2) {
+        return $eligible;
+    }
+
+    usort($eligible, function($a, $b) {
+        return (int)($a['timestamp'] ?? 0) <=> (int)($b['timestamp'] ?? 0);
+    });
+
+    $parents = [];
+    $threads = [];
+
+    foreach ($eligible as $idx => $item) {
+        $author = strtolower(trim($item['author_handle'] ?? ''));
+        $post_uri = $item['post_uri'] ?? '';
+        $parent_uri = $item['reply_parent_uri'] ?? '';
+        $root_uri = $item['reply_root_uri'] ?? '';
+
+        $found_parent = null;
+        if ($author !== '' && !empty($parent_uri)) {
+            foreach ($parents as $p_idx => $parent_item) {
+                if (strtolower(trim($parent_item['author_handle'] ?? '')) === $author) {
+                    $p_uri = $parent_item['post_uri'] ?? '';
+                    $p_root = $parent_item['reply_root_uri'] ?? '';
+                    if ($p_uri === $parent_uri || $p_uri === $root_uri || ($p_root !== '' && $p_root === $root_uri)) {
+                        $found_parent = $p_idx;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if ($found_parent !== null) {
+            $threads[$found_parent][] = $item;
+        } else {
+            $parents[$idx] = $item;
+        }
+    }
+
+    if (empty($threads)) {
+        return $eligible;
+    }
+
+    $collapsed = [];
+    foreach ($parents as $p_idx => $parent_item) {
+        if (!empty($threads[$p_idx])) {
+            $child_posts = $threads[$p_idx];
+            $child_count = count($child_posts);
+
+            $thread_html = '<details class="social-thread-collapse" data-nosnippet style="margin-top:14px; border-top:1px dashed #cbd5e1; padding-top:10px;">';
+            $thread_html .= '<summary style="cursor:pointer; font-weight:700; font-size:13px; color:#0284c7; outline:none; display:inline-flex; align-items:center; gap:6px; user-select:none;">';
+            $thread_html .= '<span>🧵 View full thread (' . $child_count . ' follow-up post' . ($child_count > 1 ? 's' : '') . ')</span>';
+            $thread_html .= '</summary>';
+            $thread_html .= '<div class="social-thread-replies" style="margin-top:10px; padding-left:12px; border-left:3px solid #0284c7; display:flex; flex-direction:column; gap:12px;">';
+
+            foreach ($child_posts as $child) {
+                $c_body = !empty($child['body_html']) ? $child['body_html'] : social_clean_body_text($child['text'] ?? '', false);
+                $c_media = $child['media_html'] ?? '';
+                $c_date = wp_date(get_option('date_format') . ' ' . get_option('time_format'), (int)$child['timestamp'], wp_timezone());
+
+                $thread_html .= '<div class="social-thread-reply-item" style="font-size:14px; line-height:1.5; color:#334155;">';
+                $thread_html .= '<div style="font-size:11px; color:#64748b; margin-bottom:4px; font-weight:600;">' . esc_html($c_date) . '</div>';
+                $thread_html .= '<div>' . $c_body . '</div>';
+                if ($c_media) $thread_html .= '<div style="margin-top:8px;">' . $c_media . '</div>';
+                $thread_html .= '</div>';
+
+                $parent_item['text'] .= ' ' . ($child['text'] ?? '');
+                if (!empty($child['extra_tags'])) {
+                    $parent_item['extra_tags'] = array_values(array_unique(array_merge((array)($parent_item['extra_tags'] ?? []), (array)$child['extra_tags'])));
+                }
+            }
+
+            $thread_html .= '</div></details>';
+
+            $parent_item['media_html'] = ($parent_item['media_html'] ?? '') . $thread_html;
+            $parent_item['html'] = social_render_native_card($parent_item, $opts);
+        }
+
+        $collapsed[] = $parent_item;
+    }
+
+    return $collapsed;
+}
+
+function social_fetch_workbench_candidates() {
+    global $wpdb;
+    $opts = get_option('social_digest_options', []);
+    $mode = $opts['network_mode'] ?? 'both';
+    $cross_dedup = !empty($opts['cross_dedup']);
+    $preferred = $opts['preferred_platform'] ?? 'masto_if_longer';
+    $keep_threads = !empty($opts['keep_threads']);
+    $include_reposts = !empty($opts['include_reposts']);
+    $exclude_titles = !empty($opts['exclude_titles']);
+    $exclude_self_syndicated = !isset($opts['exclude_self_syndicated']) || !empty($opts['exclude_self_syndicated']);
+    $excluded_words = $opts['excluded_words'] ?? '';
+    $fetch_order = $opts['fetch_order'] ?? 'newest';
+    $max_posts = max(1, (int)($opts['max_posts'] ?? 20));
+    $min_tag_length = max(1, (int)($opts['min_tag_length'] ?? 3));
+    $max_tags_per_post = max(1, (int)($opts['max_tags_per_post'] ?? 2));
+    $max_total_tags = max(1, (int)($opts['max_total_tags'] ?? 8));
+    $bsky_last = (int)get_option('bsky_last_digest_time', 0);
+    $masto_last = (int)get_option('masto_last_digest_time', 0);
+
+    // Apply max_age_days boundary to prevent massive backlogs on fresh or reset cutoffs
+    $max_age_days = absint($opts['max_age_days'] ?? 0);
+    $age_boundary = ($max_age_days > 0) ? (time() - ($max_age_days * DAY_IN_SECONDS)) : 0;
+    if ($age_boundary > 0) {
+        $bsky_last  = max($bsky_last, $age_boundary);
+        $masto_last = max($masto_last, $age_boundary);
+    }
+
+    $raw = [];
+    $new_bsky = $bsky_last;
+    $new_masto = $masto_last;
+    if ($mode === 'bsky' || $mode === 'both') {
+        $r = social_fetch_bluesky($opts['bsky_handle'] ?? '', $bsky_last, $keep_threads, $include_reposts);
+        $raw = array_merge($raw, (array)($r['posts'] ?? []));
+        $new_bsky = (int)($r['newest_timestamp'] ?? $bsky_last);
+    }
+    if ($mode === 'mastodon' || $mode === 'both') {
+        $r = social_fetch_mastodon($opts['masto_handle'] ?? '', $masto_last, $keep_threads, $include_reposts);
+        $raw = array_merge($raw, (array)($r['posts'] ?? []));
+        $new_masto = (int)($r['newest_timestamp'] ?? $masto_last);
+    }
+
+    // Notice: Do NOT fall back to historical posts when the network query yields no new posts.
+    // If the cutoff was manually set to "Right Now" or a recent publish, empty queue is the correct result.
+    if (!$raw) {
+        $empty_state = [
+            'created' => time(),
+            'preview' => ['title' => '', 'tags' => [], 'featured_image' => ''],
+            'candidates' => [],
+            'framing_override_enabled' => false,
+            'header_override' => '',
+            'footer_override' => '',
+            'cutoffs' => [
+                'bsky'  => $new_bsky,
+                'masto' => $new_masto,
+            ],
+        ];
+        social_save_workbench_state($empty_state);
+        return [
+            'success' => true,
+            'message' => 'No new posts found since the active cutoff timestamp. Next-run queue is clear.',
+            'state'   => $empty_state
+        ];
+    }
+
+    $normalized_site_titles = [];
+    if ($exclude_titles) {
+        $raw_posts = get_posts([
+            'numberposts' => 100,
+            'post_status' => 'publish',
+            'post_type'   => 'post',
+            'fields'      => 'ids',
+        ]);
+        foreach ($raw_posts as $pid) {
+            $clean = strtolower(trim(preg_replace('/[^\p{L}\p{N}\s]/u', '', html_entity_decode(get_the_title($pid), ENT_QUOTES, 'UTF-8'))));
+            if ($clean !== '') $normalized_site_titles[$clean] = true;
+        }
+    }
+
+    $eligible = [];
+    foreach ($raw as $item) {
+        $text = (string)($item['text'] ?? '');
+        $skip = false;
+        if ($age_boundary > 0 && (int)($item['timestamp'] ?? 0) < $age_boundary) {
+            continue;
+        }
+        if ($exclude_self_syndicated && social_post_links_to_site($item)) {
+            continue;
+        }
+        if (!empty($excluded_words) && social_post_matches_filter($text, $excluded_words)) {
+            continue;
+        }
+        if ($exclude_titles && $normalized_site_titles) {
+            $without_urls = preg_replace('/\bhttps?:\/\/\S+/i', '', $text);
+            $norm = strtolower(trim(preg_replace('/[^\p{L}\p{N}\s]/u', '', html_entity_decode($without_urls, ENT_QUOTES, 'UTF-8'))));
+            if (isset($normalized_site_titles[$norm])) continue;
+            foreach ($normalized_site_titles as $title => $_) {
+                if (mb_strlen($title) >= 12 && strpos($norm, $title) !== false) { $skip = true; break; }
+            }
+            if ($skip) continue;
+        }
+        $item['timestamp'] = (int)($item['timestamp'] ?? 0);
+        $eligible[] = $item;
+    }
+
+    if ($mode === 'both' && $cross_dedup) {
+        $bsky = []; $masto = [];
+        foreach ($eligible as $p) {
+            if (($p['network'] ?? '') === 'bsky') $bsky[] = $p; else $masto[] = $p;
+        }
+        $merged = []; $matched = [];
+        foreach ($bsky as $bp) {
+            $winner = $bp; $secondary = null; $mi = null;
+            foreach ($masto as $i => $mp) {
+                if (isset($matched[$i])) continue;
+                if (social_check_posts_match($bp, $mp)) { $secondary = $mp; $mi = $i; break; }
+            }
+            if ($secondary !== null) {
+                $matched[$mi] = true;
+                $prefer_masto = false;
+                if ($preferred === 'masto_if_longer' || $preferred === 'longest') {
+                    $prefer_masto = social_get_clean_text_length($secondary['text'] ?? '') > social_get_clean_text_length($bp['text'] ?? '');
+                } elseif ($preferred === 'mastodon') {
+                    $prefer_masto = true;
+                }
+                if ($prefer_masto) { $winner = $secondary; $secondary = $bp; }
+                $winner_tags = array_merge((array)($winner['extra_tags'] ?? []), preg_match_all('/#(\w+)/u', $winner['text'] ?? '', $wm) ? $wm[1] : []);
+                $secondary_tags = array_merge((array)($secondary['extra_tags'] ?? []), preg_match_all('/#(\w+)/u', $secondary['text'] ?? '', $sm) ? $sm[1] : []);
+                $winner['extra_tags'] = array_values(array_unique(array_merge($winner_tags, array_diff($secondary_tags, $winner_tags))));
+                if (empty($winner['thumb_image']) && !empty($secondary['thumb_image'])) $winner['thumb_image'] = $secondary['thumb_image'];
+
+                // Merge platform links for dual-network footer actions
+                $winner_links = (array)($winner['platform_links'] ?? []);
+                $secondary_links = (array)($secondary['platform_links'] ?? []);
+                $winner['platform_links'] = array_merge($winner_links, $secondary_links);
+
+                // If winner didn't have link card but secondary did, merge media preview
+                if (strpos($winner['media_html'] ?? '', 'social-link-card') === false && strpos($secondary['media_html'] ?? '', 'social-link-card') !== false) {
+                    $winner['media_html'] = ($winner['media_html'] ?? '') . $secondary['media_html'];
+                }
+
+                // Re-render native card HTML with merged dual-platform links and metadata
+                $winner['html'] = social_render_native_card($winner, $opts);
+            }
+            $merged[] = $winner;
+        }
+        foreach ($masto as $i => $mp) if (!isset($matched[$i])) $merged[] = $mp;
+        $eligible = $merged;
+    }
+
+    // Group multi-post threads into unified master cards if enabled before slicing count
+    $eligible = social_collapse_thread_posts($eligible, $opts);
+
+    // Re-sort newest-first so max_posts slice and chronological thumbnail extraction are strictly accurate
+    usort($eligible, function($a, $b) { return (int)($b['timestamp'] ?? 0) <=> (int)($a['timestamp'] ?? 0); });
+    if (count($eligible) > $max_posts) $eligible = array_slice($eligible, 0, $max_posts);
+    if (!$eligible) return ['success' => false, 'message' => 'No eligible posts are available after filtering and deduplication.'];
+
+    // Preserve chronological list (newest first) for thumbnail selection so 'exclude_first' always excludes the most recent post in time
+    $chronological_posts = $eligible;
+
+    // Apply display ordering preference (reverse chronological, chronological, or random)
+    $display_order = $opts['display_order'] ?? 'reverse';
+    if ($display_order === 'chronological' || $display_order === 'oldest') {
+        usort($eligible, function($a, $b) { return (int)$a['timestamp'] <=> (int)$b['timestamp']; });
+    } elseif ($display_order === 'random') {
+        shuffle($eligible);
+    } else {
+        usort($eligible, function($a, $b) { return (int)$b['timestamp'] <=> (int)$a['timestamp']; });
+    }
+
+    $candidates = [];
+    foreach ($eligible as $i => $item) {
+        $html = wp_kses_post($item['html'] ?? '');
+        if ($html === '') continue;
+        $key = social_make_candidate_key($html, $i);
+        $url = '';
+        if (!empty($item['urls'][0])) $url = esc_url_raw($item['urls'][0]);
+        $candidates[] = [
+            'key' => $key,
+            'network' => ($item['network'] ?? '') === 'mastodon' ? 'Mastodon' : 'Bluesky',
+            'timestamp' => (int)$item['timestamp'],
+            'html' => $html,
+            'text' => wp_trim_words(wp_strip_all_tags($item['text'] ?? ''), 55, '…'),
+            'full_text' => (string)($item['text'] ?? ''),
+            'url' => $url,
+            'thumb_image' => esc_url_raw($item['thumb_image'] ?? ''),
+            'extra_tags' => (array)($item['extra_tags'] ?? []),
+            'excluded' => false,
+            'pinned' => false,
+            'commentary' => '',
+        ];
+    }
+
+    $featured = '';
+    $featured_post_tags = [];
+    if (!empty($opts['auto_thumb'])) {
+        $thumbs = [];
+        $ordered = $chronological_posts;
+        if (($opts['thumb_selection_scope'] ?? 'exclude_first') === 'exclude_first') $ordered = array_slice($ordered, 1);
+        foreach ($ordered as $p) if (!empty($p['thumb_image'])) $thumbs[] = $p;
+        if (!$thumbs) foreach ($chronological_posts as $p) if (!empty($p['thumb_image'])) $thumbs[] = $p;
+        if ($thumbs) {
+            $mode_thumb = $opts['thumb_selection_mode'] ?? 'random';
+            if ($mode_thumb === 'random') $sel = $thumbs[array_rand($thumbs)];
+            else $sel = $thumbs[min(count($thumbs)-1, max(0, (int)$mode_thumb-1))];
+            
+            $featured = esc_url_raw($sel['thumb_image']);
+            $featured_post_tags = array_merge((array)($sel['extra_tags'] ?? []), preg_match_all('/#(\w+)/u', $sel['text'] ?? '', $tm) ? $tm[1] : []);
+            $featured_post_tags = array_values(array_unique(array_filter($featured_post_tags, fn($t) => mb_strlen($t) >= $min_tag_length)));
+        }
+    }
+
+    $raw_tags = [];
+    $post_tags_list = [];
+    
+    // Add the featured post tags first so they are prioritized for the title
+    if (!empty($featured_post_tags)) {
+        $post_tags_list[] = $featured_post_tags;
+    }
+
+    foreach ($eligible as $item) {
+        $tags = array_merge((array)($item['extra_tags'] ?? []), preg_match_all('/#(\w+)/u', $item['text'] ?? '', $tm) ? $tm[1] : []);
+        $valid_post_tags = array_slice(array_values(array_unique(array_filter($tags, fn($t) => mb_strlen($t) >= $min_tag_length))), 0, $max_tags_per_post);
+        $raw_tags = array_merge($raw_tags, $valid_post_tags);
+        if (!empty($valid_post_tags)) {
+            $post_tags_list[] = $valid_post_tags;
+        }
+    }
+    
+    $title_hashtags = social_rank_and_format_title_tags($post_tags_list, $opts['default_tags'] ?? '', $opts['title_tag_enclosure'] ?? 'parentheses', $opts['title_tag_delimiter'] ?? 'oxford');    
+    $tag_map = [];
+    foreach (array_filter(array_map('trim', explode(',', $opts['default_tags'] ?? ''))) as $tag) $tag_map[mb_strtolower($tag)] = $tag;
+    foreach ($raw_tags as $tag) $tag_map[mb_strtolower($tag)] = $tag;
+    $tags = array_slice(array_values($tag_map), 0, $max_total_tags);
+    $title_tpl = $opts['title_template'] ?? 'Social Digest {hashtags}';
+    $title = trim(preg_replace('/\s*[:\-–]\s*$/u', '', preg_replace('/\s+/', ' ', str_replace(['{hashtags}','{date}','{count}'], [$title_hashtags, wp_date(get_option('date_format'), time(), wp_timezone()), count($candidates)], $title_tpl))));
+
+
+    $next = [
+        'created' => time(),
+        'preview' => ['title' => $title, 'tags' => $tags, 'featured_image' => $featured],
+        'candidates' => $candidates,
+        'framing_override_enabled' => false,
+        'header_override' => '',
+        'footer_override' => '',
+        'cutoffs' => [
+            'bsky'  => $new_bsky,
+            'masto' => $new_masto,
+        ],
+    ];
+    social_save_workbench_state($next);
+    return ['success' => true, 'message' => 'Fetched the next-run candidates.', 'state' => $next];
+}
+
+function social_sanitize_next_run($input) {
+    $old = social_workbench_state();
+    $out = $old;
+    $out['candidates'] = [];
+    $old_candidates = [];
+    foreach ((array)($old['candidates'] ?? []) as $c) {
+        if (!empty($c['key'])) $old_candidates[$c['key']] = $c;
+    }
+    
+    $pinned_key   = sanitize_key($input['pinned_lead_post'] ?? '');
+    $featured_sel = sanitize_key($input['selected_featured_post'] ?? '');
+
+    if ($featured_sel === 'none') {
+        $out['featured_image_override_key'] = 'none';
+        $out['preview']['featured_image']   = '';
+    } elseif ($featured_sel !== '' && $featured_sel !== 'auto' && isset($old_candidates[$featured_sel]) && !empty($old_candidates[$featured_sel]['thumb_image'])) {
+        $out['featured_image_override_key'] = $featured_sel;
+        $out['preview']['featured_image']   = esc_url_raw($old_candidates[$featured_sel]['thumb_image']);
+    } else {
+        $out['featured_image_override_key'] = 'auto';
+    }
+
+    foreach ((array)($input['candidate'] ?? []) as $key => $raw) {
+        $key = sanitize_key($key);
+        if (!$key || !isset($old_candidates[$key])) continue;
+        $base = $old_candidates[$key];
+        $base['excluded']   = !empty($raw['excluded']);
+        $base['pinned']     = ($key === $pinned_key && empty($base['excluded']));
+        $base['commentary'] = sanitize_textarea_field($raw['commentary'] ?? '');
+        $out['candidates'][] = $base;
+    }
+
+    $out['framing_override_enabled'] = !empty($input['framing_override_enabled']);
+
+    // Parse the unified TinyMCE visual editor split by <!--digest_split-->
+    $raw_content = $input['workbench_unified_content'] ?? '';
+    $cleaned_raw = preg_replace('/<p[^>]*class=["\'][^"\']*social-digest-split-marker[^"\']*["\'][^>]*>.*?<!--digest_split-->.*?<\/p>/is', '<!--digest_split-->', $raw_content);
+
+    if (strpos($cleaned_raw, '<!--digest_split-->') !== false) {
+        $parts = explode('<!--digest_split-->', $cleaned_raw, 2);
+        $out['header_override'] = wp_kses_post(trim($parts[0]));
+        $out['footer_override'] = wp_kses_post(trim($parts[1]));
+    } else {
+        $out['header_override'] = wp_kses_post(trim($cleaned_raw));
+        $out['footer_override'] = '';
+    }
+
+    return $out;
+}
+
+function social_build_workbench_content($state) {
+    $opts = get_option('social_digest_options', []);
+    $selected = [];
+    $pinned_block = null;
+
+    foreach ((array)($state['candidates'] ?? []) as $c) {
+        if (!empty($c['excluded'])) continue;
+        $block = wp_kses_post((string)($c['html'] ?? ''));
+        if ($block === '') continue;
+        $commentary = trim((string)($c['commentary'] ?? ''));
+        if ($commentary !== '') {
+            $block = '<div class="social-digest-editorial-commentary" style="margin:0 0 10px 0;padding:10px 12px;border-left:4px solid #f59e0b;background:#fffbeb;color:#92400e;">' . esc_html($commentary) . '</div>' . $block;
+        }
+
+        if (!empty($c['pinned'])) {
+            $pinned_block = '<div class="social-digest-pinned-story" style="margin-bottom:20px;">' . $block . '</div>';
+        } else {
+            $selected[] = $block;
+        }
+    }
+
+    if ($pinned_block) {
+        array_unshift($selected, $pinned_block);
+    }
+
+    if (!$selected) return ['success' => false, 'message' => 'No articles are selected for the next run.'];
+
+    $use_override = !empty($state['framing_override_enabled']);
+    $header = $use_override ? trim($state['header_override'] ?? '') : trim($opts['header_text'] ?? '');
+    $footer = $use_override ? trim($state['footer_override'] ?? '') : trim($opts['footer_text'] ?? '');
+
+    if (!empty($opts['nosnippet_header']) && $header !== '') $header = '<section data-nosnippet class="social-digest-header">' . $header . '</section>';
+    if (!empty($opts['nosnippet_footer']) && $footer !== '') $footer = '<section data-nosnippet class="social-digest-footer">' . $footer . '</section>';
+
+    $use_blocks = !isset($opts['output_gutenberg_blocks']) || !empty($opts['output_gutenberg_blocks']);
+
+    if ($use_blocks && (function_exists(__NAMESPACE__ . '\\social_wrap_as_gutenberg_block') || function_exists('social_wrap_as_gutenberg_block'))) {
+        $block_elements = [];
+        if ($header !== '') {
+            $block_elements[] = social_wrap_as_gutenberg_block($header, 'core/html');
+        }
+        foreach ($selected as $s_card) {
+            $block_elements[] = social_wrap_as_gutenberg_block($s_card, 'core/html');
+        }
+        if ($footer !== '') {
+            $block_elements[] = social_wrap_as_gutenberg_block($footer, 'core/html');
+        }
+        $content = implode("\n\n", $block_elements);
+    } else {
+        $content = ($header !== '' ? $header . "\n\n" : '') . implode("\n\n", $selected) . ($footer !== '' ? "\n\n" . $footer : '');
+    }
+
+    return ['success' => true, 'content' => $content, 'count' => count($selected)];
+}
+
+function social_publish_workbench_run($state, $force_status = null) {
+    try {
+        if (function_exists('wp_raise_memory_limit')) {
+            wp_raise_memory_limit('admin');
+        }
+
+        $opts = get_option('social_digest_options', []);
+        $min = (int)($opts['min_posts'] ?? 1);
+        $built = social_build_workbench_content($state);
+        if (empty($built['success'])) return $built;
+        if ($built['count'] < $min) {
+            return ['success' => false, 'message' => "Threshold not met: {$built['count']} selected article(s); minimum required is {$min}."];
+        }
+
+        global $wpdb;
+        $title = sanitize_text_field($state['preview']['title'] ?? 'Social Digest');
+        $base_title = trim(preg_replace('/\s*[:\-–]\s*$/u', '', preg_replace('/\s+/', ' ', $title)));
+        $today = wp_date('Y-m-d', time(), wp_timezone());
+        $count_today = (int)$wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(ID) FROM {$wpdb->posts} WHERE post_title LIKE %s AND post_date LIKE %s AND post_status IN ('publish','draft','pending','future')",
+            $wpdb->esc_like($base_title) . '%', $today . '%'
+        ));
+        if ($count_today > 0) {
+            $suffix = $opts['same_day_suffix_tpl'] ?? ' (Part {part})';
+            $title = $base_title . str_replace('{part}', (string)($count_today + 1), $suffix);
+        }
+
+        $author_id = absint($opts['post_author'] ?? get_current_user_id());
+        if ($author_id === 0) {
+            $author_id = get_current_user_id();
+        }
+
+        $status_to_use = ($force_status !== null) ? $force_status : ($opts['post_status'] ?? 'publish');
+
+        // Generate post excerpt
+        $post_excerpt = '';
+        if (!empty($opts['excerpt_first_lines'])) {
+            $delim_key = $opts['excerpt_delimiter'] ?? 'slash';
+            $custom_delim = $opts['excerpt_custom_delimiter'] ?? ' // ';
+            $delim_map = [
+                'slash'    => ' // ',
+                'ellipsis' => ' ... ',
+                'period'   => '. ',
+                'dash'     => ' — ',
+                'bullet'   => ' • ',
+                'custom'   => $custom_delim,
+            ];
+            $delim = $delim_map[$delim_key] ?? ' // ';
+            $max_items = absint($opts['excerpt_max_items'] ?? 0);
+            $post_excerpt = social_build_first_lines_excerpt($state['candidates'] ?? [], $delim, $max_items);
+        }
+
+        if (empty($post_excerpt)) {
+            // Generate standard clean, plain-text excerpt fallback
+            $use_override = !empty($state['framing_override_enabled']);
+            $header = $use_override ? trim($state['header_override'] ?? '') : trim($opts['header_text'] ?? '');
+            $excerpt_text = wp_strip_all_tags($header) . ' ';
+            foreach ((array)($state['candidates'] ?? []) as $c) {
+                if (!empty($c['excluded'])) continue;
+                $excerpt_text .= wp_strip_all_tags($c['full_text'] ?? $c['text'] ?? '') . ' ';
+            }
+            $post_excerpt = wp_trim_words(trim($excerpt_text), 55, ' [&hellip;]');
+        }
+
+        $post_args = [
+            'post_title'   => $title,
+            'post_content' => $built['content'],
+            'post_excerpt' => $post_excerpt,
+            'post_status'  => $status_to_use,
+            'post_author'  => $author_id,
+            'post_type'    => 'post',
+            'tags_input'   => array_values(array_map('sanitize_text_field', (array)($state['preview']['tags'] ?? []))),
+        ];
+        if (!empty($opts['categories']) && is_array($opts['categories'])) {
+            $post_args['post_category'] = array_map('absint', $opts['categories']);
+        }
+
+        $post_id = wp_insert_post($post_args, true);
+        if (is_wp_error($post_id)) {
+            return ['success' => false, 'message' => 'Post creation failed: ' . $post_id->get_error_message()];
+        }
+        if (!empty($opts['rss_only_mode'])) {
+            update_post_meta($post_id, '_social_digest_rss_only', 1);
+        }
+
+        // Sideload all embedded post media attachments into Media Library if enabled
+        if (!empty($opts['sideload_all_media'])) {
+            $updated_content = social_sideload_content_media($built['content'], $post_id);
+            if ($updated_content !== $built['content']) {
+                wp_update_post([
+                    'ID'           => $post_id,
+                    'post_content' => $updated_content,
+                ]);
+            }
+        }
+
+        if (!empty($state['preview']['featured_image'])) {
+            $attachment_id = social_sideload_image_by_mime($state['preview']['featured_image'], $post_id, $title);
+            if ($attachment_id) {
+                set_post_thumbnail($post_id, $attachment_id);
+            }
+        }
+
+        // Advance cutoff timestamps on successful publish or draft creation
+        $new_bsky = (int)($state['cutoffs']['bsky'] ?? 0);
+        $new_masto = (int)($state['cutoffs']['masto'] ?? 0);
+
+        if ($new_bsky <= 0 || $new_masto <= 0) {
+            foreach ((array)($state['candidates'] ?? []) as $cand) {
+                $cand_ts = (int)($cand['timestamp'] ?? 0);
+                $net = strtolower($cand['network'] ?? '');
+                if ($net === 'bluesky' && $cand_ts > $new_bsky) {
+                    $new_bsky = $cand_ts;
+                } elseif ($net === 'mastodon' && $cand_ts > $new_masto) {
+                    $new_masto = $cand_ts;
+                }
+            }
+        }
+
+        if ($new_bsky > 0) {
+            update_option('bsky_last_digest_time', $new_bsky);
+        }
+        if ($new_masto > 0) {
+            update_option('masto_last_digest_time', $new_masto);
+        }
+
+        $status_label = ($status_to_use === 'draft') ? 'Draft created' : 'Digest published';
+        social_log_run(true, "Workbench {$status_label} (ID: {$post_id}) with {$built['count']} article(s).", $post_id);
+        return ['success' => true, 'post_id' => $post_id, 'status' => $status_to_use, 'message' => "{$status_label} (ID: {$post_id}) with {$built['count']} selected article(s)."];
+    } catch (\Throwable $e) {
+        return ['success' => false, 'message' => 'Fatal runtime error publishing digest: ' . $e->getMessage()];
+    }
+}
+
+// ==========================================
+// 8. SCHEDULED RUNNER & DRY-RUN SIMULATOR
+// ==========================================
+
+function social_run_digest_import($is_dry_run = false) {
+    $state_res = social_fetch_workbench_candidates();
+    if (empty($state_res['success'])) return $state_res;
+    return social_publish_workbench_run($state_res['state']);
+}
+
+// ==========================================
+// 3. ADMIN SETTINGS, TABS & WORKBENCH ACTIONS
+// ==========================================
+
+add_action('admin_menu', function() {
+    // Primary placement: Submenu directly under Posts (defaults to Actions & Preview)
+    add_submenu_page(
+        'edit.php',
+        'Social Digest',
+        'Social Digest',
+        'manage_options',
+        'social-digest-settings',
+        __NAMESPACE__ . '\\social_render_settings_page'
+    );
+
+    // Backwards-compatibility: Keep Settings -> Social Digest registered
+    add_options_page(
+        'Social Digest Settings',
+        'Social Digest',
+        'manage_options',
+        'social-digest-settings',
+        __NAMESPACE__ . '\\social_render_settings_page'
+    );
+});
+
+// Top WordPress Admin Bar Quick-Access Shortcut
+add_action('admin_bar_menu', function($wp_admin_bar) {
+    if (!is_object($wp_admin_bar) || !method_exists($wp_admin_bar, 'add_node') || !current_user_can('manage_options')) return;
+
+    $wp_admin_bar->add_node([
+        'id'    => 'social_digest_admin_bar',
+        'title' => '<span class="ab-icon dashicons dashicons-share" style="top:2px;"></span><span class="ab-label">Social Digest</span>',
+        'href'  => admin_url('edit.php?page=social-digest-settings&tab=workbench'),
+    ]);
+
+    $wp_admin_bar->add_node([
+        'id'     => 'social_digest_bar_actions',
+        'parent' => 'social_digest_admin_bar',
+        'title'  => '⚡ Actions &amp; Preview',
+        'href'   => admin_url('edit.php?page=social-digest-settings&tab=workbench'),
+    ]);
+
+    $wp_admin_bar->add_node([
+        'id'     => 'social_digest_bar_settings',
+        'parent' => 'social_digest_admin_bar',
+        'title'  => '⚙️ Settings',
+        'href'   => admin_url('edit.php?page=social-digest-settings&tab=settings'),
+    ]);
+}, 90);
+
+add_action('admin_init', function() {
+    register_setting('social_digest_group', 'social_digest_options', [
+        'type'              => 'array',
+        'sanitize_callback' => __NAMESPACE__ . '\\social_sanitize_settings',
+        'default'           => [
+            'network_mode'           => 'both',
+            'avatar_source'          => 'auto',
+            'bsky_handle'            => '',
+            'masto_handle'           => '',
+            'fediverse_creator'      => '',
+            'cross_dedup'            => 1,
+            'preferred_platform'     => 'masto_if_longer',
+            'schedule_freq'          => 'interval_days',
+            'schedule_interval_days' => 1,
+            'schedule_time'          => '17:00',
+            'min_posts'              => 3,
+            'max_posts'              => 20,
+            'max_age_days'           => 0,
+            'auto_thumb'             => 1,
+            'thumb_selection_scope'  => 'exclude_first',
+            'thumb_selection_mode'   => 'random',
+            'convert_modern_media'   => 1,
+            'cache_local_assets'     => 1,
+            'generate_srcsets'       => 1,
+            'enable_staging_queue'   => 0,
+            'rss_only_mode'          => 0,
+            'output_gutenberg_blocks'=> 1,
+            'excerpt_fold_limit'     => 400,
+            'fetch_order'            => 'newest',
+            'display_order'          => 'reverse',
+            'post_status'            => 'publish',
+            'post_author'            => 1,
+            'categories'             => [],
+            'default_tags'           => 'Social Digest, Roundup',
+            'extract_tags'           => 1,
+            'max_tags_per_post'      => 2,
+            'max_total_tags'         => 8,
+            'min_tag_length'         => 3,
+            'keep_threads'           => 1,
+            'include_reposts'        => 0,
+            'exclude_titles'         => 0,
+            'exclude_self_syndicated'=> 1,
+            'title_template'         => 'Social Digest {hashtags}',
+            'title_tag_enclosure'    => 'parentheses',
+            'title_tag_delimiter'    => 'oxford',
+            'same_day_suffix_tpl'    => ' (Part {part})',
+            'excluded_words'         => '#ad, sponsored',
+            'header_text'            => '<p>Here is what we shared across social channels today:</p>',
+            'footer_text'            => '<hr><p>Follow us directly on social media for real-time updates!</p>',
+            'nosnippet_header'       => 1,
+            'nosnippet_footer'       => 1,
+            'wipe_data_on_uninstall' => 1
+        ]
+    ]);
+
+    // Workbench Form Handlers
+    if (!current_user_can('manage_options')) return;
+    if (empty($_GET['page']) || $_GET['page'] !== 'social-digest-settings') return;
+
+    if (isset($_POST['sd53_fetch']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+        $result = social_fetch_workbench_candidates();
+        add_settings_error('sd53', 'fetch', $result['message'], !empty($result['success']) ? 'updated' : 'error');
+    }
+
+    if (isset($_POST['sd53_save']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+        social_save_workbench_state(social_sanitize_next_run($_POST));
+        add_settings_error('sd53', 'save', 'Next-run editorial changes saved.', 'updated');
+    }
+
+    if (isset($_POST['sd53_reset']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+        social_clear_workbench_state();
+        add_settings_error('sd53', 'reset', 'Next-run workbench reset.', 'updated');
+    }
+
+    if (isset($_POST['sd53_publish']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+        $state = social_sanitize_next_run($_POST);
+        social_save_workbench_state($state);
+        $result = social_publish_workbench_run($state, 'publish');
+        if (!empty($result['success'])) {
+            social_clear_workbench_state();
+            $post_id = absint($result['post_id'] ?? 1);
+            wp_safe_redirect(admin_url('edit.php?page=social-digest-settings&tab=workbench&sd53_published=' . $post_id));
+            exit;
+        } else {
+            add_settings_error('sd53', 'publish', $result['message'] ?? 'Publishing failed.', 'error');
+        }
+    }
+
+    if (isset($_POST['sd53_save_draft']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+        $state = social_sanitize_next_run($_POST);
+        social_save_workbench_state($state);
+        $result = social_publish_workbench_run($state, 'draft');
+        if (!empty($result['success'])) {
+            social_clear_workbench_state();
+            $post_id = absint($result['post_id'] ?? 1);
+            wp_safe_redirect(admin_url('edit.php?page=social-digest-settings&tab=workbench&sd53_drafted=' . $post_id));
+            exit;
+        } else {
+            add_settings_error('sd53', 'draft', $result['message'] ?? 'Draft creation failed.', 'error');
+        }
+    }
+
+    if (isset($_POST['sd53_manual_run']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+        try {
+            $result = social_run_digest_import(false);
+        } catch (\Throwable $e) {
+            $result = ['success' => false, 'message' => 'Manual run error: ' . $e->getMessage()];
+        }
+        add_settings_error('sd53', 'manual', $result['message'] ?? 'Import failed.', !empty($result['success']) ? 'updated' : 'error');
+    }
+
+    if (isset($_POST['sd53_reset_cutoff']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+        delete_option('bsky_last_digest_time');
+        delete_option('masto_last_digest_time');
+        add_settings_error('sd53', 'cutoff', 'Cutoff markers cleared for both networks.', 'updated');
+    }
+
+    if (isset($_POST['sd53_set_cutoff_now']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+        $now = time();
+        update_option('bsky_last_digest_time', $now);
+        update_option('masto_last_digest_time', $now);
+        $tz = wp_timezone();
+        add_settings_error('sd53', 'cutoff', 'Cutoff markers set to current time (' . esc_html(wp_date('Y-m-d H:i:s T', $now, $tz)) . '). No posts older than this moment will be used.', 'updated');
+    }
+
+    if (isset($_POST['sd53_set_cutoff_custom']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+        $custom_dt = sanitize_text_field($_POST['sd53_custom_cutoff_datetime'] ?? '');
+        if (!empty($custom_dt)) {
+            $tz = wp_timezone();
+            $dt = date_create_immutable($custom_dt, $tz);
+            if ($dt) {
+                $custom_ts = $dt->getTimestamp();
+                update_option('bsky_last_digest_time', $custom_ts);
+                update_option('masto_last_digest_time', $custom_ts);
+                add_settings_error('sd53', 'cutoff', 'Cutoff markers set to ' . esc_html(wp_date('Y-m-d H:i:s T', $custom_ts, $tz)) . '. Posts older than this will be ignored.', 'updated');
+            } else {
+                add_settings_error('sd53', 'cutoff', 'Invalid date/time format provided for custom cutoff.', 'error');
+            }
+        } else {
+            add_settings_error('sd53', 'cutoff', 'Please select a date and time to set a custom cutoff.', 'error');
+        }
+    }
+});
+
+function social_sanitize_settings($input) {
+    $output = [];
+    $output['network_mode']       = in_array($input['network_mode'] ?? '', ['bsky', 'mastodon', 'both']) ? $input['network_mode'] : 'both';
+    $output['avatar_source']      = in_array($input['avatar_source'] ?? '', ['auto', 'bsky', 'mastodon', 'none'], true) ? $input['avatar_source'] : 'auto';
+    $output['bsky_handle']        = sanitize_text_field($input['bsky_handle'] ?? '');
+    $output['masto_handle']       = sanitize_text_field($input['masto_handle'] ?? '');
+    $output['fediverse_creator']  = sanitize_text_field($input['fediverse_creator'] ?? '');
+    $output['cross_dedup']        = !empty($input['cross_dedup']) ? 1 : 0;
+    $allowed_strategies           = ['masto_if_longer', 'longest', 'bsky', 'mastodon'];
+    $output['preferred_platform'] = in_array($input['preferred_platform'] ?? '', $allowed_strategies) ? $input['preferred_platform'] : 'masto_if_longer';
+
+    $allowed_freqs = ['disabled', 'hourly', 'six_hours', 'twelve_hours', 'interval_days'];
+    $output['schedule_freq'] = in_array($input['schedule_freq'] ?? '', $allowed_freqs) ? $input['schedule_freq'] : 'interval_days';
+
+    $output['schedule_interval_days'] = max(1, absint($input['schedule_interval_days'] ?? 1));
+    $raw_time = sanitize_text_field($input['schedule_time'] ?? '17:00');
+    $output['schedule_time'] = preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $raw_time) ? $raw_time : '17:00';
+
+    $output['min_posts']             = max(1, absint($input['min_posts'] ?? 1));
+    $output['max_posts']             = max($output['min_posts'], absint($input['max_posts'] ?? 20));
+    $output['max_age_days']          = absint($input['max_age_days'] ?? 0);
+    $output['auto_thumb']            = !empty($input['auto_thumb']) ? 1 : 0;
+    $output['thumb_selection_scope'] = in_array($input['thumb_selection_scope'] ?? '', ['exclude_first', 'all_posts']) ? $input['thumb_selection_scope'] : 'exclude_first';
+    
+    $allowed_modes = ['random', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+    $output['thumb_selection_mode'] = in_array($input['thumb_selection_mode'] ?? '', $allowed_modes, true) ? $input['thumb_selection_mode'] : 'random';
+
+    $output['convert_modern_media'] = !empty($input['convert_modern_media']) ? 1 : 0;
+    $output['cache_local_assets']   = !empty($input['cache_local_assets']) ? 1 : 0;
+    $output['generate_srcsets']     = !empty($input['generate_srcsets']) ? 1 : 0;
+    $output['sideload_all_media']   = !empty($input['sideload_all_media']) ? 1 : 0;
+    $allowed_dark_modes             = ['auto', 'light', 'dark'];
+    $output['dark_mode_mode']       = in_array($input['dark_mode_mode'] ?? '', $allowed_dark_modes, true) ? $input['dark_mode_mode'] : 'auto';
+
+    $output['enable_staging_queue'] = !empty($input['enable_staging_queue']) ? 1 : 0;
+    $output['rss_only_mode']        = !empty($input['rss_only_mode']) ? 1 : 0;
+    $output['output_gutenberg_blocks'] = !empty($input['output_gutenberg_blocks']) ? 1 : 0;
+    $output['excerpt_fold_limit']   = max(0, absint($input['excerpt_fold_limit'] ?? 400));
+
+    $output['fetch_order']     = in_array($input['fetch_order'] ?? '', ['newest', 'oldest']) ? $input['fetch_order'] : 'newest';
+    $display_order_val         = $input['display_order'] ?? 'reverse';
+    $output['display_order']   = in_array($display_order_val, ['chronological', 'reverse', 'random']) ? $display_order_val : 'reverse';
+    $output['post_status']     = in_array($input['post_status'] ?? '', ['publish', 'draft', 'pending']) ? $input['post_status'] : 'publish';
+    $output['post_author']     = absint($input['post_author'] ?? 1);
+    
+    $output['categories'] = [];
+    if (!empty($input['categories']) && is_array($input['categories'])) {
+        $output['categories'] = array_map('absint', $input['categories']);
+    }
+
+    $output['default_tags']        = sanitize_text_field($input['default_tags'] ?? '');
+    $output['extract_tags']        = !empty($input['extract_tags']) ? 1 : 0;
+    $output['max_tags_per_post']   = max(1, absint($input['max_tags_per_post'] ?? 2));
+    $output['max_total_tags']      = max(1, absint($input['max_total_tags'] ?? 8));
+    $output['min_tag_length']      = max(1, absint($input['min_tag_length'] ?? 3));
+
+    $output['keep_threads']        = !empty($input['keep_threads']) ? 1 : 0;
+    $output['collapse_threads']    = !empty($input['collapse_threads']) ? 1 : 0;
+    $output['mobile_deep_links']   = !empty($input['mobile_deep_links']) ? 1 : 0;
+    $output['include_reposts']     = !empty($input['include_reposts']) ? 1 : 0;
+    $output['exclude_titles']      = !empty($input['exclude_titles']) ? 1 : 0;
+    $output['exclude_self_syndicated'] = !empty($input['exclude_self_syndicated']) ? 1 : 0;
+    $output['title_template']      = sanitize_text_field($input['title_template'] ?? 'Social Digest {hashtags}');
+    
+    $allowed_enclosures = ['parentheses', 'brackets', 'none'];
+    $output['title_tag_enclosure'] = in_array($input['title_tag_enclosure'] ?? '', $allowed_enclosures, true) ? $input['title_tag_enclosure'] : 'parentheses';
+
+    $allowed_delimiters = ['oxford', 'commas', 'ampersand', 'pipe', 'slash'];
+    $output['title_tag_delimiter'] = in_array($input['title_tag_delimiter'] ?? '', $allowed_delimiters, true) ? $input['title_tag_delimiter'] : 'oxford';
+
+    $output['same_day_suffix_tpl'] = sanitize_text_field($input['same_day_suffix_tpl'] ?? ' (Part {part})');
+    $output['excluded_words']      = sanitize_textarea_field($input['excluded_words'] ?? '');
+
+    $raw_unified = $input['unified_content'] ?? '';
+    $cleaned_raw = preg_replace('/<p[^>]*class=["\'][^"\']*social-digest-split-marker[^"\']*["\'][^>]*>.*?<!--digest_split-->.*?<\/p>/is', '<!--digest_split-->', $raw_unified);
+    
+    if (strpos($cleaned_raw, '<!--digest_split-->') !== false) {
+        $parts = explode('<!--digest_split-->', $cleaned_raw, 2);
+        $output['header_text'] = wp_kses_post(trim($parts[0]));
+        $output['footer_text'] = wp_kses_post(trim($parts[1]));
+    } else {
+        $output['header_text'] = wp_kses_post(trim($cleaned_raw));
+        $output['footer_text'] = '';
+    }
+
+    $output['nosnippet_header']       = !empty($input['nosnippet_header']) ? 1 : 0;
+    $output['nosnippet_footer']       = !empty($input['nosnippet_footer']) ? 1 : 0;
+    $output['wipe_data_on_uninstall'] = !empty($input['wipe_data_on_uninstall']) ? 1 : 0;
+
+    $output['excerpt_first_lines']      = !empty($input['excerpt_first_lines']) ? 1 : 0;
+    $allowed_excerpt_delims             = ['slash', 'ellipsis', 'period', 'dash', 'bullet', 'custom'];
+    $output['excerpt_delimiter']        = in_array($input['excerpt_delimiter'] ?? '', $allowed_excerpt_delims, true) ? $input['excerpt_delimiter'] : 'slash';
+    $output['excerpt_custom_delimiter'] = sanitize_text_field($input['excerpt_custom_delimiter'] ?? ' // ');
+    $output['excerpt_max_items']        = absint($input['excerpt_max_items'] ?? 0);
+
+    social_reschedule_cron($output);
+
+    return $output;
+}
+
+// ==========================================
+// 5. SETTINGS & WORKBENCH VIEW RENDERER
+// ==========================================
+
+function social_render_settings_page() {
+    if (!current_user_can('manage_options')) return;
+    $active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'workbench';
+    $opts       = get_option('social_digest_options', []);
+    $site_tz    = wp_timezone();
+    $bsky_last  = get_option('bsky_last_digest_time', 0);
+    $masto_last = get_option('masto_last_digest_time', 0);
+    $next_run   = wp_next_scheduled('social_digest_cron');
+    $all_cats   = get_categories(['hide_empty' => 0]);
+    $selected_cats = (array)($opts['categories'] ?? []);
+
+    $saved_header = $opts['header_text'] ?? '';
+    $saved_footer = $opts['footer_text'] ?? '';
+    $split_marker_html = '<p class="social-digest-split-marker" style="text-align:center; background:#eee; padding:6px; border:1px dashed #999; color:#555; font-weight:bold; user-select:none;"><!--digest_split--> (Header / Footer Split)</p>';
+    $unified_editor_value = trim($saved_header) . "\n\n" . $split_marker_html . "\n\n" . trim($saved_footer);
+    ?>
+    <style>
+        .postbox {
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #ccd0d4;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            margin-bottom: 20px;
+            background: #fff;
+        }
+        .postbox .postbox-header {
+            padding: 8px 14px;
+            background: #f6f7f7;
+            border-bottom: 1px solid #c3c4c7;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+        }
+        .postbox .hndle {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 700;
+            color: #1d2327;
+            cursor: grab;
+            flex-grow: 1;
+        }
+        .postbox .hndle:active { cursor: grabbing; }
+        .postbox .inside { padding: 16px 20px; margin: 0; }
+        .social-sortable-placeholder {
+            border: 2px dashed #2271b1 !important;
+            background: #f0f6fc !important;
+            min-height: 80px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+        }
+        .sd53-grid {
+            display: grid;
+            grid-template-columns: minmax(360px, 5fr) minmax(420px, 7fr);
+            gap: 20px;
+            align-items: start;
+        }
+        @media (max-width: 1024px) {
+            .sd53-grid { grid-template-columns: 1fr; }
+        }
+        .sd53-item { border: 1px solid #dcdcde; border-radius: 6px; margin-bottom: 12px; background: #fff; }
+        .sd53-item.excluded { opacity: .55; background: #f6f6f6; }
+        .sd53-item.is-pinned { border: 2px solid #f59e0b; background: #fffdf5; }
+        .sd53-item.is-featured-thumb { border: 2px solid #10b981; background: #f0fdf4; }
+        .sd53-item.is-pinned.is-featured-thumb { border: 2px solid #f59e0b; outline: 2px solid #10b981; }
+        .sd53-item-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: #f0f6fc;
+            border-bottom: 1px solid #dcdcde;
+            font-size: 11px;
+        }
+        .sd53-item-body { padding: 12px; }
+        .sd53-item-body blockquote { margin: 8px 0 !important; }
+        .sd53-comment { width: 100%; min-height: 55px; box-sizing: border-box; }
+        .sd53-preview { background: #fff; border: 1px solid #dcdcde; border-radius: 6px; overflow: hidden; }
+        .sd53-preview-head { background: #2e7d32; color: #fff; padding: 9px 14px; font-weight: 700; font-size: 12px; }
+        .sd53-preview-body { padding: 24px; max-width: 850px; margin: 0 auto; }
+        .sd53-sticky { position: sticky; top: 32px; }
+    </style>
+
+    <div class="wrap">
+        <h1>Social Digest</h1>
+        <nav class="nav-tab-wrapper wp-clearfix" style="margin-top: 15px; margin-bottom: 20px;">
+            <a href="<?php echo esc_url(admin_url('edit.php?page=social-digest-settings&tab=workbench')); ?>" class="nav-tab <?php echo $active_tab === 'workbench' ? 'nav-tab-active' : ''; ?>">
+                <span class="dashicons dashicons-performance" style="vertical-align: -3px; font-size: 17px;"></span> Actions &amp; Preview
+            </a>
+            <a href="<?php echo esc_url(admin_url('edit.php?page=social-digest-settings&tab=settings')); ?>" class="nav-tab <?php echo $active_tab === 'settings' ? 'nav-tab-active' : ''; ?>">
+                <span class="dashicons dashicons-admin-generic" style="vertical-align: -3px; font-size: 17px;"></span> Settings
+            </a>
+        </nav>
+        <?php 
+        if (!empty($_GET['sd53_published'])) {
+            $pub_id = absint($_GET['sd53_published']);
+            $edit_link = ($pub_id > 1 && function_exists('get_edit_post_link')) ? ' <a href="' . esc_url(get_edit_post_link($pub_id)) . '" class="button button-small" style="margin-left:10px;">Edit Post ↗</a>' : '';
+            add_settings_error('sd53', 'publish', 'Digest published successfully!' . $edit_link, 'updated');
+        }
+        if (!empty($_GET['sd53_drafted'])) {
+            $draft_id = absint($_GET['sd53_drafted']);
+            $edit_link = ($draft_id > 1 && function_exists('get_edit_post_link')) ? ' <a href="' . esc_url(get_edit_post_link($draft_id)) . '" class="button button-small" style="margin-left:10px;">Edit Draft in WordPress ↗</a>' : '';
+            add_settings_error('sd53', 'draft', 'Draft post created successfully!' . $edit_link, 'updated');
+        }
+        ?>
+        <?php settings_errors('sd53'); ?>
+
+        <?php if ($active_tab === 'settings'): ?>
+            <div style="background:#fff; border:1px solid #c3c4c7; padding:8px 12px; border-radius:4px; margin-bottom:15px; font-size:12px; color:#50575e; display:flex; align-items:center; gap:6px;">
+                <span class="dashicons dashicons-move" style="color:#2271b1;"></span>
+                <span>Drag widget headers or click toggle arrows to expand, collapse, and reorder.</span>
+            </div>
+
+            <form method="post" action="options.php">
+                <?php settings_fields('social_digest_group'); ?>
+                <div id="poststuff">
+                    <div id="post-body" class="metabox-holder columns-1">
+                        <div id="postbox-container-1" class="postbox-container">
+                            <div class="meta-box-sortables ui-sortable" id="social_settings_sortable">
+
+                                <!-- SOURCES & CROSS-PLATFORM SETTINGS -->
+                                <div class="postbox" id="social_box_sources" style="border-left: 5px solid #2271b1;">
+                                    <div class="postbox-header">
+                                        <h2 class="hndle">
+                                            <span class="dashicons dashicons-share" style="color:#2271b1; margin-right:4px;"></span>
+                                            Sources &amp; Cross-Platform Settings
+                                        </h2>
+                                        <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
+                                    </div>
+                                    <div class="inside">
+                                        <table class="form-table">
+                                            <tr>
+                                                <th><label for="social_network_mode">Active Platforms</label></th>
+                                                <td>
+                                                    <select name="social_digest_options[network_mode]" id="social_network_mode" onchange="socialToggleModeFields(this.value)">
+                                                        <option value="bsky" <?php selected($opts['network_mode'] ?? 'both', 'bsky'); ?>>Bluesky Only</option>
+                                                        <option value="mastodon" <?php selected($opts['network_mode'] ?? 'both', 'mastodon'); ?>>Mastodon Only</option>
+                                                        <option value="both" <?php selected($opts['network_mode'] ?? 'both', 'both'); ?>>Combined (Bluesky + Mastodon)</option>
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                            <tr id="row_bsky_handle">
+                                                <th><label for="social_bsky_handle">Bluesky Handle</label></th>
+                                                <td><input name="social_digest_options[bsky_handle]" type="text" id="social_bsky_handle" value="<?php echo esc_attr($opts['bsky_handle'] ?? ''); ?>" class="regular-text" placeholder="username.bsky.social" /></td>
+                                            </tr>
+                                            <tr id="row_masto_handle">
+                                                <th><label for="social_masto_handle">Mastodon Handle</label></th>
+                                                <td>
+                                                    <input name="social_digest_options[masto_handle]" type="text" id="social_masto_handle" value="<?php echo esc_attr($opts['masto_handle'] ?? ''); ?>" class="regular-text" placeholder="@user@instance.social or profile URL" />
+                                                    <p class="description">Accepts user@instance.social or profile URL.</p>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th><label for="social_fediverse_creator">Fediverse Attribution</label></th>
+                                                <td>
+                                                    <input name="social_digest_options[fediverse_creator]" type="text" id="social_fediverse_creator" value="<?php echo esc_attr($opts['fediverse_creator'] ?? ''); ?>" class="regular-text" placeholder="@user@instance.social" />
+                                                    <p class="description">Adds <code>&lt;meta name="fediverse:creator" content="@user@instance.social"&gt;</code> to published digest posts. Supported by Mastodon 4.3+ and Threads to attribute author profiles on shared links.</p>
+                                                </td>
+                                            </tr>
+                                            <tr class="social-combined-field">
+                                                <th>Avatar Source Preference</th>
+                                                <td>
+                                                    <select name="social_digest_options[avatar_source]" id="social_avatar_source">
+                                                        <option value="auto" <?php selected($opts['avatar_source'] ?? 'auto', 'auto'); ?>>Automatic (Source / Post Winner)</option>
+                                                        <option value="bsky" <?php selected($opts['avatar_source'] ?? '', 'bsky'); ?>>Prefer Bluesky Profile Avatar</option>
+                                                        <option value="mastodon" <?php selected($opts['avatar_source'] ?? '', 'mastodon'); ?>>Prefer Mastodon Profile Avatar</option>
+                                                        <option value="none" <?php selected($opts['avatar_source'] ?? '', 'none'); ?>>None (Hide Profile Avatars)</option>
+                                                    </select>
+                                                    <p class="description">Select which platform profile avatar to display in the native social post header.</p>
+                                                </td>
+                                            </tr>
+                                            <tr class="social-combined-field">
+                                                <th>Cross-Platform Deduplication</th>
+                                                <td>
+                                                    <label><input type="checkbox" name="social_digest_options[cross_dedup]" value="1" <?php checked($opts['cross_dedup'] ?? 1, 1); ?> /> <strong>Deduplicate matching cross-posts</strong></label>
+                                                </td>
+                                            </tr>
+                                            <tr class="social-combined-field">
+                                                <th>Duplicate Resolution Strategy</th>
+                                                <td>
+                                                    <select name="social_digest_options[preferred_platform]" id="social_preferred_platform">
+                                                        <option value="masto_if_longer" <?php selected($opts['preferred_platform'] ?? 'masto_if_longer', 'masto_if_longer'); ?>>Prefer Mastodon if longer, otherwise Bluesky</option>
+                                                        <option value="longest" <?php selected($opts['preferred_platform'] ?? '', 'longest'); ?>>Longest clean text wins</option>
+                                                        <option value="bsky" <?php selected($opts['preferred_platform'] ?? '', 'bsky'); ?>>Always prefer Bluesky</option>
+                                                        <option value="mastodon" <?php selected($opts['preferred_platform'] ?? '', 'mastodon'); ?>>Always prefer Mastodon</option>
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- SCHEDULE & THRESHOLDS -->
+                                <div class="postbox" id="social_box_schedule" style="border-left: 5px solid #0284c7;">
+                                    <div class="postbox-header">
+                                        <h2 class="hndle">
+                                            <span class="dashicons dashicons-clock" style="color:#0284c7; margin-right:4px;"></span>
+                                            Schedule &amp; Ingestion Thresholds
+                                        </h2>
+                                        <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
+                                    </div>
+                                    <div class="inside">
+                                        <table class="form-table">
+                                            <tr>
+                                                <th>Check Frequency</th>
+                                                <td>
+                                                    <select name="social_digest_options[schedule_freq]" id="social_schedule_freq" onchange="socialToggleScheduleFields(this.value)">
+                                                        <option value="disabled" <?php selected($opts['schedule_freq'] ?? '', 'disabled'); ?>>Disabled (Manual Workbench Curation Only)</option>
+                                                        <option value="hourly" <?php selected($opts['schedule_freq'] ?? '', 'hourly'); ?>>Hourly</option>
+                                                        <option value="six_hours" <?php selected($opts['schedule_freq'] ?? '', 'six_hours'); ?>>Every 6 Hours</option>
+                                                        <option value="twelve_hours" <?php selected($opts['schedule_freq'] ?? '', 'twelve_hours'); ?>>Every 12 Hours</option>
+                                                        <option value="interval_days" <?php selected($opts['schedule_freq'] ?? 'interval_days', 'interval_days'); ?>>Every X Days at Selected Time...</option>
+                                                    </select>
+                                                    <div id="socialIntervalConfig" style="margin-top: 10px;">
+                                                        Run every <input name="social_digest_options[schedule_interval_days]" type="number" min="1" max="60" value="<?php echo esc_attr($opts['schedule_interval_days'] ?? 1); ?>" class="small-text" /> day(s) at 
+                                                        <input name="social_digest_options[schedule_time]" type="time" value="<?php echo esc_attr($opts['schedule_time'] ?? '17:00'); ?>" />
+                                                    </div>
+                                                    <p class="description" style="margin-top:6px;"><strong>Workbench Staging Notice:</strong> If you manually curate digests in the Workbench tab, turn off automated scheduling (or set to <em>Disabled</em>) to prevent scheduled background imports from overwriting unpublished workbench drafts.</p>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Minimum Threshold</th>
+                                                <td><input name="social_digest_options[min_posts]" type="number" min="1" max="50" value="<?php echo esc_attr($opts['min_posts'] ?? 3); ?>" class="small-text" /> new posts required</td>
+                                            </tr>
+                                            <tr>
+                                                <th>Maximum Age Fallback</th>
+                                                <td><input name="social_digest_options[max_age_days]" type="number" min="0" max="60" value="<?php echo esc_attr($opts['max_age_days'] ?? 0); ?>" class="small-text" /> Days (0 to disable)</td>
+                                            </tr>
+                                            <tr>
+                                                <th>Maximum Posts</th>
+                                                <td><input name="social_digest_options[max_posts]" type="number" min="1" max="50" value="<?php echo esc_attr($opts['max_posts'] ?? 20); ?>" class="small-text" /></td>
+                                            </tr>
+                                            <tr>
+                                                <th>Content Exclusions</th>
+                                                <td>
+                                                    <textarea name="social_digest_options[excluded_words]" rows="3" class="large-text" placeholder="#ad, sponsored, /giveaway/i, #crypto"><?php echo esc_textarea($opts['excluded_words'] ?? ''); ?></textarea>
+                                                    <p class="description">Exclude posts matching specific criteria (comma-separated or one per line). Supports <strong>plain keywords</strong> (e.g. <code>sponsored</code>), <strong>hashtags</strong> (e.g. <code>#ad</code>), and <strong>regular expressions</strong> (e.g. <code>/giveaway/i</code> or <code>/\bcontest\b/i</code>).</p>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Feed Rules</th>
+                                                <td>
+                                                    <label><input type="checkbox" name="social_digest_options[include_reposts]" value="1" <?php checked($opts['include_reposts'] ?? 0, 1); ?> /> Include Reposts / Boosts</label><br>
+                                                    <label><input type="checkbox" name="social_digest_options[exclude_self_syndicated]" value="1" <?php checked($opts['exclude_self_syndicated'] ?? 1, 1); ?> /> Exclude self-syndicated posts (posts linking back to this WordPress site)</label><br>
+                                                    <label><input type="checkbox" name="social_digest_options[exclude_titles]" value="1" <?php checked($opts['exclude_titles'] ?? 0, 1); ?> /> Exclude posts matching existing WordPress headlines</label><br>
+                                                    <label><input type="checkbox" name="social_digest_options[keep_threads]" value="1" <?php checked($opts['keep_threads'] ?? 1, 1); ?> /> Include self-replies / threads</label><br>
+                                                     <label><input type="checkbox" name="social_digest_options[collapse_threads]" value="1" <?php checked(!isset($opts['collapse_threads']) || !empty($opts['collapse_threads'])); ?> /> Collapse multi-post author threads into single unified cards</label><br>
+                                                     <label><input type="checkbox" name="social_digest_options[mobile_deep_links]" value="1" <?php checked(!isset($opts['mobile_deep_links']) || !empty($opts['mobile_deep_links'])); ?> /> Enable smart mobile app deep-linking (opens native Bluesky or Mastodon app if installed; falls back to browser without extra buttons)</label>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Article Ordering</th>
+                                                <td>
+                                                    <select name="social_digest_options[display_order]" id="social_display_order">
+                                                        <option value="reverse" <?php selected($opts['display_order'] ?? 'reverse', 'reverse'); ?>>Reverse Chronological (Newest First)</option>
+                                                        <option value="chronological" <?php selected($opts['display_order'] ?? '', 'chronological'); ?>>Chronological (Oldest First)</option>
+                                                        <option value="random" <?php selected($opts['display_order'] ?? '', 'random'); ?>>Random Order</option>
+                                                    </select>
+                                                    <p class="description" style="margin-top:4px;">Controls the display sequence of social posts in the published digest article and Next-Run Workbench preview.</p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- MEDIA & STORAGE HYGIENE -->
+                                <div class="postbox" id="social_box_media_hygiene" style="border-left: 5px solid #10b981;">
+                                    <div class="postbox-header">
+                                        <h2 class="hndle">
+                                            <span class="dashicons dashicons-images-alt2" style="color:#10b981; margin-right:4px;"></span>
+                                            Media Optimization &amp; Storage Hygiene
+                                        </h2>
+                                        <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
+                                    </div>
+                                    <div class="inside">
+                                        <table class="form-table">
+                                            <tr>
+                                                <th>Conversion &amp; Cache</th>
+                                                <td>
+                                                    <label><input type="checkbox" name="social_digest_options[convert_modern_media]" value="1" <?php checked($opts['convert_modern_media'] ?? 1, 1); ?> /> Convert images to WebP / AVIF</label><br>
+                                                    <label><input type="checkbox" name="social_digest_options[cache_local_assets]" value="1" <?php checked($opts['cache_local_assets'] ?? 1, 1); ?> /> Cache remote avatars &amp; cards locally</label><br>
+                                                    <label><input type="checkbox" name="social_digest_options[generate_srcsets]" value="1" <?php checked($opts['generate_srcsets'] ?? 1, 1); ?> /> Generate standard responsive srcset sizes</label><br>
+                                                    <label><input type="checkbox" name="social_digest_options[sideload_all_media]" value="1" <?php checked($opts['sideload_all_media'] ?? 0, 1); ?> /> <strong>Sideload all embedded post media into WordPress Media Library</strong></label>
+                                                    <p class="description">Automatically downloads and imports all embedded update images directly into the local Media Library when publishing or drafting, protecting against external link rot and server outages.</p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- FEATURED IMAGE -->
+                                <div class="postbox" id="social_box_featured_image" style="border-left: 5px solid #f59e0b;">
+                                    <div class="postbox-header">
+                                        <h2 class="hndle">
+                                            <span class="dashicons dashicons-format-image" style="color:#f59e0b; margin-right:4px;"></span>
+                                            Featured Image Selection
+                                        </h2>
+                                        <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
+                                    </div>
+                                    <div class="inside">
+                                        <table class="form-table">
+                                            <tr>
+                                                <th>Auto-Thumbnail</th>
+                                                <td><label><input type="checkbox" name="social_digest_options[auto_thumb]" value="1" <?php checked($opts['auto_thumb'] ?? 1, 1); ?> /> Sideload and assign Featured Image</label></td>
+                                            </tr>
+                                            <tr>
+                                                <th>Candidate Scope</th>
+                                                <td>
+                                                    <select name="social_digest_options[thumb_selection_scope]">
+                                                        <option value="exclude_first" <?php selected($opts['thumb_selection_scope'] ?? 'exclude_first', 'exclude_first'); ?>>Exclude Most Recent Post (Pick from Posts 2+)</option>
+                                                        <option value="all_posts" <?php selected($opts['thumb_selection_scope'] ?? '', 'all_posts'); ?>>Include All Posts</option>
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Strategy</th>
+                                                <td>
+                                                    <select name="social_digest_options[thumb_selection_mode]">
+                                                        <option value="random" <?php selected($opts['thumb_selection_mode'] ?? 'random', 'random'); ?>>Random candidate</option>
+                                                        <option value="1" <?php selected($opts['thumb_selection_mode'] ?? '', '1'); ?>>1st available</option>
+                                                        <option value="2" <?php selected($opts['thumb_selection_mode'] ?? '', '2'); ?>>2nd available</option>
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- PUBLISHING & FRAMING -->
+                                <div class="postbox" id="social_box_content" style="border-left: 5px solid #ec4899;">
+                                    <div class="postbox-header">
+                                        <h2 class="hndle">
+                                            <span class="dashicons dashicons-admin-post" style="color:#ec4899; margin-right:4px;"></span>
+                                            Publishing, Tags &amp; Article Framing
+                                        </h2>
+                                        <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
+                                    </div>
+                                    <div class="inside">
+                                        <table class="form-table">
+                                            <tr>
+                                                <th>Post Status</th>
+                                                <td>
+                                                    <select name="social_digest_options[post_status]" id="social_post_status">
+                                                        <option value="publish" <?php selected($opts['post_status'] ?? 'publish', 'publish'); ?>>Auto-Publish Immediately</option>
+                                                        <option value="pending" <?php selected($opts['post_status'] ?? '', 'pending'); ?>>Pending Review</option>
+                                                        <option value="draft" <?php selected($opts['post_status'] ?? '', 'draft'); ?>>Save as Draft</option>
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>RSS-Only</th>
+                                                <td><label><input type="checkbox" name="social_digest_options[rss_only_mode]" value="1" <?php checked($opts['rss_only_mode'] ?? 0, 1); ?> /> Publish exclusively to RSS feeds</label></td>
+                                            </tr>
+                                            <tr>
+                                                <th>Block Editor Markup</th>
+                                                <td>
+                                                    <label><input type="checkbox" name="social_digest_options[output_gutenberg_blocks]" value="1" <?php checked($opts['output_gutenberg_blocks'] ?? 1, 1); ?> /> <strong>Format content as native WordPress Gutenberg blocks</strong></label>
+                                                    <p class="description">Wraps digest headers, social post cards, and footers into native <code>&lt;!-- wp:core/html --&gt;</code> and paragraph block structures so published digests can be edited smoothly in the block editor without "Attempt Block Recovery" warnings.</p>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Dark Mode Adaptability</th>
+                                                <td>
+                                                    <select name="social_digest_options[dark_mode_mode]" id="social_dark_mode_mode">
+                                                        <option value="auto" <?php selected($opts['dark_mode_mode'] ?? 'auto', 'auto'); ?>>Automatic (System prefers-color-scheme &amp; Dark Theme detection)</option>
+                                                        <option value="light" <?php selected($opts['dark_mode_mode'] ?? '', 'light'); ?>>Force Light Theme</option>
+                                                        <option value="dark" <?php selected($opts['dark_mode_mode'] ?? '', 'dark'); ?>>Force High-Contrast Dark Theme</option>
+                                                    </select>
+                                                    <p class="description">Controls card background and text colors. Automatic mode dynamically matches user OS dark preferences as well as popular WordPress dark themes (<code>.dark</code>, <code>.dark-theme</code>, <code>[data-theme="dark"]</code>).</p>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Post Excerpt Generation</th>
+                                                <td>
+                                                    <label>
+                                                        <input type="checkbox" name="social_digest_options[excerpt_first_lines]" id="social_excerpt_first_lines" value="1" <?php checked(!empty($opts['excerpt_first_lines'])); ?> onchange="document.getElementById('social_excerpt_options_wrap').style.display = this.checked ? 'block' : 'none';" />
+                                                        <strong>Automatically generate excerpt from the first line of each entry</strong>
+                                                    </label>
+                                                    <p class="description">Extracts the lead sentence or first line from included social posts to form the excerpt for homepages, archives, and RSS feeds.</p>
+
+                                                    <div id="social_excerpt_options_wrap" style="margin-top: 10px; padding: 12px; background: #f6f7f7; border: 1px solid #ccd0d4; border-radius: 4px; max-width: 500px; display: <?php echo !empty($opts['excerpt_first_lines']) ? 'block' : 'none'; ?>;">
+                                                        <div style="margin-bottom: 8px;">
+                                                            <label style="display:inline-block; width: 140px; font-weight:600;">Sentence Divider:</label>
+                                                            <select name="social_digest_options[excerpt_delimiter]" id="social_excerpt_delimiter" onchange="document.getElementById('social_excerpt_custom_wrap').style.display = (this.value === 'custom') ? 'inline-block' : 'none';">
+                                                                <option value="slash" <?php selected($opts['excerpt_delimiter'] ?? 'slash', 'slash'); ?>>Double Slash ( // )</option>
+                                                                <option value="ellipsis" <?php selected($opts['excerpt_delimiter'] ?? '', 'ellipsis'); ?>>Ellipsis ( ... )</option>
+                                                                <option value="period" <?php selected($opts['excerpt_delimiter'] ?? '', 'period'); ?>>Period / Sentences ( . )</option>
+                                                                <option value="dash" <?php selected($opts['excerpt_delimiter'] ?? '', 'dash'); ?>>Em-Dash ( &mdash; )</option>
+                                                                <option value="bullet" <?php selected($opts['excerpt_delimiter'] ?? '', 'bullet'); ?>>Bullet ( &bull; )</option>
+                                                                <option value="custom" <?php selected($opts['excerpt_delimiter'] ?? '', 'custom'); ?>>Custom Divider...</option>
+                                                            </select>
+                                                            <span id="social_excerpt_custom_wrap" style="margin-left: 8px; display: <?php echo (($opts['excerpt_delimiter'] ?? '') === 'custom') ? 'inline-block' : 'none'; ?>;">
+                                                                <input type="text" name="social_digest_options[excerpt_custom_delimiter]" value="<?php echo esc_attr($opts['excerpt_custom_delimiter'] ?? ' // '); ?>" style="width: 80px;" placeholder=" // " />
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <label style="display:inline-block; width: 140px; font-weight:600;">Entries in Excerpt:</label>
+                                                            <select name="social_digest_options[excerpt_max_items]">
+                                                                <option value="0" <?php selected($opts['excerpt_max_items'] ?? '0', '0'); ?>>All Included Posts</option>
+                                                                <option value="1" <?php selected($opts['excerpt_max_items'] ?? '', '1'); ?>>1 Post (Lead Story only)</option>
+                                                                <option value="2" <?php selected($opts['excerpt_max_items'] ?? '', '2'); ?>>First 2 Posts</option>
+                                                                <option value="3" <?php selected($opts['excerpt_max_items'] ?? '', '3'); ?>>First 3 Posts</option>
+                                                                <option value="4" <?php selected($opts['excerpt_max_items'] ?? '', '4'); ?>>First 4 Posts</option>
+                                                                <option value="5" <?php selected($opts['excerpt_max_items'] ?? '', '5'); ?>>First 5 Posts</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Post Author</th>
+                                                <td><?php wp_dropdown_users(['name' => 'social_digest_options[post_author]', 'id' => 'social_post_author', 'selected' => $opts['post_author'] ?? 1]); ?></td>
+                                            </tr>
+                                            <tr>
+                                                <th>Categories</th>
+                                                <td>
+                                                    <div style="max-height: 120px; overflow-y: auto; border: 1px solid #ccd0d4; padding: 6px 10px; width: 280px; background:#fff;">
+                                                        <?php foreach ($all_cats as $cat): ?>
+                                                            <label style="display:block;"><input type="checkbox" name="social_digest_options[categories][]" value="<?php echo $cat->term_id; ?>" <?php checked(in_array($cat->term_id, $selected_cats)); ?> /> <?php echo esc_html($cat->name); ?></label>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Title Template</th>
+                                                <td>
+                                                    <input name="social_digest_options[title_template]" type="text" value="<?php echo esc_attr($opts['title_template'] ?? 'Social Digest {hashtags}'); ?>" class="regular-text" />
+                                                    <p class="description">Available variables: <code>{hashtags}</code>, <code>{date}</code>, <code>{count}</code></p>
+                                                    <div style="margin-top: 10px; padding: 12px; background: #f6f7f7; border: 1px solid #ccd0d4; border-radius: 4px; max-width: 500px;">
+                                                        <strong style="display:block; margin-bottom: 8px;">Hashtag Formatting Rules:</strong>
+                                                        <div style="margin-bottom: 8px;">
+                                                            <label style="display:inline-block; width: 80px;">Enclosure:</label>
+                                                            <select name="social_digest_options[title_tag_enclosure]">
+                                                                <option value="parentheses" <?php selected($opts['title_tag_enclosure'] ?? 'parentheses', 'parentheses'); ?>>(Tag 1, Tag 2)</option>
+                                                                <option value="brackets" <?php selected($opts['title_tag_enclosure'] ?? '', 'brackets'); ?>>[Tag 1, Tag 2]</option>
+                                                                <option value="none" <?php selected($opts['title_tag_enclosure'] ?? '', 'none'); ?>>Tag 1, Tag 2 (No Enclosure)</option>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label style="display:inline-block; width: 80px;">Delimiter:</label>
+                                                            <select name="social_digest_options[title_tag_delimiter]">
+                                                                <option value="oxford" <?php selected($opts['title_tag_delimiter'] ?? 'oxford', 'oxford'); ?>>Tag 1, Tag 2, and Tag 3</option>
+                                                                <option value="commas" <?php selected($opts['title_tag_delimiter'] ?? '', 'commas'); ?>>Tag 1, Tag 2, Tag 3</option>
+                                                                <option value="ampersand" <?php selected($opts['title_tag_delimiter'] ?? '', 'ampersand'); ?>>Tag 1, Tag 2 &amp; Tag 3</option>
+                                                                <option value="pipe" <?php selected($opts['title_tag_delimiter'] ?? '', 'pipe'); ?>>Tag 1 | Tag 2 | Tag 3</option>
+                                                                <option value="slash" <?php selected($opts['title_tag_delimiter'] ?? '', 'slash'); ?>>Tag 1 / Tag 2 / Tag 3</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Article Header &amp; Footer</th>
+                                                <td>
+                                                    <div style="max-width: 800px;">
+                                                        <?php 
+                                                        wp_editor($unified_editor_value, 'social_digest_unified_content', [
+                                                            'textarea_name' => 'social_digest_options[unified_content]',
+                                                            'textarea_rows' => 10,
+                                                            'media_buttons' => false,
+                                                            'teeny'         => false
+                                                        ]); 
+                                                        ?>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Uninstallation Policy</th>
+                                                <td><label><input type="checkbox" name="social_digest_options[wipe_data_on_uninstall]" value="1" <?php checked($opts['wipe_data_on_uninstall'] ?? 1, 1); ?> /> Delete settings on uninstall</label></td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php submit_button('Save Settings'); ?>
+            </form>
+
+        <?php elseif ($active_tab === 'workbench'): ?>
+            <?php 
+            $state = social_workbench_state();
+            $candidates = (array)($state['candidates'] ?? []);
+            $has_candidates = !empty($candidates);
+            $fetch_confirm_attr = $has_candidates ? ' onclick="return confirm(\'Refreshing will discard your current exclusions, pin, and notes \u2014 continue?\');"' : '';
+            ?>
+
+            <?php if ($next_run && $has_candidates): ?>
+                <div class="notice notice-warning" style="margin: 0 0 15px 0; padding: 12px 14px; border-left: 4px solid #dba617; background: #fff8e5;">
+                    <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #614700;">
+                        <strong>Warning: Automated Schedule Active:</strong> Automated cron scheduling is currently running and will overwrite this staged workbench draft on its next scheduled cycle (<strong><?php echo esc_html(wp_date('Y-m-d H:i:s T', $next_run, $site_tz)); ?></strong>). If you are curating this digest by hand, set <em>Check Frequency</em> to <strong>"Disabled (Manual Workbench Curation Only)"</strong> under <a href="<?php echo esc_url(admin_url('edit.php?page=social-digest-settings&tab=settings')); ?>" style="color: #2271b1; text-decoration: underline;">General Settings</a> until you publish or discard this draft.
+                    </p>
+                </div>
+            <?php endif; ?>
+
+            <div style="background:#fff; border:1px solid #c3c4c7; padding:8px 12px; border-radius:4px; margin-bottom:15px; font-size:12px; color:#50575e; display:flex; align-items:center; gap:6px;">
+                <span class="dashicons dashicons-move" style="color:#2271b1;"></span>
+                <span>Drag widget headers or click toggle arrows to expand, collapse, and reorder.</span>
+            </div>
+
+            <form method="post">
+                <?php wp_nonce_field('sd53_workbench_action', 'sd53_nonce'); ?>
+
+                <!-- TOP QUICK ACTIONS WORKBENCH -->
+                <div class="postbox" id="social_wb_box_quick_actions" style="border-left: 5px solid #2271b1;">
+                    <div class="postbox-header">
+                        <h2 class="hndle">
+                            <span class="dashicons dashicons-admin-generic" style="color:#2271b1; margin-right:4px;"></span>
+                            Prepare Next Digest Run
+                        </h2>
+                        <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
+                    </div>
+                    <div class="inside">
+                        <p style="margin-top:0">Fetch a preview of what the next digest will contain. Exclude articles, pin a lead story, add commentary, or temporarily override framing before publishing.</p>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                            <button class="button button-primary" name="sd53_fetch" value="1"<?php echo $fetch_confirm_attr; ?>>Fetch / Refresh Next Run</button>
+                            <button class="button" name="sd53_save" value="1">Save Next-Run Changes</button>
+                            <button class="button" name="sd53_reset" value="1" onclick="return confirm('Discard all changes?')">Reset Next Run</button>
+                            <button class="button" name="sd53_save_draft" value="1" onclick="return confirm('Save this staged digest as a WordPress Draft post?')"><span class="dashicons dashicons-edit" style="vertical-align:text-bottom; margin-right:2px; font-size:16px;"></span> Save as Draft</button>
+                            <button class="button button-primary" name="sd53_publish" value="1" onclick="return confirm('Publish this digest immediately?')">Publish Next Run</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="meta-box-sortables ui-sortable" id="social_wb_main_sortable">
+                    
+                    <!-- ARTICLES LIST & PINNING -->
+                    <div class="postbox" id="social_wb_box_candidates" style="border-left: 5px solid #0284c7;">
+                        <div class="postbox-header">
+                            <h2 class="hndle">
+                                <span class="dashicons dashicons-list-view" style="color:#0284c7; margin-right:4px;"></span>
+                                Articles for Next Run
+                            </h2>
+                            <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
+                        </div>
+                        <div class="inside">
+                            <?php if (!$candidates): ?>
+                                <p><strong>No next-run candidates loaded.</strong> Click <em>Fetch / Refresh Next Run</em> above.</p>
+                            <?php else: ?>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #e2e4e7; padding-bottom:8px; flex-wrap:wrap; gap:10px;">
+                                    <span style="font-size:12px; color:#50575e;">Select <strong>Pin as Lead Story</strong> to pin an update to top, or <strong>Set as Featured Image</strong> to choose the digest's featured post thumbnail.</span>
+                                    <div style="display:flex; gap:12px; font-size:11px; color:#646970; align-items:center; flex-wrap:wrap;">
+                                        <label>
+                                            <input type="radio" name="pinned_lead_post" value="" <?php checked(empty(array_filter($candidates, fn($item) => !empty($item['pinned'])))); ?> onchange="document.querySelectorAll('.sd53-item').forEach(el=>el.classList.remove('is-pinned'));"> 
+                                            <em>No Pinned Lead</em>
+                                        </label>
+                                        <label>
+                                            <input type="radio" name="selected_featured_post" value="auto" <?php checked(empty($state['featured_image_override_key']) || $state['featured_image_override_key'] === 'auto'); ?>> 
+                                            <em>Auto Featured Image</em>
+                                        </label>
+                                        <label>
+                                            <input type="radio" name="selected_featured_post" value="none" <?php checked(($state['featured_image_override_key'] ?? '') === 'none'); ?> onchange="document.querySelectorAll('.sd53-item').forEach(el=>el.classList.remove('is-featured-thumb'));"> 
+                                            <em>No Featured Image</em>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <?php foreach ($candidates as $i => $c): 
+                                    $key = sanitize_key($c['key']); 
+                                    $excluded = !empty($c['excluded']); 
+                                    $pinned = !empty($c['pinned']);
+                                    $c_thumb = esc_url($c['thumb_image'] ?? '');
+                                    $active_featured = esc_url($state['preview']['featured_image'] ?? '');
+                                    $is_featured_thumb = ($c_thumb !== '' && $active_featured === $c_thumb);
+                                ?>
+                                    <div class="sd53-item <?php echo $excluded ? 'excluded' : ''; ?> <?php echo $pinned ? 'is-pinned' : ''; ?> <?php echo $is_featured_thumb ? 'is-featured-thumb' : ''; ?>" id="sd53_<?php echo esc_attr($key); ?>" style="transition: all 0.2s ease;">
+                                        <div class="sd53-item-head">
+                                            <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                                                <label style="font-weight:600;"><input type="checkbox" name="candidate[<?php echo esc_attr($key); ?>][excluded]" value="1" <?php checked($excluded); ?> onchange="this.closest('.sd53-item').classList.toggle('excluded', this.checked)"> Exclude from next post</label>
+                                                <label style="color:#b45309; font-weight:700; cursor:pointer;">
+                                                    <input type="radio" name="pinned_lead_post" value="<?php echo esc_attr($key); ?>" <?php checked($pinned); ?> onchange="document.querySelectorAll('.sd53-item').forEach(el=>el.classList.remove('is-pinned')); this.closest('.sd53-item').classList.add('is-pinned');"> 
+                                                    📌 Pin as Lead Story
+                                                </label>
+                                                <?php if ($c_thumb): ?>
+                                                    <label style="color:#047857; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                                                        <input type="radio" name="selected_featured_post" value="<?php echo esc_attr($key); ?>" <?php checked($is_featured_thumb); ?> onchange="document.querySelectorAll('.sd53-item').forEach(el=>el.classList.remove('is-featured-thumb')); if (this.checked) this.closest('.sd53-item').classList.add('is-featured-thumb');"> 
+                                                        🖼️ Set as Featured Image
+                                                        <img src="<?php echo esc_url($c_thumb); ?>" style="width:20px; height:20px; object-fit:cover; border-radius:3px; border:1px solid #10b981; vertical-align:middle;" title="Candidate Featured Thumbnail" />
+                                                    </label>
+                                                <?php else: ?>
+                                                    <span style="color:#8c8f94; font-size:11px; font-style:italic;">(No post image)</span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <span style="background:#e8f0fe; color:#1a73e8; font-weight:700; padding:2px 8px; border-radius:3px; font-size:10px; text-transform:uppercase;">
+                                                <?php echo esc_html($c['network'] ?? 'Social'); ?>
+                                            </span>
+                                        </div>
+                                        <div class="sd53-item-body">
+                                            <div style="font-size:12px; color:#50575e; margin-bottom:8px; line-height:1.4;"><?php echo esc_html($c['text'] ?? ''); ?></div>
+                                            <?php echo wp_kses_post($c['html'] ?? ''); ?>
+                                            <label style="display:block; margin-top:12px; font-weight:600; font-size:11px; color:#2c3338;">Attach Custom Takeaway / Author Note:</label>
+                                            <textarea class="sd53-comment" name="candidate[<?php echo esc_attr($key); ?>][commentary]" placeholder="Optional author lead-in commentary..."><?php echo esc_textarea($c['commentary'] ?? ''); ?></textarea>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- TEMPORARY FRAMING -->
+                    <div class="postbox" id="social_wb_box_framing" style="border-left: 5px solid #8e24aa;">
+                        <div class="postbox-header">
+                            <h2 class="hndle">
+                                <span class="dashicons dashicons-edit" style="color:#8e24aa; margin-right:4px;"></span>
+                                Temporary Article Framing Overrides
+                            </h2>
+                            <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
+                        </div>
+                        <div class="inside">
+                            <p style="margin-top:0; color:#50575e; font-size:12px;">
+                                Overrides apply only to the next published digest. Use the <strong>Insert Post Splitter</strong> button to place the divider between header and footer.
+                            </p>
+
+                            <p style="margin-bottom:15px;">
+                                <label>
+                                    <input type="checkbox" name="framing_override_enabled" value="1" <?php checked(!empty($state['framing_override_enabled'])); ?>>
+                                    <strong>Enable temporary header &amp; footer overrides for this run</strong>
+                                </label>
+                            </p>
+
+                            <?php
+                            $wb_header = !empty($state['header_override']) ? $state['header_override'] : ($opts['header_text'] ?? '');
+                            $wb_footer = !empty($state['footer_override']) ? $state['footer_override'] : ($opts['footer_text'] ?? '');
+                            $wb_unified = trim($wb_header) . "\n\n" . $split_marker_html . "\n\n" . trim($wb_footer);
+
+                            wp_editor($wb_unified, 'social_digest_workbench_unified_content', [
+                                'textarea_name' => 'workbench_unified_content',
+                                'textarea_rows' => 8,
+                                'media_buttons' => false,
+                                'teeny'         => false,
+                                'quicktags'     => [
+                                    'buttons' => 'strong,em,link,close'
+                                ]
+                            ]);
+                            ?>
+                        </div>
+                    </div>
+
+                    <!-- EXCERPT & DIGEST PREVIEW -->
+                    <?php if ($has_candidates): 
+                        $wb_delim_key = $opts['excerpt_delimiter'] ?? 'slash';
+                        $wb_custom_delim = $opts['excerpt_custom_delimiter'] ?? ' // ';
+                        $wb_delim_map = [
+                            'slash'    => ' // ',
+                            'ellipsis' => ' ... ',
+                            'period'   => '. ',
+                            'dash'     => ' — ',
+                            'bullet'   => ' • ',
+                            'custom'   => $wb_custom_delim,
+                        ];
+                        $wb_delim = $wb_delim_map[$wb_delim_key] ?? ' // ';
+                        $wb_max_items = absint($opts['excerpt_max_items'] ?? 0);
+                        $wb_first_lines_excerpt = social_build_first_lines_excerpt($candidates, $wb_delim, $wb_max_items);
+                    ?>
+                    <div class="postbox" id="social_wb_box_excerpt_preview" style="border-left: 5px solid #10b981;">
+                        <div class="postbox-header">
+                            <h2 class="hndle">
+                                <span class="dashicons dashicons-excerpt-view" style="color:#10b981; margin-right:4px;"></span>
+                                Digest Excerpt Inspection
+                            </h2>
+                            <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
+                        </div>
+                        <div class="inside">
+                            <p style="margin-top:0; font-size:12px; color:#50575e;">
+                                Live preview of the WordPress post excerpt that will be distributed to your homepage, search snippets, archives, and RSS feeds.
+                            </p>
+                            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px 14px; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size:14px; line-height:1.6; color:#1e293b;">
+                                <?php if (!empty($opts['excerpt_first_lines'])): ?>
+                                    <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#059669; letter-spacing:0.5px; margin-bottom:6px;">
+                                        Generated First-Lines Excerpt (Active Divider: <code><?php echo esc_html(trim($wb_delim)); ?></code>)
+                                    </div>
+                                    <div style="font-style:italic; color:#0f172a;">
+                                        &ldquo;<?php echo esc_html($wb_first_lines_excerpt ?: 'No excerpt lines available.'); ?>&rdquo;
+                                    </div>
+                                <?php else: ?>
+                                    <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#64748b; letter-spacing:0.5px; margin-bottom:6px;">
+                                        Standard Excerpt (Auto-generated from post content)
+                                    </div>
+                                    <div style="color:#475569;">
+                                        First-lines excerpt is currently disabled. Enable it under <a href="<?php echo esc_url(admin_url('edit.php?page=social-digest-settings&tab=settings#social_box_content')); ?>" style="color:#0284c7;">Settings &rarr; Publishing, Tags &amp; Article Framing</a>.
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- ACTIONS & DIAGNOSTICS -->
+                    <div class="postbox" id="social_wb_box_diagnostics" style="border-left: 5px solid #0085ff;">
+                        <div class="postbox-header">
+                            <h2 class="hndle">
+                                <span class="dashicons dashicons-heart" style="color:#0085ff; margin-right:4px;"></span>
+                                Network Actions &amp; Diagnostics
+                            </h2>
+                            <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
+                        </div>
+                        <div class="inside">
+                            <p>Bluesky cutoff: <strong><?php echo $bsky_last ? esc_html(wp_date('Y-m-d H:i:s T', $bsky_last, $site_tz)) : 'None'; ?></strong> | Mastodon cutoff: <strong><?php echo $masto_last ? esc_html(wp_date('Y-m-d H:i:s T', $masto_last, $site_tz)) : 'None'; ?></strong> | Next auto-run: <strong><?php echo $next_run ? esc_html(wp_date('Y-m-d H:i:s T', $next_run, $site_tz)) : 'Not scheduled'; ?></strong></p>
+                            
+                            <div style="margin-top:14px; padding-top:12px; border-top:1px solid #dcdcde;">
+                                <strong style="display:block; margin-bottom:6px; color:#1d2327;">Cutoff Management &amp; Time Boundary:</strong>
+                                <p class="description" style="margin-bottom:10px;">Control which posts are considered "new". Any posts created before the cutoff timestamp will not be included in upcoming digests.</p>
+                                
+                                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+                                    <button type="submit" class="button button-primary" name="sd53_set_cutoff_now" value="1" onclick="return confirm('Set cutoff markers to right now? No posts published before this exact moment will be pulled into future digests.')">
+                                        <span class="dashicons dashicons-clock" style="vertical-align:text-bottom; margin-right:3px;"></span> Set Cutoff to Right Now
+                                    </button>
+                                    <button type="submit" class="button" name="sd53_reset_cutoff" value="1" onclick="return confirm('Clear cutoff markers for both networks? Upcoming fetch will pull posts back to your Max Post Age limit.')">Clear Cutoffs (Fetch Backlog)</button>
+                                </div>
+
+                                <div style="display:inline-flex; gap:6px; flex-wrap:wrap; align-items:center; background:#f6f7f7; border:1px solid #dcdcde; padding:8px 12px; border-radius:4px;">
+                                    <label for="sd53_custom_cutoff_datetime" style="font-weight:600; font-size:12px;">Or Set Custom Cutoff Date &amp; Time:</label>
+                                    <input type="datetime-local" id="sd53_custom_cutoff_datetime" name="sd53_custom_cutoff_datetime" class="regular-text" style="width:auto; max-width:210px;" value="<?php echo esc_attr(wp_date('Y-m-d\TH:i', time(), $site_tz)); ?>" />
+                                    <button type="submit" class="button" name="sd53_set_cutoff_custom" value="1">Apply Custom Cutoff</button>
+                                </div>
+                            </div>
+
+                            <div style="margin-top:14px; padding-top:12px; border-top:1px solid #dcdcde; display:flex; gap:8px; flex-wrap:wrap;">
+                                <button type="submit" class="button" name="sd53_manual_run" value="1">Run Standard Automated Import Now</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </form>
+        <?php endif; ?>
+    </div>
+
+    <script>
+    function socialToggleScheduleFields(freq) {
+        const configWrap = document.getElementById('socialIntervalConfig');
+        if (configWrap) configWrap.style.display = (freq === 'interval_days') ? 'block' : 'none';
+    }
+    function socialToggleModeFields(mode) {
+        const combinedFields = document.querySelectorAll('.social-combined-field');
+        combinedFields.forEach(el => { el.style.display = (mode === 'both') ? 'table-row' : 'none'; });
+        const bskyRow = document.getElementById('row_bsky_handle');
+        const mastoRow = document.getElementById('row_masto_handle');
+        if (bskyRow) bskyRow.style.display = (mode === 'bsky' || mode === 'both') ? 'table-row' : 'none';
+        if (mastoRow) mastoRow.style.display = (mode === 'mastodon' || mode === 'both') ? 'table-row' : 'none';
+    }
+
+    jQuery(document).ready(function($) {
+        if (typeof postboxes !== 'undefined') {
+            postboxes.add_postbox_toggles('settings_page_social-digest-settings');
+        }
+        if ($.fn.sortable) {
+            $('#social_settings_sortable, #social_wb_main_sortable').sortable({
+                handle: '.hndle',
+                items: '.postbox',
+                placeholder: 'social-sortable-placeholder',
+                forcePlaceholderSize: true,
+                opacity: 0.8,
+                cursor: 'grabbing'
+            });
+        }
+    });
+    </script>
+    <?php
+}
