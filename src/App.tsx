@@ -212,21 +212,21 @@ export default function App() {
           </div>
         </div>
 
-        {/* Live Visual Card Design Preview (v5.6.6) */}
+        {/* Live Visual Card Design Preview (v5.6.10) */}
         <section className="bg-slate-800/50 border border-slate-700/70 rounded-xl p-5 sm:p-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-700/60">
             <div>
               <div className="flex items-center space-x-2">
                 <Sparkles className="w-4 h-4 text-blue-400" />
                 <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                  Native Post Card Design Preview (v5.6.6)
+                  Native Post Card Design Preview (v5.6.10)
                 </h2>
                 <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
                   Live Style
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-1">
-                Visual demonstration of the newly updated card header layout with inline follow links and calendar-free footer.
+                Visual demonstration of the card layout with inline follow links, image ALT badges, collapsible threads, and mobile deep-link badges.
               </p>
             </div>
           </div>
@@ -272,10 +272,36 @@ export default function App() {
 
               {/* Card Body */}
               <div className="text-[15px] leading-relaxed text-slate-800 mb-3 break-words">
-                A look at the refreshed Social Digest post card formatting. Handles and follow links are now paired directly inline, closely resembling the native Bluesky embed design.
+                A look at the refreshed Social Digest post card formatting. Image embeds now feature accessible ALT badges, and multi-part posts collapse cleanly into single cards.
               </div>
 
-              {/* Card Footer (Clean Date + Platform Badges) */}
+              {/* Embedded Media with ALT badge */}
+              <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-900/5 mb-3">
+                <div className="h-44 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 flex items-center justify-center text-slate-400 text-xs font-mono">
+                  [Sample Image Gallery / Preview]
+                </div>
+                <button
+                  type="button"
+                  onClick={() => alert('ALT: A demonstration photo illustrating the new accessibility overlay badges.')}
+                  className="absolute bottom-2 left-2 bg-slate-900/85 hover:bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wider shadow cursor-help transition-colors"
+                  title="ALT: A demonstration photo illustrating the new accessibility overlay badges."
+                >
+                  ALT
+                </button>
+              </div>
+
+              {/* Collapsible Thread Preview */}
+              <details className="mt-3 border-t border-dashed border-slate-200 pt-2 text-xs text-slate-600">
+                <summary className="cursor-pointer font-bold text-[#0284c7] hover:underline list-none flex items-center gap-1.5 py-1">
+                  <span>🧵 View full thread (1 follow-up post)</span>
+                </summary>
+                <div className="mt-2 pl-3 border-l-2 border-[#0284c7] space-y-2 py-1 text-slate-700">
+                  <div className="text-[11px] text-slate-400 font-semibold">Oct 14, 2026 · 3:47 PM</div>
+                  <div>Part 2: Follow-up reply automatically grouped without creating separate digest cards!</div>
+                </div>
+              </details>
+
+              {/* Card Footer (Clean Date + Platform Badges + Deep Links) */}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 text-[13px] text-slate-500">
                 <div className="flex items-center">
                   <span>Oct 14, 2026 · 3:45 PM</span>
@@ -290,6 +316,13 @@ export default function App() {
                     <span>🦋 Bluesky</span>
                     <span className="text-[11px] bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-full">❤️ 42</span>
                     <span className="text-[10px]">↗</span>
+                  </a>
+                  <a
+                    href="bsky://profile/liliputing.bsky.social/post/3lbexample"
+                    className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded bg-sky-100/70 text-[#0369a1] border border-sky-300 hover:bg-sky-200 transition-colors"
+                    title="Open directly in installed Bluesky mobile app"
+                  >
+                    <span>📲 App</span>
                   </a>
                   <a
                     href="https://fosstodon.org"

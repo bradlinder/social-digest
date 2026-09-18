@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.6.9
+ * Version: 5.6.10
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -14,6 +14,17 @@
 namespace SocialDigest;
 
 if (!defined('ABSPATH')) exit;
+
+// Whitelist custom mobile app protocols so esc_url() preserves them
+add_filter('kses_allowed_protocols', function($protocols) {
+    if (!in_array('bsky', $protocols, true)) {
+        $protocols[] = 'bsky';
+    }
+    if (!in_array('mastodon', $protocols, true)) {
+        $protocols[] = 'mastodon';
+    }
+    return $protocols;
+});
 
 // ==========================================
 // 1. UNINSTALLATION & LIFECYCLE HOOKS
@@ -736,12 +747,13 @@ function social_fetch_workbench_candidates() {
         $eligible = $merged;
     }
 
-    usort($eligible, function($a, $b) { return (int)$b['timestamp'] <=> (int)$a['timestamp']; });
+    // Group multi-post threads into unified master cards if enabled before slicing count
+    $eligible = social_collapse_thread_posts($eligible, $opts);
+
+    // Re-sort newest-first so max_posts slice and chronological thumbnail extraction are strictly accurate
+    usort($eligible, function($a, $b) { return (int)($b['timestamp'] ?? 0) <=> (int)($a['timestamp'] ?? 0); });
     if (count($eligible) > $max_posts) $eligible = array_slice($eligible, 0, $max_posts);
     if (!$eligible) return ['success' => false, 'message' => 'No eligible posts are available after filtering and deduplication.'];
-
-    // Group multi-post threads into unified master cards if enabled
-    $eligible = social_collapse_thread_posts($eligible, $opts);
 
     // Preserve chronological list (newest first) for thumbnail selection so 'exclude_first' always excludes the most recent post in time
     $chronological_posts = $eligible;
@@ -2026,7 +2038,7 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
                 $alt_txt = esc_attr($alt_raw ?: 'Bluesky image');
                 $alt_badge = '';
                 if ($alt_raw !== '' && strtolower($alt_raw) !== 'bluesky image') {
-                    $alt_badge = '<span data-nosnippet style="position:absolute; bottom:6px; left:6px; background:rgba(15,23,42,0.85); color:#ffffff; font-size:10px; font-weight:700; padding:2px 5px; border-radius:4px; letter-spacing:0.5px; backdrop-filter:blur(4px); box-shadow:0 1px 3px rgba(0,0,0,0.3); z-index:2; pointer-events:auto;" title="ALT: ' . $alt_txt . '">ALT</span>';
+                    $alt_badge = '<span data-nosnippet class="social-alt-badge" onclick="event.preventDefault(); event.stopPropagation(); alert(this.getAttribute(\'title\'));" style="position:absolute; bottom:6px; left:6px; background:rgba(15,23,42,0.85); color:#ffffff; font-size:10px; font-weight:700; padding:2px 5px; border-radius:4px; letter-spacing:0.5px; backdrop-filter:blur(4px); box-shadow:0 1px 3px rgba(0,0,0,0.3); z-index:3; pointer-events:auto; cursor:help;" title="ALT: ' . $alt_txt . '">ALT</span>';
                 }
                 if ($img_url) {
                     if (!$first_image_url) $first_image_url = $img_url;
@@ -2252,7 +2264,7 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
                     $alt_txt = esc_attr($alt_raw ?: 'Mastodon image');
                     $alt_badge = '';
                     if ($alt_raw !== '' && strtolower($alt_raw) !== 'mastodon image') {
-                        $alt_badge = '<span data-nosnippet style="position:absolute; bottom:6px; left:6px; background:rgba(15,23,42,0.85); color:#ffffff; font-size:10px; font-weight:700; padding:2px 5px; border-radius:4px; letter-spacing:0.5px; backdrop-filter:blur(4px); box-shadow:0 1px 3px rgba(0,0,0,0.3); z-index:2; pointer-events:auto;" title="ALT: ' . $alt_txt . '">ALT</span>';
+                        $alt_badge = '<span data-nosnippet class="social-alt-badge" onclick="event.preventDefault(); event.stopPropagation(); alert(this.getAttribute(\'title\'));" style="position:absolute; bottom:6px; left:6px; background:rgba(15,23,42,0.85); color:#ffffff; font-size:10px; font-weight:700; padding:2px 5px; border-radius:4px; letter-spacing:0.5px; backdrop-filter:blur(4px); box-shadow:0 1px 3px rgba(0,0,0,0.3); z-index:3; pointer-events:auto; cursor:help;" title="ALT: ' . $alt_txt . '">ALT</span>';
                     }
                     if ($img_url) {
                         if (!$first_image_url) $first_image_url = $img_url;
@@ -2369,7 +2381,7 @@ function social_get_og_image_cached($url) {
     $cached = get_transient($transient_key);
     if ($cached !== false) return (string)$cached;
 
-    $res = wp_remote_get($url, [
+    $res = wp_safe_remote_get($url, [
         'timeout'     => 3,
         'user-agent'  => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) WordPress-SocialDigest/1.0',
         'redirection' => 2,
@@ -2408,7 +2420,7 @@ function social_get_og_card_cached($url) {
         return !empty($cached['error']) ? null : $cached;
     }
 
-    $res = wp_remote_get($url, [
+    $res = wp_safe_remote_get($url, [
         'timeout'     => 4,
         'user-agent'  => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) WordPress-SocialDigest/1.0',
         'redirection' => 3,

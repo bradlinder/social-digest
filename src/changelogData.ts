@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.6.9',
+  version: '5.6.10',
   requiresWP: '6.0+',
   testedUpTo: '6.7',
   requiresPHP: '7.4+',
@@ -17,14 +17,25 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.6.8',
+  rollbackTarget: 'v5.6.9',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.6.10',
+    tag: 'v5.6.10',
+    isLatest: true,
+    highlights: [
+      'Protocol Whitelisting: Added bsky and mastodon to kses_allowed_protocols so WordPress esc_url() preserves mobile deep links.',
+      'Thread & Thumbnail Order: Fixed timestamp sorting so thread collapsing runs prior to post truncation and newest-first order is preserved for thumbnail exclusion.',
+      'SSRF Protection: Replaced wp_remote_get() with wp_safe_remote_get() across OpenGraph image and link card scrapers to block internal host requests.',
+      'Touch Accessibility: Prevented touch events on image ALT badges from accidentally opening parent gallery links on mobile.'
+    ]
+  },
+  {
     version: '5.6.9',
     tag: 'v5.6.9',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Automated Social Thread Collapsing: Grouped multi-post author threads into single unified cards with a "View full thread" expand toggle.',
       'Accessibility ALT Badges: Added interactive overlay "ALT" badges on embedded images displaying author descriptions in browser tooltips.',

@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 5.6.9
+Stable tag: 5.6.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,12 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.6.10 =
+* Fix: Allowed Protocols Whitelist: Registered `bsky` and `mastodon` in `kses_allowed_protocols` filter to prevent WordPress core `esc_url()` from stripping `bsky://` and `mastodon://` mobile deep links to empty strings.
+* Fix: Chronological Order & Thumbnail Selection: Fixed timestamp ordering so multi-post thread collapsing executes before count truncation and `$chronological_posts` remains sorted newest-first, preventing featured image exclusion errors.
+* Security: Hardened OpenGraph Link Scraper: Switched OpenGraph image and card scrapers to `wp_safe_remote_get()` to protect against Server-Side Request Forgery (SSRF) when requesting external URLs.
+* Fix: Touch-Safe ALT Badges: Prevented touch events on image accessibility ALT badges from triggering parent gallery links on mobile devices.
 
 = 5.6.9 =
 * Feature: Automated Social Thread Collapsing: Multi-post threads authored on Bluesky or Mastodon are now automatically grouped into unified cards featuring an "Expand Thread" toggle rather than flooding the digest with separate cards.
