@@ -98,7 +98,7 @@ function social_render_native_card($item, $opts = []) {
     }
     $html .= '<div style="min-width:0; line-height:1.35; flex:1;">';
     $html .= '<div class="social-author-name" style="font-weight:700; font-size:15px; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' . $author_name . '</div>';
-    $html .= '<div class="social-author-handles" style="font-size:13px; color:#64748b; display:flex; flex-wrap:wrap; align-items:center; column-gap:8px; row-gap:2px;">' . implode('<span style="color:#cbd5e1; margin:0 2px;">·</span>', $social_identities) . '</div>';
+    $html .= '<div class="social-author-handles" style="font-size:13px; color:#64748b; display:flex; flex-wrap:wrap; align-items:center; column-gap:8px; row-gap:2px;">' . implode('<span class="social-identity-sep" style="color:#cbd5e1; margin:0 2px;">·</span>', $social_identities) . '</div>';
     $html .= '</div>';
     $html .= '</div>';
 
@@ -151,7 +151,7 @@ function social_render_native_card($item, $opts = []) {
         $bsky_data = $links['bsky'];
         $b_url = esc_url($bsky_data['url'] ?? '');
         $b_likes = absint($bsky_data['likes'] ?? 0);
-        $like_str = ($b_likes > 0) ? ' <span style="font-size:11px; background:#eff6ff; color:#1d4ed8; padding:1px 6px; border-radius:9999px; margin-left:3px;">❤️ ' . $b_likes . '</span>' : '';
+        $like_str = ($b_likes > 0) ? ' <span class="social-stat-pill" style="font-size:11px; background:#eff6ff; color:#1d4ed8; padding:1px 6px; border-radius:9999px; margin-left:3px;">❤️ ' . $b_likes . '</span>' : '';
         $b_deep_attr = '';
         if ($enable_deep_links && preg_match('/bsky\.app\/profile\/([^\/]+)\/post\/([^\/]+)/i', $b_url, $bm)) {
             $b_deep_url = 'bsky://profile/' . $bm[1] . '/post/' . $bm[2];
@@ -167,7 +167,7 @@ function social_render_native_card($item, $opts = []) {
         $m_stats = [];
         if ($m_favs > 0) $m_stats[] = '⭐ ' . $m_favs;
         if ($m_boosts > 0) $m_stats[] = '🔁 ' . $m_boosts;
-        $m_stat_str = $m_stats ? ' <span style="font-size:11px; background:#faf5ff; color:#6b21a8; padding:1px 6px; border-radius:9999px; margin-left:3px;">' . implode(' · ', $m_stats) . '</span>' : '';
+        $m_stat_str = $m_stats ? ' <span class="social-stat-pill" style="font-size:11px; background:#faf5ff; color:#6b21a8; padding:1px 6px; border-radius:9999px; margin-left:3px;">' . implode(' · ', $m_stats) . '</span>' : '';
         $m_deep_attr = '';
         if ($enable_deep_links && !empty($m_url)) {
             $m_deep_url = 'mastodon://' . preg_replace('/^https?:\/\//i', '', $m_url);

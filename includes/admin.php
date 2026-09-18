@@ -666,11 +666,11 @@ function social_render_settings_page() {
                                                 <th>Dark Mode Adaptability</th>
                                                 <td>
                                                     <select name="social_digest_options[dark_mode_mode]" id="social_dark_mode_mode">
-                                                        <option value="auto" <?php selected($opts['dark_mode_mode'] ?? 'auto', 'auto'); ?>>Automatic (System prefers-color-scheme &amp; Dark Theme detection)</option>
+                                                        <option value="auto" <?php selected($opts['dark_mode_mode'] ?? 'auto', 'auto'); ?>>Automatic (Dynamic Website Theme &amp; Preference Matching)</option>
                                                         <option value="light" <?php selected($opts['dark_mode_mode'] ?? '', 'light'); ?>>Force Light Theme</option>
                                                         <option value="dark" <?php selected($opts['dark_mode_mode'] ?? '', 'dark'); ?>>Force High-Contrast Dark Theme</option>
                                                     </select>
-                                                    <p class="description">Controls card background and text colors. Automatic mode dynamically matches user OS dark preferences as well as popular WordPress dark themes (<code>.dark</code>, <code>.dark-theme</code>, <code>[data-theme="dark"]</code>).</p>
+                                                    <p class="description">Controls card background and typography contrast. <strong>Automatic</strong> mode intelligently checks active website themes (<code>.dark</code>, <code>[data-theme="dark"]</code>, computed background luminance) and browser/OS preferences, ensuring cards never stay dark on a light website (or vice-versa).</p>
                                                 </td>
                                             </tr>
                                             <tr>

@@ -161,11 +161,11 @@ function social_render_link_card_html($card_url, $card_title, $card_desc, $card_
     }
     $html .= '<div style="padding:10px 14px;">';
     if ($display_domain) {
-        $html .= '<div data-nosnippet style="font-size:0.75em; text-transform:uppercase; color:#657786; margin-bottom:3px; font-weight:600; letter-spacing:0.5px;">' . $display_domain . '</div>';
+        $html .= '<div class="social-link-card-domain" data-nosnippet style="font-size:0.75em; text-transform:uppercase; color:#657786; margin-bottom:3px; font-weight:600; letter-spacing:0.5px;">' . $display_domain . '</div>';
     }
-    $html .= '<div style="font-weight:700; font-size:1em; margin-bottom:4px; color:#0284c7; line-height:1.35;">' . $display_title . '</div>';
+    $html .= '<div class="social-link-card-title" style="font-weight:700; font-size:1em; margin-bottom:4px; color:#0284c7; line-height:1.35;">' . $display_title . '</div>';
     if ($display_desc) {
-        $html .= '<div style="font-size:0.85em; color:#475569; line-height:1.4;">' . $display_desc . '</div>';
+        $html .= '<div class="social-link-card-desc" style="font-size:0.85em; color:#475569; line-height:1.4;">' . $display_desc . '</div>';
     }
     $html .= '</div>';
     $html .= '</a>';

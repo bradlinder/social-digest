@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.7',
+  version: '5.7.8',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,23 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.6',
+  rollbackTarget: 'v5.7.7',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.8',
+    tag: 'v5.7.8',
+    isLatest: true,
+    highlights: [
+      'UI/UX & Readability: Enhanced Dark Mode Contrast & Typography: Overhauled the embedded native social card dark mode color system with crisp Slate-50 (#f8fafc) author titles, high-contrast Slate-100 (#f1f5f9) post copy, vibrant Sky-380 (#38bdf8) links and preview titles, and subtle Slate-800 card borders, significantly improving readability on dark backgrounds.',
+      'Feature: Smart Website & Browser Theme Detection: Added dynamic theme intelligence that prioritizes the active website or theme color preference over conflicting system-level OS settings. Automatically inspects document root/body theme classes and computed background luminance (getComputedStyle), ensuring light-themed websites render light-mode cards even if the user\'s OS or browser is set to dark mode (and vice versa). Features live dynamic adaptation via MutationObserver when users toggle site dark mode switches.'
+    ]
+  },
+  {
     version: '5.7.7',
     tag: 'v5.7.7',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Architecture: Modular Codebase with Zero-Downtime Self-Healing: Restructured plugin into clean, dedicated modules (includes/helpers.php, includes/api-clients.php, includes/feed-builder.php, and includes/admin.php). Built-in self-healing provisioner in social-digest.php automatically creates the /includes/ directory and restores module files on the fly if installed on a server that only received social-digest.php, guaranteeing zero downtime and complete backwards compatibility.',
       'Fix: TinyMCE Editor Splitter Inline Fallback: Added an inline TinyMCE plugin fallback in admin_footer to guarantee the "Insert Post Splitter" toolbar button functions properly even if external JS assets are missing from disk.'
