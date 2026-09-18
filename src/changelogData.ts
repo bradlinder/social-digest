@@ -26,7 +26,7 @@ export const CHANGELOG_DATA: ReleaseEntry[] = [
     tag: 'v5.7.6',
     isLatest: true,
     highlights: [
-      'Critical Fix: 100% Self-Contained Standalone Architecture: Consolidated all core helper functions, API clients, feed builders, and admin UI views directly into social-digest.php. When updating the plugin via direct file replacement or single-file uploads where subdirectories are not present, the plugin previously threw a fatal error (require_once includes/helpers.php: Failed to open stream). social-digest.php is now completely self-contained and zero-dependency, ensuring flawless execution across all WordPress deployment methods.',
+      'Architecture: Modular Codebase with Zero-Downtime Self-Healing: Restructured plugin into clean, dedicated modules (includes/helpers.php, includes/api-clients.php, includes/feed-builder.php, and includes/admin.php). Built-in self-healing provisioner automatically creates the /includes/ directory and restores module files on the fly if installed on a server that only received social-digest.php, guaranteeing zero downtime and complete backwards compatibility.',
       'Fix: TinyMCE Editor Splitter Inline Fallback: Added an inline TinyMCE plugin fallback in admin_footer to guarantee the "Insert Post Splitter" toolbar button functions properly even if external JS assets are missing from disk.'
     ]
   },

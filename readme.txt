@@ -16,7 +16,7 @@ Social Digest is a WordPress plugin that automates the aggregation and publicati
 == Changelog ==
 
 = 5.7.6 =
-* Critical Fix: 100% Self-Contained Standalone Architecture: Consolidated all core helper functions, API clients, feed builders, and admin UI views directly into `social-digest.php`. When updating the plugin via direct file replacement or FTP where subdirectories are not present, the plugin previously threw a fatal error (`require_once(/.../includes/helpers.php): Failed to open stream`). `social-digest.php` is now completely self-contained and zero-dependency, ensuring flawless execution across all WordPress deployment methods.
+* Architecture: Modular Codebase with Zero-Downtime Self-Healing: Restructured plugin into clean, dedicated modules (`includes/helpers.php`, `includes/api-clients.php`, `includes/feed-builder.php`, and `includes/admin.php`). Built-in self-healing provisioner automatically creates the `/includes/` directory and restores module files on the fly if the plugin is installed on a server that only received `social-digest.php`, guaranteeing zero downtime and complete backwards compatibility across all deployment workflows.
 * Fix: TinyMCE Editor Splitter Inline Fallback: Added an inline TinyMCE plugin fallback in `admin_footer` to guarantee the "Insert Post Splitter" toolbar button functions properly even if the external JS asset is not present on disk.
 
 = 5.7.5 =
