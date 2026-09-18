@@ -809,6 +809,12 @@ function social_render_settings_page() {
         <?php elseif ($active_tab === 'workbench'): ?>
             <?php 
             $state = social_workbench_state();
+            if (!empty($state) && (empty($state['version']) || $state['version'] !== SOCIAL_DIGEST_VERSION || strpos($state['title_override'] ?? '', ': ') === 0)) {
+                $auto_refreshed = social_fetch_workbench_candidates();
+                if (!empty($auto_refreshed['state'])) {
+                    $state = $auto_refreshed['state'];
+                }
+            }
             $candidates = (array)($state['candidates'] ?? []);
             $has_candidates = !empty($candidates);
             $fetch_confirm_attr = $has_candidates ? ' onclick="return confirm(\'Refreshing will discard your current exclusions, pin, and notes \u2014 continue?\');"' : '';

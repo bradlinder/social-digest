@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.17',
+  version: '5.7.18',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,24 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.16',
+  rollbackTarget: 'v5.7.17',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.18',
+    tag: 'v5.7.18',
+    isLatest: true,
+    highlights: [
+      'Fix: Auto-Refresh Stale Drafts: Workbench state now tracks versioning. Staged candidate drafts created on prior releases automatically re-generate on load, removing stale markup and broken title formatting instantly.',
+      'Enhancement: Topic Keyword Extraction: When posts do not contain explicit #hashtags, key proper nouns and topic words (e.g. Samsung, Valve, Asus, Lenovo) are extracted to populate {hashtags} in post titles.',
+      'Fix: Redundant Trailing Link Sanitation: Domain-style trailing links (winfuture.de/..., 9to5google.com/...) above embedded preview cards are automatically stripped, and inline a tags pass through wp_kses_post cleanly without raw HTML markup.'
+    ]
+  },
+  {
     version: '5.7.17',
     tag: 'v5.7.17',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Fix: Tokenized URL Replacement: Fixed double-nested href attribute parsing where Bluesky facet links were re-processed by plain-URL regexes, ensuring rendered post links remain clean and active without printing raw HTML markup.',
       'Fix: Cross-Platform Hashtag Extraction: Fixed Mastodon API tag harvesting so Mastodon hashtags are populated into extra_tags before body cleaning, allowing Mastodon tags to populate title templates even when Bluesky posts have no hashtags.'

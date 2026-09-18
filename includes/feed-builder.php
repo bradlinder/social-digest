@@ -341,6 +341,14 @@ function social_fetch_workbench_candidates() {
         }
     }
     
+    // If no explicit hashtags exist across candidate posts, extract key topic terms/proper nouns
+    if (empty($post_tags_list)) {
+        $extracted_topics = social_extract_topic_keywords_from_posts($candidates);
+        if (!empty($extracted_topics)) {
+            $post_tags_list[] = $extracted_topics;
+        }
+    }
+
     $title_hashtags = social_rank_and_format_title_tags(
         $post_tags_list,
         $opts['default_tags'] ?? '',
@@ -356,12 +364,13 @@ function social_fetch_workbench_candidates() {
     $title_tpl = $opts['title_template'] ?? 'Social Digest {hashtags}';
     $title = str_replace(['{hashtags}','{date}','{count}'], [$title_hashtags, wp_date(get_option('date_format'), time(), wp_timezone()), count($candidates)], $title_tpl);
     $title = preg_replace('/\s+/', ' ', $title);
-    $title = preg_replace('/^\s*[:\-–|]\s*/u', '', $title);
-    $title = preg_replace('/\s*[:\-–|]\s*$/u', '', $title);
+    $title = preg_replace('/^\s*[:\-–|;,]\s*/u', '', $title);
+    $title = preg_replace('/\s*[:\-–|;,]\s*$/u', '', $title);
     $title = trim($title);
 
 
     $next = [
+        'version' => SOCIAL_DIGEST_VERSION,
         'created' => time(),
         'title_override' => $title,
         'preview' => ['title' => $title, 'tags' => $tags, 'featured_image' => $featured],

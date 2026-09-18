@@ -179,10 +179,9 @@ function social_clean_body_text($raw_text, $has_card = false, $card_url = '', $l
     // Strip hashtags
     $text = preg_replace('/#[\p{L}\p{N}_]+/u', '', $raw_text);
 
-    // If a preview card is present, strip trailing redundant URL that leads to the card
+    // If a preview card is present, strip trailing redundant URL (scheme or domain/path) that leads to the card
     if ($has_card) {
-        // Strip trailing URL (including truncated URLs with ellipsis like store.minisforum.com/products/min...)
-        $text = preg_replace('/(?:\s+|[\r\n]+|\s*[:\-–]\s*)(?:https?:\/\/|www\.)[^\s<"\'\)]+(?:\.\.\.)?\s*$/iu', '', $text);
+        $text = preg_replace('/(?:\s+|[\r\n]+|\s*[:\-–]\s*)(?:https?:\/\/|www\.|[a-zA-Z0-9\-]+\.[a-zA-Z]{2,}\/)[^\s<"\'\)]*(?:\.\.\.)?\s*$/iu', '', $text);
         $text = preg_replace('/\s*[:\-–]\s*$/u', '.', $text);
     }
 
@@ -194,10 +193,11 @@ function social_clean_body_text($raw_text, $has_card = false, $card_url = '', $l
     if (!empty($links_map) && is_array($links_map)) {
         $idx = 0;
         foreach ($links_map as $disp => $full_url) {
+            if (empty($disp) || empty($full_url)) continue;
             $disp_esc = esc_html($disp);
-            if ($disp_esc !== '' && stripos($escaped, $disp_esc) !== false) {
+            if (stripos($escaped, $disp_esc) !== false) {
                 $ph = "___SD_LINK_PH_{$idx}___";
-                $placeholders[$ph] = '<a href="' . esc_url($full_url) . '" target="_blank" rel="noopener" style="color:#0284c7; text-decoration:underline;">' . $disp_esc . '</a>';
+                $placeholders[$ph] = '<a href="' . esc_url($full_url) . '" target="_blank" rel="noopener">' . $disp_esc . '</a>';
                 $escaped = str_replace($disp_esc, $ph, $escaped);
                 $idx++;
             }
@@ -205,9 +205,10 @@ function social_clean_body_text($raw_text, $has_card = false, $card_url = '', $l
     }
 
     // Link any remaining bare http(s):// or www. URLs that weren't converted yet
-    $escaped = preg_replace_callback('/\b(https?:\/\/[^\s<"\'\)]+)/i', function($m) {
+    $escaped = preg_replace_callback('/\b(https?:\/\/[^\s<"\'\)]+|www\.[^\s<"\'\)]+)/i', function($m) {
         $u = $m[1];
-        return '<a href="' . esc_url($u) . '" target="_blank" rel="noopener" style="color:#0284c7; text-decoration:underline;">' . $u . '</a>';
+        $href = (strpos($u, 'www.') === 0) ? 'https://' . $u : $u;
+        return '<a href="' . esc_url($href) . '" target="_blank" rel="noopener">' . $u . '</a>';
     }, $escaped);
 
     // Restore placeholders
@@ -231,8 +232,8 @@ function social_clean_mastodon_html($html, $has_card = false, $card_url = '') {
         $html = preg_replace('/(?:\s*[:\-–]\s*|\s*)<a[^>]+href=["\'][^"\']*["\'][^>]*>.*?<\/a>\s*(<\/p>\s*)$/isu', '$1', $html);
     }
 
-    // Add target="_blank" and styling to remaining links
-    $html = preg_replace('/<a\s+(?![^>]*\btarget=)([^>]+)>/i', '<a target="_blank" rel="noopener" style="color:#0284c7; text-decoration:underline;" $1>', $html);
+    // Add target="_blank" and rel="noopener" to remaining links cleanly
+    $html = preg_replace('/<a\s+(?![^>]*\btarget=)([^>]+)>/i', '<a target="_blank" rel="noopener" $1>', $html);
 
     // Clean up empty paragraphs or dangling breaks
     $html = preg_replace('/<p>\s*(?:<br\s*\/?>|&nbsp;|\s)*<\/p>/i', '', $html);
@@ -537,6 +538,48 @@ function social_split_camelcase_tag($tag) {
     $t = ltrim(trim($tag), '#');
     $t = preg_replace('/([a-z]{2,})([A-Z0-9])/u', '$1 $2', $t);
     return trim(preg_replace('/([A-Z]+)([A-Z][a-z])/u', '$1 $2', $t));
+}
+
+function social_extract_topic_keywords_from_posts($items) {
+    if (empty($items) || !is_array($items)) return [];
+
+    $stop_words = [
+        'the','a','an','and','or','but','if','then','else','when','at','by','from','for','with','about','against','between','into','through','during','before','after','above','below','to','up','down','in','out','on','off','over','under','again','further','once','here','there','where','why','how','all','any','both','each','few','more','most','other','some','such','no','nor','not','only','own','same','so','than','too','very','s','t','can','will','just','don','should','now','according','leaked','details','line','premium','tablets','include','both','chips','displays','support','open','source','tool','lets','developers','port','games','specifically','designed','bring','including','meta','quest','first','mini','processor','graphics','announced','june','available','now','laptop','key','feature','motorized','swivel','hinge','rotate','face','video','calls','fold','keyboard','tablet','usage','also','price','tag','unsurprising','disappointing','since','covers','follow','last','year','trades','faster','expected','ship','december','news','roundup'
+    ];
+
+    $phrases = [];
+
+    foreach ($items as $item) {
+        $text = $item['full_text'] ?? $item['text'] ?? '';
+        if (!$text) continue;
+
+        // Find Capitalized Multi-word Proper Nouns (e.g. "Samsung Galaxy Tab", "Steam Frame", "Qualcomm Snapdragon", "Lenovo ThinkBook", "Minimal Phone")
+        if (preg_match_all('/\b([A-Z][a-zA-Z0-9\+\-\.]{2,} (?:\w+ ){0,2}[A-Z0-9][a-zA-Z0-9\+\-\.]*)\b/u', $text, $matches)) {
+            foreach ($matches[1] as $m) {
+                $m = trim($m);
+                $words = explode(' ', $m);
+                $first_lower = mb_strtolower($words[0]);
+                if (in_array($first_lower, ['the', 'this', 'that', 'with', 'from', 'first', 'according'])) {
+                    array_shift($words);
+                    $m = implode(' ', $words);
+                }
+                if ($m && mb_strlen($m) >= 3 && !in_array(mb_strtolower($m), $stop_words)) {
+                    $phrases[] = $m;
+                }
+            }
+        }
+
+        // Single Capitalized Brand/Product Words if needed
+        if (preg_match_all('/\b([A-Z][a-zA-Z0-9]{3,})\b/u', $text, $s_matches)) {
+            foreach ($s_matches[1] as $sm) {
+                if (!in_array(mb_strtolower($sm), $stop_words)) {
+                    $phrases[] = $sm;
+                }
+            }
+        }
+    }
+
+    return array_values(array_unique($phrases));
 }
 
 function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $enclosure = 'parentheses', $delimiter = 'oxford', $max_tags_count = 3, $strategy = 'first') {

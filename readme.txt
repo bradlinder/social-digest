@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.17
+Stable tag: 5.7.18
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,13 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.18 =
+* Fix & Enhancement: Auto-Refresh Stale Drafts, Topic Keyword Extraction & Complete Trailing URL Sanitation:
+  1. Auto-Refresh Stale Workbench Drafts: Added version tracking to staged workbench drafts. Any existing draft saved on a previous version is automatically refreshed on page load, eliminating stale preview state and ensuring clean output immediately.
+  2. Fallback Topic Keyword Extraction: When candidate posts do not contain explicit `#hashtags`, Social Digest now automatically extracts key topic words and proper nouns (such as `Samsung`, `Valve`, `Asus`, `Lenovo`, `Minimal Phone`) to populate `{hashtags}` in post titles.
+  3. Clean Separator Sanitation: Enforced trimming of leading colons and separators (`: Liliputing News Roundup` -> `Liliputing News Roundup`) when title tags resolve to empty.
+  4. Redundant Link Sanitation: Enhanced trailing URL stripping for posts with embedded preview cards to match scheme-less domain paths (`winfuture.de/...`, `9to5google.com/...`) and removed inline `style` attributes on `<a>` tags so `wp_kses_post()` processes rendered HTML without stripping or printing raw markup.
 
 = 5.7.17 =
 * Fix & Enhancement: Tokenized URL Replacement & Cross-Platform Hashtag Extraction:
