@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.24
+Stable tag: 5.7.25
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,12 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.25 =
+* Bug Fix: Galaxy Tab S-Series & Snapdragon X-Series Precision Formatting:
+  1. Galaxy Tab S-Series Model Designation: Added explicit pattern matching for Samsung Galaxy Tab S-series model numbers (`#SamsungGalaxyTabS12`, `#samsunggalaxytabs12`, `#TabS12`) to strictly resolve as `Samsung Galaxy Tab S12` (or `Tab S12`) instead of misparsing `tabs` + digits as `Tabs 12`.
+  2. Snapdragon X-Series Processor Designation: Updated Snapdragon X-series model resolution (`SnapdragonX2`, `snapdragonx2`) to output unified `Snapdragon X2` without inserting an extraneous space before the series number (`Snapdragon X 2`).
+  3. Post-Processing Cleanup: Added regex safety guards in `social_split_camelcase_tag()` to prevent site taxonomy terms containing `Tabs` from corrupting model designation numbers.
 
 = 5.7.24 =
 * Bug Fix: CamelCase Hashtag Parsing & Fuzzy Duplicate Tag Elimination:

@@ -674,6 +674,24 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
         }
     }
 
+    // 1. Explicit Samsung Galaxy Tab S-Series pattern matching (e.g. "SamsungGalaxyTabS12", "samsunggalaxytabs12", "TabS12")
+    if (preg_match('/(?i)samsung\s*galaxy\s*tab\s*s\s*(\d+)/u', $t, $m)) {
+        $t = preg_replace('/(?i)samsung\s*galaxy\s*tab\s*s\s*\d+/u', 'Samsung Galaxy Tab S' . $m[1], $t);
+    } elseif (preg_match('/(?i)samsung\s*galaxy\s*tabs\s*(\d+)/u', $t, $m)) {
+        $t = preg_replace('/(?i)samsung\s*galaxy\s*tabs\s*\d+/u', 'Samsung Galaxy Tab S' . $m[1], $t);
+    } elseif (preg_match('/(?i)galaxy\s*tabs\s*(\d+)/u', $t, $m)) {
+        $t = preg_replace('/(?i)galaxy\s*tabs\s*\d+/u', 'Galaxy Tab S' . $m[1], $t);
+    } elseif (preg_match('/(?i)tab\s*s\s*(\d+)/u', $t, $m)) {
+        $t = preg_replace('/(?i)tab\s*s\s*\d+/u', 'Tab S' . $m[1], $t);
+    }
+
+    // 2. Explicit Snapdragon X-Series processor pattern matching (e.g. "SnapdragonX2", "snapdragonx2", "SnapdragonX2Elite")
+    if (preg_match('/(?i)snapdragon\s*x\s*(\d+)/u', $t, $m)) {
+        $t = preg_replace('/(?i)snapdragon\s*x\s*\d+/u', 'Snapdragon X' . $m[1], $t);
+    } elseif (preg_match('/(?i)snapdragon\s*x(\d+)/u', $t, $m)) {
+        $t = preg_replace('/(?i)snapdragon\s*x\d+/u', 'Snapdragon X' . $m[1], $t);
+    }
+
     // Get dynamic vocabulary dictionary learned from site content + baseline terms
     $compound_map = social_get_site_vocabulary_dictionary();
 
@@ -684,12 +702,11 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
     $t = preg_replace('/([a-z]{2,})([A-Z0-9])/u', '$1 $2', $t);
     $t = preg_replace('/([A-Z]+)([A-Z][a-z])/u', '$1 $2', $t);
 
-    // Letter-number boundary splitting (e.g. "minimalphone2" -> "minimalphone 2", "gen7" -> "gen 7", "tabs12" -> "tabs 12")
+    // Letter-number boundary splitting (e.g. "minimalphone2" -> "minimalphone 2", "gen7" -> "gen 7")
     $t = preg_replace('/([a-zA-Z]{2,})([0-9]+)/u', '$1 $2', $t);
     $t = preg_replace('/([0-9]+)([a-zA-Z]{2,})/u', '$1 $2', $t);
 
-    // Specific model/chip designation regex splits (e.g. "snapdragonx" -> "snapdragon x")
-    $t = preg_replace('/(snapdragon)(x\b|x(?=\d))/i', '$1 $2', $t);
+    // Specific model/chip designation regex splits
     $t = preg_replace('/(elite)(mini)(pc)/i', '$1 $2 $3', $t);
     $t = preg_replace('/(mini)(pc|pcs)/i', '$1 $2', $t);
 
@@ -728,7 +745,7 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
             if ($sw === '') continue;
 
             $sw_upper = mb_strtoupper($sw);
-            if (in_array($sw_upper, ['AI', 'PC', 'PCS', 'VR', 'X', 'X1', 'X2', 'X3', '3D', '2K', '4K', '8K', '5G', '4G', 'US', 'UK', 'EU', 'OLED', 'AMOLED', 'RAM', 'CPU', 'GPU', 'S12', 'QN10', 'OS', 'UI', 'HD'], true)) {
+            if (in_array($sw_upper, ['AI', 'PC', 'PCS', 'VR', 'X', 'X1', 'X2', 'X3', '3D', '2K', '4K', '8K', '5G', '4G', 'US', 'UK', 'EU', 'OLED', 'AMOLED', 'RAM', 'CPU', 'GPU', 'S10', 'S11', 'S12', 'S24', 'QN10', 'OS', 'UI', 'HD'], true)) {
                 $processed_phrases[] = $sw_upper;
             } elseif (preg_match('/^[A-Z0-9\-\.]/u', $sw)) {
                 // Preserve exact capitalization if provided by site vocabulary term
@@ -739,7 +756,13 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
         }
     }
 
-    return trim(implode(' ', $processed_phrases));
+    $res = trim(implode(' ', $processed_phrases));
+    // Final precision fixes for model designations
+    $res = preg_replace('/\bSamsung Galaxy Tabs (\d+)\b/i', 'Samsung Galaxy Tab S$1', $res);
+    $res = preg_replace('/\bGalaxy Tabs (\d+)\b/i', 'Galaxy Tab S$1', $res);
+    $res = preg_replace('/\bSnapdragon X (\d+)\b/i', 'Snapdragon X$1', $res);
+
+    return $res;
 }
 
 function social_extract_topic_keywords_from_posts($items) {

@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.24',
+  version: '5.7.25',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,24 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.23',
+  rollbackTarget: 'v5.7.24',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.25',
+    tag: 'v5.7.25',
+    isLatest: true,
+    highlights: [
+      'Bug Fix: Galaxy Tab S-Series Model Designation: Hashtags like #SamsungGalaxyTabS12 now strictly format as "Samsung Galaxy Tab S12" (or "Tab S12").',
+      'Bug Fix: Snapdragon X-Series Processor Designation: Snapdragon X-series tags format as "Snapdragon X2" without extra space before the series number.',
+      'Enhancement: Post-Processing Regex Cleanup: Added safety guards to prevent site taxonomy terms containing "Tabs" from corrupting model designation numbers.'
+    ]
+  },
+  {
     version: '5.7.24',
     tag: 'v5.7.24',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Bug Fix: CamelCase Hashtag Preservation: Corrected model number splitting for tags like #SamsungGalaxyTabS12 to preserve "Tab S12" without corruption from unspaced dictionary entries.',
       'Bug Fix: Single Hashtag Per Social Post Enforcement: Eliminated featured post tag double-counting during title candidate assembly.',
