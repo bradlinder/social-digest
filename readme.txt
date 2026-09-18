@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.20
+Stable tag: 5.7.22
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -15,12 +15,10 @@ Social Digest is a WordPress plugin that automates the aggregation and publicati
 
 == Changelog ==
 
-= 5.7.20 =
-* Fix & Enhancement: Recursive Compound Tag Word Segmentation, Smart Letter-Number Boundary Splitting & Auto-Refresh Enforcement:
-  1. Recursive Word Segmentation: Added recursive compound word segmentation (`thinkbookplusgen` -> `ThinkBook Plus Gen`, `autotwist` -> `Auto Twist`, `steamframe` -> `Steam Frame`, `samsunggalaxytabs` -> `Samsung Galaxy Tabs`).
-  2. Letter-Number Boundary Splitting: Correctly splits attached numbers from word boundaries (`thinkbookplusgen 7autotwist` -> `ThinkBook Plus Gen 7 Auto Twist`, `minimalphone 2` -> `Minimal Phone 2`).
-  3. Automatic Title Capitalization: Enforced strict Title Case capitalization across all title tags while retaining tech acronyms (`VR`, `AI`, `PC`, `OLED`, `5G`, `S12`).
-  4. Workbench Draft Refresh Enforcement: Workbench automatically invalidates and re-generates staged candidate drafts if uncapitalized lowercase tags are detected.
+= 5.7.22 =
+* Feature & Architecture: Zero-Config Automated Title Tag Formatting Engine & Custom Tag Overrides:
+  1. Multi-Layer Title Formatting: Combined CamelCase regexes (`[a-z][A-Z]`), letter-number boundary splitting (`[a-z][0-9]`), acronym preservation, and an expanded built-in tech dictionary for zero-config title tag generation.
+  2. Optional Custom Tag Overrides Setting: Added a "Custom Tag Title Overrides" textarea in Settings (under Hashtag Formatting Rules) allowing power users to map raw tags to custom phrases (e.g. `rawtag=Formatted Name`).
 
 = 5.7.18 =
 * Fix & Enhancement: Auto-Refresh Stale Drafts, Topic Keyword Extraction & Complete Trailing URL Sanitation:

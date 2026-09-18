@@ -773,6 +773,11 @@ function social_render_settings_page() {
                                                                 <option value="slash" <?php selected($opts['title_tag_delimiter'] ?? '', 'slash'); ?>>Tag 1 / Tag 2 / Tag 3</option>
                                                             </select>
                                                         </div>
+                                                        <div style="margin-top: 10px; border-top: 1px dashed #ccd0d4; padding-top: 8px;">
+                                                            <label style="display:block; font-weight:600; margin-bottom: 4px;">Custom Tag Title Overrides (Optional):</label>
+                                                            <textarea name="social_digest_options[title_tag_custom_overrides]" rows="2" class="large-text" style="font-family: monospace; font-size: 12px;" placeholder="snapdragonx2=Snapdragon X2, eliteminipc=Elite Mini PC (one per line or comma-separated)"><?php echo esc_textarea($opts['title_tag_custom_overrides'] ?? ''); ?></textarea>
+                                                            <p class="description" style="margin-top: 2px; font-size: 11px;">Optional escape hatch to manually map specific raw tags to custom formatted titles (e.g. <code>rawtag=Formatted Name</code>).</p>
+                                                        </div>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -809,7 +814,7 @@ function social_render_settings_page() {
         <?php elseif ($active_tab === 'workbench'): ?>
             <?php 
             $state = social_workbench_state();
-            if (!empty($state) && (empty($state['version']) || $state['version'] !== SOCIAL_DIGEST_VERSION || strpos($state['title_override'] ?? '', ': ') === 0 || preg_match('/^[a-z]/', $state['title_override'] ?? ''))) {
+            if (!empty($state) && (empty($state['version']) || $state['version'] !== SOCIAL_DIGEST_VERSION || strpos($state['title_override'] ?? '', ': ') === 0 || preg_match('/minipc|snapdragonx|eliteminipc|^[a-z]/i', $state['title_override'] ?? ''))) {
                 $auto_refreshed = social_fetch_workbench_candidates();
                 if (!empty($auto_refreshed['state'])) {
                     $state = $auto_refreshed['state'];

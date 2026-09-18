@@ -355,7 +355,8 @@ function social_fetch_workbench_candidates() {
         $opts['title_tag_enclosure'] ?? 'parentheses',
         $opts['title_tag_delimiter'] ?? 'oxford',
         $opts['title_tag_max_count'] ?? 3,
-        $opts['title_tag_selection_strategy'] ?? 'first'
+        $opts['title_tag_selection_strategy'] ?? 'first',
+        $opts['title_tag_custom_overrides'] ?? ''
     );    
     $tag_map = [];
     foreach (array_filter(array_map('trim', explode(',', $opts['default_tags'] ?? ''))) as $tag) $tag_map[mb_strtolower($tag)] = $tag;

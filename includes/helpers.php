@@ -534,9 +534,24 @@ function social_get_cached_tag_weights() {
     return $weights;
 }
 
-function social_split_camelcase_tag($tag) {
+function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
     $t = ltrim(trim($tag), '#');
     if ($t === '') return '';
+
+    // Check optional custom overrides first (e.g. "rawtag=Formatted Name")
+    if (!empty($custom_overrides_str)) {
+        $lines = preg_split('/[\r\n,]+/', $custom_overrides_str);
+        foreach ($lines as $line) {
+            if (strpos($line, '=') !== false) {
+                list($k, $v) = explode('=', $line, 2);
+                $k = ltrim(trim($k), '#');
+                $v = trim($v);
+                if ($k !== '' && $v !== '' && mb_strtolower(str_replace(' ', '', $t)) === mb_strtolower(str_replace(' ', '', $k))) {
+                    return $v;
+                }
+            }
+        }
+    }
 
     // Replace underscores and hyphens with spaces
     $t = str_replace(['_', '-'], ' ', $t);
@@ -549,11 +564,27 @@ function social_split_camelcase_tag($tag) {
     $t = preg_replace('/([a-zA-Z]{2,})([0-9]+)/u', '$1 $2', $t);
     $t = preg_replace('/([0-9]+)([a-zA-Z]{2,})/u', '$1 $2', $t);
 
+    // Specific model/chip designation regex splits (e.g. "snapdragonx" -> "snapdragon x")
+    $t = preg_replace('/(snapdragon)(x\b|x(?=\d))/i', '$1 $2', $t);
+    $t = preg_replace('/(elite)(mini)(pc)/i', '$1 $2 $3', $t);
+    $t = preg_replace('/(mini)(pc|pcs)/i', '$1 $2', $t);
+
     // Map of recognized compound terms to properly capitalized phrases
     $compound_map = [
         'samsunggalaxytabs' => 'Samsung Galaxy Tabs',
         'samsunggalaxytab'  => 'Samsung Galaxy Tab',
         'samsunggalaxy'     => 'Samsung Galaxy',
+        'snapdragonx2'      => 'Snapdragon X2',
+        'snapdragonx1'      => 'Snapdragon X1',
+        'snapdragonx'       => 'Snapdragon X',
+        'snapdragon'        => 'Snapdragon',
+        'eliteminipc'       => 'Elite Mini PC',
+        'minipc'            => 'Mini PC',
+        'minipcs'           => 'Mini PCs',
+        'elite'             => 'Elite',
+        'mini'              => 'Mini',
+        'pc'                => 'PC',
+        'pcs'               => 'PCs',
         'thinkbookplusgen'  => 'ThinkBook Plus Gen',
         'thinkbookplus'     => 'ThinkBook Plus',
         'thinkbookgen'      => 'ThinkBook Gen',
@@ -573,7 +604,6 @@ function social_split_camelcase_tag($tag) {
         'nintendoswitch'    => 'Nintendo Switch',
         'raspberrypi'       => 'Raspberry Pi',
         'openclaw'          => 'OpenClaw',
-        'snapdragon'        => 'Snapdragon',
         'samsung'           => 'Samsung',
         'galaxy'            => 'Galaxy',
         'lenovo'            => 'Lenovo',
@@ -581,6 +611,7 @@ function social_split_camelcase_tag($tag) {
         'ascent'            => 'Ascent',
         'adreno'            => 'Adreno',
         'qualcomm'          => 'Qualcomm',
+        'dimensity'         => 'Dimensity',
         'lepton'            => 'Lepton',
         'valve'             => 'Valve',
         'quest'             => 'Quest',
@@ -600,7 +631,6 @@ function social_split_camelcase_tag($tag) {
         'game'              => 'Game',
         'tabs'              => 'Tabs',
         'tab'               => 'Tab',
-        'mini'              => 'Mini',
         'laptop'            => 'Laptop',
         'desktop'           => 'Desktop',
         'tablet'            => 'Tablet',
@@ -641,7 +671,7 @@ function social_split_camelcase_tag($tag) {
             if ($sw === '') continue;
 
             $sw_upper = mb_strtoupper($sw);
-            if (in_array($sw_upper, ['AI', 'PC', 'VR', '3D', '2K', '4K', '8K', '5G', '4G', 'US', 'UK', 'EU', 'OLED', 'AMOLED', 'RAM', 'CPU', 'GPU', 'S12', 'QN10', 'OS', 'UI', 'HD'])) {
+            if (in_array($sw_upper, ['AI', 'PC', 'PCS', 'VR', 'X', 'X1', 'X2', 'X3', '3D', '2K', '4K', '8K', '5G', '4G', 'US', 'UK', 'EU', 'OLED', 'AMOLED', 'RAM', 'CPU', 'GPU', 'S12', 'QN10', 'OS', 'UI', 'HD'])) {
                 $processed_phrases[] = $sw_upper;
             } else {
                 $processed_phrases[] = mb_convert_case($sw, MB_CASE_TITLE, "UTF-8");
@@ -694,7 +724,7 @@ function social_extract_topic_keywords_from_posts($items) {
     return array_values(array_unique($phrases));
 }
 
-function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $enclosure = 'parentheses', $delimiter = 'oxford', $max_tags_count = 3, $strategy = 'first') {
+function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $enclosure = 'parentheses', $delimiter = 'oxford', $max_tags_count = 3, $strategy = 'first', $custom_overrides_str = '') {
     $max_tags = max(1, min(5, (int)$max_tags_count));
     $selected_tags = [];
     $seen_normalized = [];
@@ -730,7 +760,7 @@ function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $
                 // 'first' maintains original appearance order in the post
 
                 foreach ($post_tags_copy as $tag) {
-                    $clean_tag = social_split_camelcase_tag($tag);
+                    $clean_tag = social_split_camelcase_tag($tag, $custom_overrides_str);
                     $norm = mb_strtolower(trim($clean_tag));
                     if ($norm !== '' && !isset($seen_normalized[$norm])) {
                         $seen_normalized[$norm] = true;
@@ -756,7 +786,7 @@ function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $
             }
 
             foreach ($flat_tags as $tag) {
-                $clean_tag = social_split_camelcase_tag($tag);
+                $clean_tag = social_split_camelcase_tag($tag, $custom_overrides_str);
                 $norm = mb_strtolower(trim($clean_tag));
                 if ($norm !== '' && !isset($seen_normalized[$norm])) {
                     $seen_normalized[$norm] = true;
@@ -773,7 +803,7 @@ function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $
     if (empty($selected_tags)) {
         $defaults = array_filter(array_map('trim', explode(',', $default_tags_str)));
         foreach ($defaults as $d) {
-            $clean_tag = social_split_camelcase_tag($d);
+            $clean_tag = social_split_camelcase_tag($d, $custom_overrides_str);
             $norm = mb_strtolower(trim($clean_tag));
             if ($norm !== '' && !isset($seen_normalized[$norm])) {
                 $seen_normalized[$norm] = true;

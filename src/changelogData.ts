@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.20',
+  version: '5.7.22',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,33 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.19',
+  rollbackTarget: 'v5.7.21',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.22',
+    tag: 'v5.7.22',
+    isLatest: true,
+    highlights: [
+      'Feature: Zero-Config Automated Title Tag Engine: Combines CamelCase regexes, letter-number transitions, and built-in tech word segmentation.',
+      'Feature: Optional Custom Tag Overrides: Added a settings textarea under Hashtag Formatting Rules allowing optional manual tag mappings (rawtag=Formatted Name).'
+    ]
+  },
+  {
+    version: '5.7.21',
+    tag: 'v5.7.21',
+    isLatest: false,
+    highlights: [
+      'Fix: Chip Series & Form Factor Segmentation: Added specific rules and compound dictionary mappings for Snapdragon X (Snapdragonx 2 -> Snapdragon X2) and form factors (Eliteminipc -> Elite Mini PC, minipc -> Mini PC).',
+      'Enhancement: Preserved Acronyms: Retained uppercase formatting for model designations (X, X1, X2, X3, PC, PCS, S12, QN10).',
+      'Fix: Workbench Refresh Trigger: Workbench auto-invalidates drafts containing concatenated model terms (eliteminipc, snapdragonx).'
+    ]
+  },
+  {
     version: '5.7.20',
     tag: 'v5.7.20',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Fix: Recursive Compound Tag Segmentation: Added recursive compound word segmentation (thinkbookplusgen -> ThinkBook Plus Gen, autotwist -> Auto Twist, steamframe -> Steam Frame, samsunggalaxytabs -> Samsung Galaxy Tabs).',
       'Fix: Letter-Number Boundary Splitting: Correctly splits attached numbers from word boundaries (thinkbookplusgen 7autotwist -> ThinkBook Plus Gen 7 Auto Twist, minimalphone 2 -> Minimal Phone 2).',
