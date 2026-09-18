@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.25',
+  version: '5.7.26',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,23 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.24',
+  rollbackTarget: 'v5.7.25',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.26',
+    tag: 'v5.7.26',
+    isLatest: true,
+    highlights: [
+      'Feature: Custom Tag Title Overrides Import & Export (.txt files): Instant one-click export and file import for tag override lists.',
+      'Feature: Configurable Vocabulary Post Scan Depth: Customize scan limits (50, 150, 300, 500, 1000, Full Site) with dynamic warning callouts for large archives.'
+    ]
+  },
+  {
     version: '5.7.25',
     tag: 'v5.7.25',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Bug Fix: Galaxy Tab S-Series Model Designation: Hashtags like #SamsungGalaxyTabS12 now strictly format as "Samsung Galaxy Tab S12" (or "Tab S12").',
       'Bug Fix: Snapdragon X-Series Processor Designation: Snapdragon X-series tags format as "Snapdragon X2" without extra space before the series number.',

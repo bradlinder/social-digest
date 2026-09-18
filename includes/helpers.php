@@ -611,8 +611,11 @@ function social_get_site_vocabulary_dictionary() {
     }
 
     // 3. Extract Capitalized Brand & Product Phrases from Recent Published Post Titles
+    $scan_limit = (int)($opts['vocabulary_post_scan_limit'] ?? 150);
+    if ($scan_limit === 0) $scan_limit = 150;
+
     $posts = get_posts([
-        'numberposts' => 150,
+        'numberposts' => $scan_limit,
         'post_status' => 'publish',
         'post_type'   => 'post',
         'fields'      => 'post_title',

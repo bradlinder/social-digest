@@ -102,6 +102,7 @@ add_action('admin_init', function() {
             'title_tag_selection_strategy' => 'first',
             'learn_site_vocabulary'        => 1,
             'vocabulary_scan_frequency'    => '7_days',
+            'vocabulary_post_scan_limit'   => 150,
             'title_tag_custom_overrides'   => '',
             'same_day_suffix_tpl'    => ' (Part {part})',
             'excluded_words'         => '#ad, sponsored',
@@ -286,6 +287,8 @@ function social_sanitize_settings($input) {
     $output['learn_site_vocabulary']     = !empty($input['learn_site_vocabulary']) ? 1 : 0;
     $allowed_frequencies                 = ['24_hours', '7_days', '30_days'];
     $output['vocabulary_scan_frequency'] = in_array($input['vocabulary_scan_frequency'] ?? '', $allowed_frequencies, true) ? $input['vocabulary_scan_frequency'] : '7_days';
+    $raw_limit                           = (int)($input['vocabulary_post_scan_limit'] ?? 150);
+    $output['vocabulary_post_scan_limit']= in_array($raw_limit, [50, 100, 150, 300, 500, 1000, -1], true) ? $raw_limit : 150;
     $output['title_tag_custom_overrides']= sanitize_textarea_field($input['title_tag_custom_overrides'] ?? '');
 
     $output['same_day_suffix_tpl'] = sanitize_text_field($input['same_day_suffix_tpl'] ?? ' (Part {part})');
@@ -792,13 +795,30 @@ function social_render_settings_page() {
                                                             <div style="margin-bottom: 6px;">
                                                                 <label><input type="checkbox" name="social_digest_options[learn_site_vocabulary]" value="1" <?php checked(!isset($opts['learn_site_vocabulary']) || !empty($opts['learn_site_vocabulary'])); ?>> Automatically learn vocabulary from published WordPress post titles, tags &amp; categories</label>
                                                             </div>
-                                                            <div style="margin-bottom: 8px;">
-                                                                <label style="display:inline-block; width: 140px; font-size: 12px;">Scan Frequency:</label>
-                                                                <select name="social_digest_options[vocabulary_scan_frequency]" style="font-size: 12px;">
-                                                                    <option value="24_hours" <?php selected($opts['vocabulary_scan_frequency'] ?? '', '24_hours'); ?>>Every 24 Hours</option>
-                                                                    <option value="7_days" <?php selected($opts['vocabulary_scan_frequency'] ?? '7_days', '7_days'); ?>>Every 7 Days (Recommended)</option>
-                                                                    <option value="30_days" <?php selected($opts['vocabulary_scan_frequency'] ?? '', '30_days'); ?>>Every 30 Days</option>
-                                                                </select>
+                                                            <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 8px;">
+                                                                <div>
+                                                                    <label style="display:inline-block; width: 120px; font-size: 12px;">Scan Frequency:</label>
+                                                                    <select name="social_digest_options[vocabulary_scan_frequency]" style="font-size: 12px;">
+                                                                        <option value="24_hours" <?php selected($opts['vocabulary_scan_frequency'] ?? '', '24_hours'); ?>>Every 24 Hours</option>
+                                                                        <option value="7_days" <?php selected($opts['vocabulary_scan_frequency'] ?? '7_days', '7_days'); ?>>Every 7 Days (Recommended)</option>
+                                                                        <option value="30_days" <?php selected($opts['vocabulary_scan_frequency'] ?? '', '30_days'); ?>>Every 30 Days</option>
+                                                                    </select>
+                                                                </div>
+                                                                <div>
+                                                                    <?php $scan_limit_val = (int)($opts['vocabulary_post_scan_limit'] ?? 150); ?>
+                                                                    <label style="display:inline-block; width: 120px; font-size: 12px;">Post Scan Depth:</label>
+                                                                    <select name="social_digest_options[vocabulary_post_scan_limit]" id="sd_vocab_scan_limit_select" style="font-size: 12px;" onchange="sdToggleVocabWarning(this.value)">
+                                                                        <option value="50" <?php selected($scan_limit_val, 50); ?>>50 Posts (Light &amp; Fast)</option>
+                                                                        <option value="150" <?php selected($scan_limit_val, 150); ?>>150 Posts (Recommended Baseline)</option>
+                                                                        <option value="300" <?php selected($scan_limit_val, 300); ?>>300 Posts (Deep Coverage)</option>
+                                                                        <option value="500" <?php selected($scan_limit_val, 500); ?>>500 Posts (Extended Archive)</option>
+                                                                        <option value="1000" <?php selected($scan_limit_val, 1000); ?>>1,000 Posts (Heavy Archive)</option>
+                                                                        <option value="-1" <?php selected($scan_limit_val, -1); ?>>All Published Posts (Full Site History)</option>
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                            <div id="sd_vocab_scan_warning" style="display: <?php echo ($scan_limit_val > 300 || $scan_limit_val === -1) ? 'block' : 'none'; ?>; background: #fff8e5; border: 1px solid #f0c36d; color: #8a6d3b; padding: 8px 12px; border-radius: 4px; font-size: 11px; margin-bottom: 8px;">
+                                                                <strong>⚠️ Large Archive Scan Warning:</strong> Indexing <span id="sd_scan_num_label"><?php echo $scan_limit_val === -1 ? 'all published' : $scan_limit_val; ?></span> posts scans your database for product titles &amp; taxonomies. While transient caching keeps normal page loads fast, re-indexing large archives (>300 posts or full site) may temporarily increase PHP memory usage and execution time. <em>150–300 posts is recommended for optimal balance.</em>
                                                             </div>
                                                             <?php 
                                                             $current_vocab = social_get_site_vocabulary_dictionary();
@@ -811,10 +831,72 @@ function social_render_settings_page() {
                                                             <p class="description" style="margin-top: 2px; font-size: 11px;">Extracts proper nouns and product terms from your site so all-lowercase social hashtags (e.g. <code>#eliteminipc</code>) map automatically to your site's exact terminology.</p>
                                                         </div>
                                                         <div style="margin-top: 10px; border-top: 1px dashed #ccd0d4; padding-top: 8px;">
-                                                            <label style="display:block; font-weight:600; margin-bottom: 4px;">Custom Tag Title Overrides (Optional):</label>
-                                                            <textarea name="social_digest_options[title_tag_custom_overrides]" rows="2" class="large-text" style="font-family: monospace; font-size: 12px;" placeholder="snapdragonx2=Snapdragon X2, eliteminipc=Elite Mini PC (one per line or comma-separated)"><?php echo esc_textarea($opts['title_tag_custom_overrides'] ?? ''); ?></textarea>
-                                                            <p class="description" style="margin-top: 2px; font-size: 11px;">Optional escape hatch to manually map specific raw tags to custom formatted titles (e.g. <code>rawtag=Formatted Name</code>).</p>
+                                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                                                <label style="font-weight:600;">Custom Tag Title Overrides (Optional):</label>
+                                                                <div>
+                                                                    <button type="button" class="button button-small" onclick="sdExportCustomOverrides()" title="Export current custom overrides as a text file">📥 Export (.txt)</button>
+                                                                    <button type="button" class="button button-small" onclick="document.getElementById('sd_import_overrides_file').click()" title="Import custom overrides from a text file">📤 Import (.txt)</button>
+                                                                    <input type="file" id="sd_import_overrides_file" accept=".txt,.csv" style="display:none;" onchange="sdImportCustomOverrides(this)">
+                                                                </div>
+                                                            </div>
+                                                            <textarea id="sd_title_tag_custom_overrides" name="social_digest_options[title_tag_custom_overrides]" rows="3" class="large-text" style="font-family: monospace; font-size: 12px;" placeholder="snapdragonx2=Snapdragon X2, eliteminipc=Elite Mini PC (one per line or comma-separated)"><?php echo esc_textarea($opts['title_tag_custom_overrides'] ?? ''); ?></textarea>
+                                                            <p class="description" style="margin-top: 2px; font-size: 11px;">Optional escape hatch to manually map specific raw tags to custom formatted titles (e.g. <code>rawtag=Formatted Name</code>). Use 📥 Export / 📤 Import to save or load backups as <code>.txt</code> files.</p>
                                                         </div>
+                                                        <script>
+                                                        function sdToggleVocabWarning(val) {
+                                                            var box = document.getElementById('sd_vocab_scan_warning');
+                                                            var label = document.getElementById('sd_scan_num_label');
+                                                            var num = parseInt(val, 10);
+                                                            if (num > 300 || num === -1) {
+                                                                box.style.display = 'block';
+                                                                label.textContent = (num === -1) ? 'all published' : num;
+                                                            } else {
+                                                                box.style.display = 'none';
+                                                            }
+                                                        }
+
+                                                        function sdExportCustomOverrides() {
+                                                            var textarea = document.getElementById('sd_title_tag_custom_overrides');
+                                                            var content = textarea ? textarea.value.trim() : '';
+                                                            if (!content) {
+                                                                alert('There are no custom tag overrides to export.');
+                                                                return;
+                                                            }
+                                                            var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                                                            var url = URL.createObjectURL(blob);
+                                                            var a = document.createElement('a');
+                                                            a.href = url;
+                                                            a.download = 'custom-tag-overrides.txt';
+                                                            document.body.appendChild(a);
+                                                            a.click();
+                                                            document.body.removeChild(a);
+                                                            URL.revokeObjectURL(url);
+                                                        }
+
+                                                        function sdImportCustomOverrides(input) {
+                                                            if (!input.files || !input.files[0]) return;
+                                                            var file = input.files[0];
+                                                            var reader = new FileReader();
+                                                            reader.onload = function(e) {
+                                                                var importedText = e.target.result;
+                                                                var textarea = document.getElementById('sd_title_tag_custom_overrides');
+                                                                if (textarea) {
+                                                                    if (textarea.value.trim() !== '') {
+                                                                        if (confirm('Do you want to append the imported overrides to your existing list?\n\nClick OK to Append, or Cancel to Replace existing overrides.')) {
+                                                                            textarea.value = textarea.value.trim() + '\n' + importedText.trim();
+                                                                        } else {
+                                                                            textarea.value = importedText.trim();
+                                                                        }
+                                                                    } else {
+                                                                        textarea.value = importedText.trim();
+                                                                    }
+                                                                    alert('Import successful! Remember to click "Save Changes" at the bottom of the page to apply.');
+                                                                }
+                                                            };
+                                                            reader.readAsText(file);
+                                                            input.value = '';
+                                                        }
+                                                        </script>
                                                     </div>
                                                 </td>
                                             </tr>

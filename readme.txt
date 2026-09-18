@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.25
+Stable tag: 5.7.26
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,14 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.26 =
+* Feature: Custom Tag Title Overrides Import & Export (.txt files):
+  1. Export (.txt): Added one-click export button to save custom tag overrides as a local `custom-tag-overrides.txt` backup file.
+  2. Import (.txt): Added file uploader allowing users to import or append custom tag override mappings from `.txt` or `.csv` files directly in the admin UI.
+* Feature & Performance: Configurable Post Scan Depth & Warning Indicators for Vocabulary Engine:
+  1. Configurable Post Scan Depth: Added a setting (`vocabulary_post_scan_limit`) with options ranging from 50 to 1,000 posts up to Full Site History.
+  2. Performance Warning Callout: Displayed clear guidance and warning callouts when selecting large scan depths (>300 posts or Full Site) to inform users about transient memory and execution tradeoffs.
 
 = 5.7.25 =
 * Bug Fix: Galaxy Tab S-Series & Snapdragon X-Series Precision Formatting:
