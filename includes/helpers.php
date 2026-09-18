@@ -545,58 +545,111 @@ function social_split_camelcase_tag($tag) {
     $t = preg_replace('/([a-z]{2,})([A-Z0-9])/u', '$1 $2', $t);
     $t = preg_replace('/([A-Z]+)([A-Z][a-z])/u', '$1 $2', $t);
 
-    // Letter-number boundary splitting (e.g. "minimalphone2" -> "minimalphone 2", "tabs12" -> "tabs 12")
+    // Letter-number boundary splitting (e.g. "minimalphone2" -> "minimalphone 2", "gen7" -> "gen 7", "tabs12" -> "tabs 12")
     $t = preg_replace('/([a-zA-Z]{2,})([0-9]+)/u', '$1 $2', $t);
     $t = preg_replace('/([0-9]+)([a-zA-Z]{2,})/u', '$1 $2', $t);
 
-    // Known compound word splitting for lowercase concatenated tech/product terms
-    $compound_splits = [
-        'steamframe' => 'Steam Frame',
-        'minimalphone' => 'Minimal Phone',
+    // Map of recognized compound terms to properly capitalized phrases
+    $compound_map = [
         'samsunggalaxytabs' => 'Samsung Galaxy Tabs',
-        'samsunggalaxytab' => 'Samsung Galaxy Tab',
-        'samsunggalaxy' => 'Samsung Galaxy',
-        'galaxytabs' => 'Galaxy Tabs',
-        'galaxytab' => 'Galaxy Tab',
-        'thinkbook' => 'ThinkBook',
-        'openclaw' => 'OpenClaw',
-        'steamos' => 'SteamOS',
-        'steamdeck' => 'Steam Deck',
-        'googlepixel' => 'Google Pixel',
-        'applewatch' => 'Apple Watch',
-        'macbook' => 'MacBook',
-        'playstation' => 'PlayStation',
-        'nintendoswitch' => 'Nintendo Switch',
-        'raspberrypi' => 'Raspberry Pi',
+        'samsunggalaxytab'  => 'Samsung Galaxy Tab',
+        'samsunggalaxy'     => 'Samsung Galaxy',
+        'thinkbookplusgen'  => 'ThinkBook Plus Gen',
+        'thinkbookplus'     => 'ThinkBook Plus',
+        'thinkbookgen'      => 'ThinkBook Gen',
+        'thinkbook'         => 'ThinkBook',
+        'thinkpad'          => 'ThinkPad',
+        'minimalphone'      => 'Minimal Phone',
+        'steamframe'        => 'Steam Frame',
+        'steamdeck'         => 'Steam Deck',
+        'steamos'           => 'SteamOS',
+        'vrgames'           => 'VR Games',
+        'androidgames'      => 'Android Games',
+        'autotwist'         => 'Auto Twist',
+        'googlepixel'       => 'Google Pixel',
+        'applewatch'        => 'Apple Watch',
+        'macbook'           => 'MacBook',
+        'playstation'       => 'PlayStation',
+        'nintendoswitch'    => 'Nintendo Switch',
+        'raspberrypi'       => 'Raspberry Pi',
+        'openclaw'          => 'OpenClaw',
+        'snapdragon'        => 'Snapdragon',
+        'samsung'           => 'Samsung',
+        'galaxy'            => 'Galaxy',
+        'lenovo'            => 'Lenovo',
+        'asus'              => 'Asus',
+        'ascent'            => 'Ascent',
+        'adreno'            => 'Adreno',
+        'qualcomm'          => 'Qualcomm',
+        'lepton'            => 'Lepton',
+        'valve'             => 'Valve',
+        'quest'             => 'Quest',
+        'meta'              => 'Meta',
+        'minimal'           => 'Minimal',
+        'phone'             => 'Phone',
+        'steam'             => 'Steam',
+        'frame'             => 'Frame',
+        'deck'              => 'Deck',
+        'think'             => 'Think',
+        'book'              => 'Book',
+        'plus'              => 'Plus',
+        'gen'               => 'Gen',
+        'auto'              => 'Auto',
+        'twist'             => 'Twist',
+        'games'             => 'Games',
+        'game'              => 'Game',
+        'tabs'              => 'Tabs',
+        'tab'               => 'Tab',
+        'mini'              => 'Mini',
+        'laptop'            => 'Laptop',
+        'desktop'           => 'Desktop',
+        'tablet'            => 'Tablet',
     ];
 
-    $lower_clean = str_replace(' ', '', mb_strtolower($t));
-    foreach ($compound_splits as $k => $v) {
-        if ($lower_clean === $k) {
-            $t = $v;
-            break;
-        } elseif (strpos($lower_clean, $k) === 0) {
-            $rest = trim(substr($lower_clean, strlen($k)));
-            $t = $v . ($rest !== '' ? ' ' . $rest : '');
-            break;
+    $segment_word = function($w) use (&$segment_word, $compound_map) {
+        $clean = mb_strtolower(trim($w));
+        if ($clean === '' || is_numeric($clean)) return $w;
+
+        if (isset($compound_map[$clean])) {
+            return $compound_map[$clean];
+        }
+
+        // Try greedy prefix matching against compound map keys
+        foreach ($compound_map as $k => $v) {
+            if (strpos($clean, $k) === 0 && strlen($clean) > strlen($k)) {
+                $rest = substr($clean, strlen($k));
+                $seg_rest = $segment_word($rest);
+                return $v . ' ' . $seg_rest;
+            }
+        }
+
+        return $w;
+    };
+
+    $raw_tokens = explode(' ', $t);
+    $processed_phrases = [];
+
+    foreach ($raw_tokens as $token) {
+        $token = trim($token);
+        if ($token === '') continue;
+
+        $segmented = $segment_word($token);
+        $sub_words = explode(' ', $segmented);
+
+        foreach ($sub_words as $sw) {
+            $sw = trim($sw);
+            if ($sw === '') continue;
+
+            $sw_upper = mb_strtoupper($sw);
+            if (in_array($sw_upper, ['AI', 'PC', 'VR', '3D', '2K', '4K', '8K', '5G', '4G', 'US', 'UK', 'EU', 'OLED', 'AMOLED', 'RAM', 'CPU', 'GPU', 'S12', 'QN10', 'OS', 'UI', 'HD'])) {
+                $processed_phrases[] = $sw_upper;
+            } else {
+                $processed_phrases[] = mb_convert_case($sw, MB_CASE_TITLE, "UTF-8");
+            }
         }
     }
 
-    // Capitalize every word in Title Case while preserving special acronyms/models
-    $words = explode(' ', $t);
-    $capitalized = [];
-    foreach ($words as $w) {
-        $w = trim($w);
-        if ($w === '') continue;
-        $w_upper = mb_strtoupper($w);
-        if (in_array($w_upper, ['AI', 'PC', 'VR', '3D', '2K', '4K', '8K', '5G', '4G', 'US', 'UK', 'EU', 'OLED', 'AMOLED', 'RAM', 'CPU', 'GPU', 'S12', 'QN10'])) {
-            $capitalized[] = $w_upper;
-        } else {
-            $capitalized[] = mb_convert_case($w, MB_CASE_TITLE, "UTF-8");
-        }
-    }
-
-    return trim(implode(' ', $capitalized));
+    return trim(implode(' ', $processed_phrases));
 }
 
 function social_extract_topic_keywords_from_posts($items) {

@@ -809,7 +809,7 @@ function social_render_settings_page() {
         <?php elseif ($active_tab === 'workbench'): ?>
             <?php 
             $state = social_workbench_state();
-            if (!empty($state) && (empty($state['version']) || $state['version'] !== SOCIAL_DIGEST_VERSION || strpos($state['title_override'] ?? '', ': ') === 0)) {
+            if (!empty($state) && (empty($state['version']) || $state['version'] !== SOCIAL_DIGEST_VERSION || strpos($state['title_override'] ?? '', ': ') === 0 || preg_match('/^[a-z]/', $state['title_override'] ?? ''))) {
                 $auto_refreshed = social_fetch_workbench_candidates();
                 if (!empty($auto_refreshed['state'])) {
                     $state = $auto_refreshed['state'];

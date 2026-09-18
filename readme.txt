@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.19
+Stable tag: 5.7.20
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -15,11 +15,12 @@ Social Digest is a WordPress plugin that automates the aggregation and publicati
 
 == Changelog ==
 
-= 5.7.19 =
-* Fix & Enhancement: Smart Title Tag Capitalization, Word Boundary Splitting & Compound Phrase Formatting:
-  1. Title Case Capitalization: Applied strict Title Case capitalization to all hashtags and topic keywords formatted for WordPress post titles (`steamframe` -> `Steam Frame`, `minimalphone 2` -> `Minimal Phone 2`, `samsunggalaxytabs 12` -> `Samsung Galaxy Tabs 12`).
-  2. Compound & Lowercase Word Splitting: Added intelligent splitting for compound tech/product terms (`steamframe` -> `Steam Frame`, `minimalphone` -> `Minimal Phone`, `samsunggalaxytabs` -> `Samsung Galaxy Tabs`) as well as letter-to-number boundary transitions (`tabs12` -> `Tabs 12`).
-  3. Preserved Acronyms: Maintained uppercase formatting for tech acronyms, model codes, and hardware terms (e.g. `AI`, `PC`, `VR`, `OLED`, `5G`, `S12`).
+= 5.7.20 =
+* Fix & Enhancement: Recursive Compound Tag Word Segmentation, Smart Letter-Number Boundary Splitting & Auto-Refresh Enforcement:
+  1. Recursive Word Segmentation: Added recursive compound word segmentation (`thinkbookplusgen` -> `ThinkBook Plus Gen`, `autotwist` -> `Auto Twist`, `steamframe` -> `Steam Frame`, `samsunggalaxytabs` -> `Samsung Galaxy Tabs`).
+  2. Letter-Number Boundary Splitting: Correctly splits attached numbers from word boundaries (`thinkbookplusgen 7autotwist` -> `ThinkBook Plus Gen 7 Auto Twist`, `minimalphone 2` -> `Minimal Phone 2`).
+  3. Automatic Title Capitalization: Enforced strict Title Case capitalization across all title tags while retaining tech acronyms (`VR`, `AI`, `PC`, `OLED`, `5G`, `S12`).
+  4. Workbench Draft Refresh Enforcement: Workbench automatically invalidates and re-generates staged candidate drafts if uncapitalized lowercase tags are detected.
 
 = 5.7.18 =
 * Fix & Enhancement: Auto-Refresh Stale Drafts, Topic Keyword Extraction & Complete Trailing URL Sanitation:

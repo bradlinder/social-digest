@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.19',
+  version: '5.7.20',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,25 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.18',
+  rollbackTarget: 'v5.7.19',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.20',
+    tag: 'v5.7.20',
+    isLatest: true,
+    highlights: [
+      'Fix: Recursive Compound Tag Segmentation: Added recursive compound word segmentation (thinkbookplusgen -> ThinkBook Plus Gen, autotwist -> Auto Twist, steamframe -> Steam Frame, samsunggalaxytabs -> Samsung Galaxy Tabs).',
+      'Fix: Letter-Number Boundary Splitting: Correctly splits attached numbers from word boundaries (thinkbookplusgen 7autotwist -> ThinkBook Plus Gen 7 Auto Twist, minimalphone 2 -> Minimal Phone 2).',
+      'Enhancement: Title Case Capitalization & Acronyms: Enforced strict Title Case capitalization across all title tags while preserving tech acronyms (VR, AI, PC, OLED, 5G, S12).',
+      'Fix: Workbench Draft Invalidation: Automatically re-generates staged workbench drafts if uncapitalized lowercase tags are detected.'
+    ]
+  },
+  {
     version: '5.7.19',
     tag: 'v5.7.19',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Fix: Title Case Capitalization: Applied strict Title Case capitalization to all hashtags and topic keywords formatted for WordPress post titles (steamframe -> Steam Frame, minimalphone 2 -> Minimal Phone 2, samsunggalaxytabs 12 -> Samsung Galaxy Tabs 12).',
       'Enhancement: Word Boundary & Compound Splitting: Added intelligent splitting for compound tech terms (steamframe -> Steam Frame, minimalphone -> Minimal Phone, samsunggalaxytabs -> Samsung Galaxy Tabs) and letter-number transitions (tabs12 -> Tabs 12).',
