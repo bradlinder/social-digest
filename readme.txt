@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.12
+Stable tag: 5.7.13
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,9 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.13 =
+* UI/UX & Layout: WP Media Settings Integration for Multi-Image Galleries: Multi-image post galleries now dynamically query the site's default WordPress thumbnail dimensions (`get_option('thumbnail_size_w')` and `get_option('thumbnail_size_h')`). Renders gallery images as clean, thumbnail-sized inline blocks using the user's configured Media Settings (defaulting to 150x150), while single-image embeds preserve full 400px–450px max dimensions.
 
 = 5.7.12 =
 * UI/UX & Layout: Compact Thumbnail-Sized Media Galleries & Single Images: Optimized multi-image post galleries and single image/video embeds to render as compact, thumbnail-sized previews (`120px` to `220px` height constraints). Displays multi-image galleries in clean single-row grids (up to 4 thumbnails side by side), preventing individual social posts from taking up excessive vertical screen space in published digest articles.

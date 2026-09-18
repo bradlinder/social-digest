@@ -318,13 +318,13 @@ export default function App() {
                 </a>
               </div>
 
-              {/* 3-Image Compact Single-Row Social Gallery with ALT Overlay */}
-              <div className="grid grid-cols-3 gap-2 my-2.5 w-full">
-                <div className="relative group overflow-hidden rounded-md max-h-28">
+              {/* Multi-Image Gallery with WP Media Thumbnail Settings (150x150) & ALT Overlay */}
+              <div className="flex flex-wrap gap-2.5 my-3 w-full">
+                <div className="relative group overflow-hidden rounded-md w-[140px] h-[140px] shrink-0">
                   <img
                     src="https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:wxhudjcwjjwsfklsq4advde6/bafkreigqnojxmiohiw75kkagzi2t3ooferz67ehnj7pv5enhkri23snyhy"
                     alt="MINISFORUM S5 chassis"
-                    className="w-full h-28 max-h-28 object-cover rounded-md block"
+                    className="w-full h-full object-cover rounded-md block"
                   />
                   <button
                     type="button"
@@ -335,11 +335,11 @@ export default function App() {
                     ALT
                   </button>
                 </div>
-                <div className="relative group overflow-hidden rounded-md max-h-28">
+                <div className="relative group overflow-hidden rounded-md w-[140px] h-[140px] shrink-0">
                   <img
                     src="https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:wxhudjcwjjwsfklsq4advde6/bafkreiga4h4hxetzx2dwbqk542n5rqvo5zg6ywaks35wcfbbkeqojvi37y"
                     alt="MINISFORUM S5 ports and internal layout"
-                    className="w-full h-28 max-h-28 object-cover rounded-md block"
+                    className="w-full h-full object-cover rounded-md block"
                   />
                   <button
                     type="button"
@@ -350,11 +350,11 @@ export default function App() {
                     ALT
                   </button>
                 </div>
-                <div className="relative group overflow-hidden rounded-md max-h-28">
+                <div className="relative group overflow-hidden rounded-md w-[140px] h-[140px] shrink-0">
                   <img
                     src="https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:wxhudjcwjjwsfklsq4advde6/bafkreiambm2ccrza3se7adwhnbgwgpgfj4pxqeb4cqydoytm3banfv4iw4"
                     alt="MINISFORUM S5 heatsink fins"
-                    className="w-full h-28 max-h-28 object-cover rounded-md block"
+                    className="w-full h-full object-cover rounded-md block"
                   />
                   <button
                     type="button"

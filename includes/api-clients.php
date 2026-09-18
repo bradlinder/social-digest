@@ -245,10 +245,11 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
             $images = $post['embed']['images'];
             $num_imgs = count($images);
             if ($num_imgs > 1) {
-                $cols = min($num_imgs, 4);
-                $gallery_html .= '<div class="social-embed-images" style="display:grid; grid-template-columns: repeat(' . $cols . ', 1fr); gap:8px; margin:10px 0;">';
+                $wp_thumb_w = (int)get_option('thumbnail_size_w', 150) ?: 150;
+                $wp_thumb_h = (int)get_option('thumbnail_size_h', 150) ?: 150;
+                $gallery_html .= '<div class="social-embed-images" style="display:flex; flex-wrap:wrap; gap:10px; margin:12px 0;">';
             } else {
-                $gallery_html .= '<div class="social-embed-images" style="margin:10px 0;">';
+                $gallery_html .= '<div class="social-embed-images" style="margin:12px 0;">';
             }
             foreach ($images as $img) {
                 $img_url = esc_url($img['thumb'] ?? $img['fullsize'] ?? '');
@@ -261,11 +262,11 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
                 if ($img_url) {
                     if (!$first_image_url) $first_image_url = $img_url;
                     $title_attr = ($num_imgs > 1) ? 'View full gallery on Bluesky' : 'View image on Bluesky';
-                    $gallery_html .= '<a href="' . esc_url($web_url) . '" target="_blank" rel="noopener" title="' . esc_attr($title_attr) . '" style="display:block; text-decoration:none;">';
+                    $gallery_html .= '<a href="' . esc_url($web_url) . '" target="_blank" rel="noopener" title="' . esc_attr($title_attr) . '" style="display:inline-block; text-decoration:none;">';
                     if ($num_imgs > 1) {
-                        $gallery_html .= '<figure style="margin:0; position:relative; overflow:hidden; border-radius:6px; max-height:130px;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="width:100%; height:130px; max-height:130px; object-fit:cover; border-radius:6px; display:block;" />' . $alt_badge . '</figure>';
+                        $gallery_html .= '<figure style="margin:0; position:relative; width:' . $wp_thumb_w . 'px; height:' . $wp_thumb_h . 'px; max-width:100%; overflow:hidden; border-radius:6px; flex-shrink:0;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="width:100%; height:100%; object-fit:cover; border-radius:6px; display:block;" />' . $alt_badge . '</figure>';
                     } else {
-                        $gallery_html .= '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="max-width:100%; max-height:220px; width:auto; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
+                        $gallery_html .= '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="max-width:100%; max-height:400px; width:auto; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
                     }
                     $gallery_html .= '</a>';
                 }
@@ -287,9 +288,9 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
             $gallery_html .= '<div class="social-embed-video" style="margin:12px 0; position:relative; border-radius:8px; overflow:hidden; background:#000;">';
             $gallery_html .= '<a href="' . esc_url($web_url) . '" target="_blank" rel="noopener" title="Watch video on Bluesky" style="display:block; position:relative; text-decoration:none;">';
             if ($video_thumb) {
-                $gallery_html .= '<img src="' . $video_thumb . '" alt="' . $alt_txt . '" style="width:100%; max-height:220px; object-fit:contain; display:block; background:#0f172a;" />';
+                $gallery_html .= '<img src="' . $video_thumb . '" alt="' . $alt_txt . '" style="width:100%; max-height:450px; object-fit:contain; display:block; background:#0f172a;" />';
             } else {
-                $gallery_html .= '<div style="height:180px; width:100%; background:#0f172a; display:flex; align-items:center; justify-content:center;"></div>';
+                $gallery_html .= '<div style="height:220px; width:100%; background:#0f172a; display:flex; align-items:center; justify-content:center;"></div>';
             }
             // Play Button Overlay
             $gallery_html .= '<div class="social-video-play-btn" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:56px; height:56px; border-radius:50%; background:rgba(15,23,42,0.85); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.5); border:2px solid rgba(255,255,255,0.8);">';
@@ -508,10 +509,11 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
             if (!empty($images)) {
                 $num_imgs = count($images);
                 if ($num_imgs > 1) {
-                    $cols = min($num_imgs, 4);
-                    $gallery_html .= '<div class="social-embed-media" style="display:grid; grid-template-columns: repeat(' . $cols . ', 1fr); gap:8px; margin:10px 0;">';
+                    $wp_thumb_w = (int)get_option('thumbnail_size_w', 150) ?: 150;
+                    $wp_thumb_h = (int)get_option('thumbnail_size_h', 150) ?: 150;
+                    $gallery_html .= '<div class="social-embed-media" style="display:flex; flex-wrap:wrap; gap:10px; margin:12px 0;">';
                 } else {
-                    $gallery_html .= '<div class="social-embed-media" style="margin:10px 0;">';
+                    $gallery_html .= '<div class="social-embed-media" style="margin:12px 0;">';
                 }
                 foreach ($images as $med) {
                     $img_url = esc_url($med['preview_url'] ?? $med['url'] ?? '');
@@ -524,11 +526,11 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
                     if ($img_url) {
                         if (!$first_image_url) $first_image_url = $img_url;
                         $title_attr = ($num_imgs > 1) ? 'View full gallery on Mastodon' : 'View image on Mastodon';
-                        $gallery_html .= '<a href="' . esc_url($post_url) . '" target="_blank" rel="noopener" title="' . esc_attr($title_attr) . '" style="display:block; text-decoration:none;">';
+                        $gallery_html .= '<a href="' . esc_url($post_url) . '" target="_blank" rel="noopener" title="' . esc_attr($title_attr) . '" style="display:inline-block; text-decoration:none;">';
                         if ($num_imgs > 1) {
-                            $gallery_html .= '<figure style="margin:0; position:relative; overflow:hidden; border-radius:6px; max-height:130px;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="width:100%; height:130px; max-height:130px; object-fit:cover; border-radius:6px; display:block;" />' . $alt_badge . '</figure>';
+                            $gallery_html .= '<figure style="margin:0; position:relative; width:' . $wp_thumb_w . 'px; height:' . $wp_thumb_h . 'px; max-width:100%; overflow:hidden; border-radius:6px; flex-shrink:0;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="width:100%; height:100%; object-fit:cover; border-radius:6px; display:block;" />' . $alt_badge . '</figure>';
                         } else {
-                            $gallery_html .= '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="max-width:100%; max-height:220px; width:auto; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
+                            $gallery_html .= '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="max-width:100%; max-height:400px; width:auto; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
                         }
                         $gallery_html .= '</a>';
                     }
@@ -552,7 +554,7 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
                     if ($is_gifv && $v_url) {
                         // Native HTML5 autoplaying looping muted video for GIFV
                         $gallery_html .= '<div class="social-embed-gifv" style="margin:12px 0; position:relative; border-radius:8px; overflow:hidden; background:#0f172a;">';
-                        $gallery_html .= '<video src="' . $v_url . '" poster="' . $v_thumb . '" autoplay loop muted playsinline style="width:100%; max-height:220px; object-fit:contain; display:block;"></video>';
+                        $gallery_html .= '<video src="' . $v_url . '" poster="' . $v_thumb . '" autoplay loop muted playsinline style="width:100%; max-height:450px; object-fit:contain; display:block;"></video>';
                         $gallery_html .= '<span data-nosnippet style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.75); color:#fff; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; letter-spacing:0.5px;">GIF</span>';
                         $gallery_html .= '</div>';
                     } else {
@@ -560,7 +562,7 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
                         $gallery_html .= '<div class="social-embed-video" style="margin:12px 0; position:relative; border-radius:8px; overflow:hidden; background:#000;">';
                         $gallery_html .= '<a href="' . esc_url($post_url) . '" target="_blank" rel="noopener" title="Watch video on Mastodon" style="display:block; position:relative; text-decoration:none;">';
                         if ($v_thumb) {
-                            $gallery_html .= '<img src="' . $v_thumb . '" alt="' . $alt_txt . '" style="width:100%; max-height:220px; object-fit:contain; display:block; background:#0f172a;" />';
+                            $gallery_html .= '<img src="' . $v_thumb . '" alt="' . $alt_txt . '" style="width:100%; max-height:450px; object-fit:contain; display:block; background:#0f172a;" />';
                         } else {
                             $gallery_html .= '<div style="height:180px; width:100%; background:#0f172a; display:flex; align-items:center; justify-content:center;"></div>';
                         }

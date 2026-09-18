@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.12',
+  version: '5.7.13',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,22 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.11',
+  rollbackTarget: 'v5.7.12',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.13',
+    tag: 'v5.7.13',
+    isLatest: true,
+    highlights: [
+      'UI/UX & Layout: WP Media Settings Integration for Multi-Image Galleries: Multi-image post galleries now dynamically query the site\'s default WordPress thumbnail dimensions (get_option(\'thumbnail_size_w\') and get_option(\'thumbnail_size_h\')). Renders gallery images as clean, thumbnail-sized inline blocks using the user\'s configured Media Settings (defaulting to 150x150), while single-image embeds preserve full 400px–450px max dimensions.',
+    ]
+  },
+  {
     version: '5.7.12',
     tag: 'v5.7.12',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'UI/UX & Layout: Compact Thumbnail-Sized Media Galleries & Single Images: Optimized multi-image post galleries and single image/video embeds to render as compact, thumbnail-sized previews (120px to 220px height constraints). Displays multi-image galleries in clean single-row grids (up to 4 thumbnails side by side), preventing individual social posts from taking up excessive vertical screen space in published digest articles.',
     ]
