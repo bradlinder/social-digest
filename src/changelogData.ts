@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.10',
+  version: '5.7.11',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,22 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.9',
+  rollbackTarget: 'v5.7.10',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.11',
+    tag: 'v5.7.11',
+    isLatest: true,
+    highlights: [
+      'Feature: Configurable Title Hashtag Selection Strategy & Max Count: Added settings under Title Template to choose how hashtags are picked for WordPress post titles (First Hashtag in Post, Taxonomy Popularity/Frequency, or Random) and configurable max title tags (1 to 5 tags). Selecting the first hashtag ensures the leading tag is prioritized for the title while all harvested hashtags remain assigned to the post taxonomy.',
+    ]
+  },
+  {
     version: '5.7.10',
     tag: 'v5.7.10',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'UI/UX & Design: Native Bluesky Embed Card Hierarchy: Realigned link preview card layout and typography with native Bluesky card design standards. Headlines are bold with refined, proportionate sizing (14px), card body descriptions use clean normal font weight (400, 12.5px), and the source domain is positioned below the description at the bottom with a link indicator.',
     ]

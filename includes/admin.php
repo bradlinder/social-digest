@@ -95,9 +95,11 @@ add_action('admin_init', function() {
             'include_reposts'        => 0,
             'exclude_titles'         => 0,
             'exclude_self_syndicated'=> 1,
-            'title_template'         => 'Social Digest {hashtags}',
-            'title_tag_enclosure'    => 'parentheses',
-            'title_tag_delimiter'    => 'oxford',
+            'title_template'               => 'Social Digest {hashtags}',
+            'title_tag_enclosure'          => 'parentheses',
+            'title_tag_delimiter'          => 'oxford',
+            'title_tag_max_count'          => 3,
+            'title_tag_selection_strategy' => 'first',
             'same_day_suffix_tpl'    => ' (Part {part})',
             'excluded_words'         => '#ad, sponsored',
             'header_text'            => '<p>Here is what we shared across social channels today:</p>',
@@ -266,6 +268,11 @@ function social_sanitize_settings($input) {
 
     $allowed_delimiters = ['oxford', 'commas', 'ampersand', 'pipe', 'slash'];
     $output['title_tag_delimiter'] = in_array($input['title_tag_delimiter'] ?? '', $allowed_delimiters, true) ? $input['title_tag_delimiter'] : 'oxford';
+
+    $output['title_tag_max_count'] = min(5, max(1, absint($input['title_tag_max_count'] ?? 3)));
+
+    $allowed_strategies = ['first', 'popularity', 'random'];
+    $output['title_tag_selection_strategy'] = in_array($input['title_tag_selection_strategy'] ?? '', $allowed_strategies, true) ? $input['title_tag_selection_strategy'] : 'first';
 
     $output['same_day_suffix_tpl'] = sanitize_text_field($input['same_day_suffix_tpl'] ?? ' (Part {part})');
     $output['excluded_words']      = sanitize_textarea_field($input['excluded_words'] ?? '');
@@ -733,7 +740,23 @@ function social_render_settings_page() {
                                                     <div style="margin-top: 10px; padding: 12px; background: #f6f7f7; border: 1px solid #ccd0d4; border-radius: 4px; max-width: 500px;">
                                                         <strong style="display:block; margin-bottom: 8px;">Hashtag Formatting Rules:</strong>
                                                         <div style="margin-bottom: 8px;">
-                                                            <label style="display:inline-block; width: 80px;">Enclosure:</label>
+                                                            <label style="display:inline-block; width: 140px;">Selection Strategy:</label>
+                                                            <select name="social_digest_options[title_tag_selection_strategy]">
+                                                                <option value="first" <?php selected($opts['title_tag_selection_strategy'] ?? 'first', 'first'); ?>>First Hashtag in Post</option>
+                                                                <option value="popularity" <?php selected($opts['title_tag_selection_strategy'] ?? '', 'popularity'); ?>>Taxonomy Popularity / Frequency</option>
+                                                                <option value="random" <?php selected($opts['title_tag_selection_strategy'] ?? '', 'random'); ?>>Random Hashtag in Post</option>
+                                                            </select>
+                                                        </div>
+                                                        <div style="margin-bottom: 8px;">
+                                                            <label style="display:inline-block; width: 140px;">Max Tags in Title:</label>
+                                                            <select name="social_digest_options[title_tag_max_count]">
+                                                                <?php for ($i = 1; $i <= 5; $i++): ?>
+                                                                    <option value="<?php echo $i; ?>" <?php selected((int)($opts['title_tag_max_count'] ?? 3), $i); ?>><?php echo $i; ?> <?php echo $i === 1 ? 'tag' : 'tags'; ?></option>
+                                                                <?php endfor; ?>
+                                                            </select>
+                                                        </div>
+                                                        <div style="margin-bottom: 8px;">
+                                                            <label style="display:inline-block; width: 140px;">Enclosure:</label>
                                                             <select name="social_digest_options[title_tag_enclosure]">
                                                                 <option value="parentheses" <?php selected($opts['title_tag_enclosure'] ?? 'parentheses', 'parentheses'); ?>>(Tag 1, Tag 2)</option>
                                                                 <option value="brackets" <?php selected($opts['title_tag_enclosure'] ?? '', 'brackets'); ?>>[Tag 1, Tag 2]</option>

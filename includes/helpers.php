@@ -531,7 +531,8 @@ function social_split_camelcase_tag($tag) {
     return trim(preg_replace('/([A-Z]+)([A-Z][a-z])/u', '$1 $2', $t));
 }
 
-function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $enclosure = 'parentheses', $delimiter = 'oxford') {
+function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $enclosure = 'parentheses', $delimiter = 'oxford', $max_tags_count = 3, $strategy = 'first') {
+    $max_tags = max(1, min(5, (int)$max_tags_count));
     $selected_tags = [];
     $seen_normalized = [];
     $tag_weights = social_get_cached_tag_weights();
@@ -546,22 +547,26 @@ function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $
         }
 
         if ($is_grouped) {
-            // Select at most 1 distinct tag per post, prioritizing higher taxonomy frequency
+            // Select at most 1 distinct tag per post based on strategy
             foreach ($candidate_tags as $post_tags) {
                 if (!is_array($post_tags)) {
                     $post_tags = [$post_tags];
                 }
 
-                // Sort tags within the post by cached tag popularity if available
-                if (count($post_tags) > 1 && !empty($tag_weights)) {
-                    usort($post_tags, function($a, $b) use ($tag_weights) {
+                $post_tags_copy = array_values($post_tags);
+
+                if ($strategy === 'popularity' && count($post_tags_copy) > 1 && !empty($tag_weights)) {
+                    usort($post_tags_copy, function($a, $b) use ($tag_weights) {
                         $w_a = $tag_weights[mb_strtolower(trim(ltrim($a, '#')))] ?? 0;
                         $w_b = $tag_weights[mb_strtolower(trim(ltrim($b, '#')))] ?? 0;
                         return $w_b <=> $w_a;
                     });
+                } elseif ($strategy === 'random' && count($post_tags_copy) > 1) {
+                    shuffle($post_tags_copy);
                 }
+                // 'first' maintains original appearance order in the post
 
-                foreach ($post_tags as $tag) {
+                foreach ($post_tags_copy as $tag) {
                     $clean_tag = social_split_camelcase_tag($tag);
                     $norm = mb_strtolower(trim($clean_tag));
                     if ($norm !== '' && !isset($seen_normalized[$norm])) {
@@ -570,19 +575,21 @@ function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $
                         break; // Pick only 1 tag from this post, then move to the next post
                     }
                 }
-                if (count($selected_tags) >= 3) {
+                if (count($selected_tags) >= $max_tags) {
                     break;
                 }
             }
         } else {
-            // Flat array fallback - sort by popularity if available
-            $flat_tags = $candidate_tags;
-            if (count($flat_tags) > 1 && !empty($tag_weights)) {
+            // Flat array fallback
+            $flat_tags = array_values($candidate_tags);
+            if ($strategy === 'popularity' && count($flat_tags) > 1 && !empty($tag_weights)) {
                 usort($flat_tags, function($a, $b) use ($tag_weights) {
                     $w_a = $tag_weights[mb_strtolower(trim(ltrim($a, '#')))] ?? 0;
                     $w_b = $tag_weights[mb_strtolower(trim(ltrim($b, '#')))] ?? 0;
                     return $w_b <=> $w_a;
                 });
+            } elseif ($strategy === 'random' && count($flat_tags) > 1) {
+                shuffle($flat_tags);
             }
 
             foreach ($flat_tags as $tag) {
@@ -592,7 +599,7 @@ function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $
                     $seen_normalized[$norm] = true;
                     $selected_tags[] = $clean_tag;
                 }
-                if (count($selected_tags) >= 3) {
+                if (count($selected_tags) >= $max_tags) {
                     break;
                 }
             }
@@ -609,7 +616,7 @@ function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $
                 $seen_normalized[$norm] = true;
                 $selected_tags[] = $clean_tag;
             }
-            if (count($selected_tags) >= 3) {
+            if (count($selected_tags) >= $max_tags) {
                 break;
             }
         }
@@ -624,9 +631,14 @@ function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $
             $joined = implode(', ', $selected_tags);
             break;
         case 'ampersand':
-            if ($c === 1) $joined = $selected_tags[0];
-            elseif ($c === 2) $joined = $selected_tags[0] . ' & ' . $selected_tags[1];
-            else $joined = $selected_tags[0] . ', ' . $selected_tags[1] . ' & ' . $selected_tags[2];
+            if ($c === 1) {
+                $joined = $selected_tags[0];
+            } elseif ($c === 2) {
+                $joined = $selected_tags[0] . ' & ' . $selected_tags[1];
+            } else {
+                $last = array_pop($selected_tags);
+                $joined = implode(', ', $selected_tags) . ' & ' . $last;
+            }
             break;
         case 'pipe':
             $joined = implode(' | ', $selected_tags);
@@ -636,9 +648,14 @@ function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $
             break;
         case 'oxford':
         default:
-            if ($c === 1) $joined = $selected_tags[0];
-            elseif ($c === 2) $joined = $selected_tags[0] . ' and ' . $selected_tags[1];
-            else $joined = $selected_tags[0] . ', ' . $selected_tags[1] . ', and ' . $selected_tags[2];
+            if ($c === 1) {
+                $joined = $selected_tags[0];
+            } elseif ($c === 2) {
+                $joined = $selected_tags[0] . ' and ' . $selected_tags[1];
+            } else {
+                $last = array_pop($selected_tags);
+                $joined = implode(', ', $selected_tags) . ', and ' . $last;
+            }
             break;
     }
 

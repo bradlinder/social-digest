@@ -341,7 +341,14 @@ function social_fetch_workbench_candidates() {
         }
     }
     
-    $title_hashtags = social_rank_and_format_title_tags($post_tags_list, $opts['default_tags'] ?? '', $opts['title_tag_enclosure'] ?? 'parentheses', $opts['title_tag_delimiter'] ?? 'oxford');    
+    $title_hashtags = social_rank_and_format_title_tags(
+        $post_tags_list,
+        $opts['default_tags'] ?? '',
+        $opts['title_tag_enclosure'] ?? 'parentheses',
+        $opts['title_tag_delimiter'] ?? 'oxford',
+        $opts['title_tag_max_count'] ?? 3,
+        $opts['title_tag_selection_strategy'] ?? 'first'
+    );    
     $tag_map = [];
     foreach (array_filter(array_map('trim', explode(',', $opts['default_tags'] ?? ''))) as $tag) $tag_map[mb_strtolower($tag)] = $tag;
     foreach ($raw_tags as $tag) $tag_map[mb_strtolower($tag)] = $tag;
