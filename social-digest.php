@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.6.5
+ * Version: 5.6.6
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -1817,6 +1817,13 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
             if ($link_thumb) $media_html .= '<img src="' . $link_thumb . '" alt="' . $link_title . '" style="width:100%; max-height:220px; object-fit:cover; display:block;" />';
             $media_html .= '<div style="padding:10px 14px;"><div style="font-weight:bold; font-size:1em; margin-bottom:4px;"><a href="' . $link_url . '" target="_blank" rel="noopener">' . $link_title . '</a></div>';
             if ($link_desc) $media_html .= '<div style="font-size:0.85em; color:#555; line-height:1.4;">' . wp_trim_words($link_desc, 25) . '</div>';
+            
+            $domain = parse_url($link_url, PHP_URL_HOST);
+            if ($domain) {
+                $domain = preg_replace('/^www\./', '', $domain);
+                $media_html .= '<div data-nosnippet style="font-size:0.75em; color:#888; text-transform:uppercase; margin-top:6px;">' . esc_html($domain) . '</div>';
+            }
+            
             $media_html .= '</div></div>';
         }
 
@@ -1990,7 +1997,7 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
                 }
                 $media_html .= '<div style="padding:10px 14px;">';
                 if ($card_prov) {
-                    $media_html .= '<div style="font-size:0.75em; text-transform:uppercase; color:#657786; margin-bottom:2px;">' . $card_prov . '</div>';
+                    $media_html .= '<div data-nosnippet style="font-size:0.75em; text-transform:uppercase; color:#657786; margin-bottom:2px;">' . $card_prov . '</div>';
                 }
                 $media_html .= '<div style="font-weight:bold; font-size:1em; margin-bottom:4px;"><a href="' . $card_url . '" target="_blank" rel="noopener" style="color:#0085ff; text-decoration:none;">' . ($card_title ?: $card_url) . '</a></div>';
                 if ($card_desc) {
