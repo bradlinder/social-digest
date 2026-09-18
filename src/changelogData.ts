@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.11',
+  version: '5.7.12',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,22 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.10',
+  rollbackTarget: 'v5.7.11',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.12',
+    tag: 'v5.7.12',
+    isLatest: true,
+    highlights: [
+      'UI/UX & Layout: Compact Thumbnail-Sized Media Galleries & Single Images: Optimized multi-image post galleries and single image/video embeds to render as compact, thumbnail-sized previews (120px to 220px height constraints). Displays multi-image galleries in clean single-row grids (up to 4 thumbnails side by side), preventing individual social posts from taking up excessive vertical screen space in published digest articles.',
+    ]
+  },
+  {
     version: '5.7.11',
     tag: 'v5.7.11',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Feature: Configurable Title Hashtag Selection Strategy & Max Count: Added settings under Title Template to choose how hashtags are picked for WordPress post titles (First Hashtag in Post, Taxonomy Popularity/Frequency, or Random) and configurable max title tags (1 to 5 tags). Selecting the first hashtag ensures the leading tag is prioritized for the title while all harvested hashtags remain assigned to the post taxonomy.',
     ]
