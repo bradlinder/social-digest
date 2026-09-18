@@ -1270,7 +1270,7 @@ Click OK to Append, or Cancel to Replace existing overrides.')) {
                                         Standard Excerpt (Auto-generated from post content)
                                     </div>
                                     <div style="color:#475569;">
-                                        First-lines excerpt is currently disabled. Enable it under <a href="<?php echo esc_url(admin_url('edit.php?page=social-digest-settings&tab=settings#social_box_content')); ?>" style="color:#0284c7;">Settings &rarr; Publishing, Tags &amp; Article Framing</a>.
+                                        First-lines excerpt is currently disabled. Enable it under <a href="<?php echo esc_url(admin_url('edit.php?page=social-digest-settings&tab=settings#social_box_framing_templates')); ?>" style="color:#0284c7;">Settings &rarr; Article Framing &amp; Lead-In / Footer Templates</a>.
                                     </div>
                                 <?php endif; ?>
                             </div>
