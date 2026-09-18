@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.26
+Stable tag: 5.7.27
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,15 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.27 =
+* Formatting: Bold Bullet Sentence Divider:
+  1. Updated the bullet-style sentence divider option for post excerpts to render in bold font (`<b>•</b>`).
+* Excerpt Feature: Trailing Ellipsis Option:
+  1. Added a setting (`excerpt_append_ellipsis`) to append `...` to the end of automatically generated post excerpts.
+* Vocabulary Feature: Wildcard (*) Prefix Matching in Custom Overrides:
+  1. Custom Tag Title Overrides now support wildcard prefix rules (`MINISFORUM*`, `GEEKOM*`, `NVIDIA*`, or `SnapdragonX*=Snapdragon X`).
+  2. For example, `MINISFORUM*` automatically formats `#MINISFORUMS5` into `MINISFORUM S5` while preserving model designation formatting.
 
 = 5.7.26 =
 * Feature: Custom Tag Title Overrides Import & Export (.txt files):

@@ -311,6 +311,7 @@ function social_sanitize_settings($input) {
     $output['wipe_data_on_uninstall'] = !empty($input['wipe_data_on_uninstall']) ? 1 : 0;
 
     $output['excerpt_first_lines']      = !empty($input['excerpt_first_lines']) ? 1 : 0;
+    $output['excerpt_append_ellipsis']  = !empty($input['excerpt_append_ellipsis']) ? 1 : 0;
     $allowed_excerpt_delims             = ['slash', 'ellipsis', 'period', 'dash', 'bullet', 'custom'];
     $output['excerpt_delimiter']        = in_array($input['excerpt_delimiter'] ?? '', $allowed_excerpt_delims, true) ? $input['excerpt_delimiter'] : 'slash';
     $output['excerpt_custom_delimiter'] = sanitize_text_field($input['excerpt_custom_delimiter'] ?? ' // ');
@@ -714,7 +715,7 @@ function social_render_settings_page() {
                                                                 <option value="ellipsis" <?php selected($opts['excerpt_delimiter'] ?? '', 'ellipsis'); ?>>Ellipsis ( ... )</option>
                                                                 <option value="period" <?php selected($opts['excerpt_delimiter'] ?? '', 'period'); ?>>Period / Sentences ( . )</option>
                                                                 <option value="dash" <?php selected($opts['excerpt_delimiter'] ?? '', 'dash'); ?>>Em-Dash ( &mdash; )</option>
-                                                                <option value="bullet" <?php selected($opts['excerpt_delimiter'] ?? '', 'bullet'); ?>>Bullet ( &bull; )</option>
+                                                                <option value="bullet" <?php selected($opts['excerpt_delimiter'] ?? '', 'bullet'); ?>>Bold Bullet ( &bull; )</option>
                                                                 <option value="custom" <?php selected($opts['excerpt_delimiter'] ?? '', 'custom'); ?>>Custom Divider...</option>
                                                             </select>
                                                             <span id="social_excerpt_custom_wrap" style="margin-left: 8px; display: <?php echo (($opts['excerpt_delimiter'] ?? '') === 'custom') ? 'inline-block' : 'none'; ?>;">
@@ -839,8 +840,8 @@ function social_render_settings_page() {
                                                                     <input type="file" id="sd_import_overrides_file" accept=".txt,.csv" style="display:none;" onchange="sdImportCustomOverrides(this)">
                                                                 </div>
                                                             </div>
-                                                            <textarea id="sd_title_tag_custom_overrides" name="social_digest_options[title_tag_custom_overrides]" rows="3" class="large-text" style="font-family: monospace; font-size: 12px;" placeholder="snapdragonx2=Snapdragon X2, eliteminipc=Elite Mini PC (one per line or comma-separated)"><?php echo esc_textarea($opts['title_tag_custom_overrides'] ?? ''); ?></textarea>
-                                                            <p class="description" style="margin-top: 2px; font-size: 11px;">Optional escape hatch to manually map specific raw tags to custom formatted titles (e.g. <code>rawtag=Formatted Name</code>). Use 📥 Export / 📤 Import to save or load backups as <code>.txt</code> files.</p>
+                                                            <textarea id="sd_title_tag_custom_overrides" name="social_digest_options[title_tag_custom_overrides]" rows="3" class="large-text" style="font-family: monospace; font-size: 12px;" placeholder="SnapdragonX=Snapdragon X, MINISFORUM*, GEEKOM*, NVIDIA* (one per line or comma-separated)"><?php echo esc_textarea($opts['title_tag_custom_overrides'] ?? ''); ?></textarea>
+                                                            <p class="description" style="margin-top: 2px; font-size: 11px;">Optional escape hatch to manually map specific raw tags to custom formatted titles (e.g. <code>rawtag=Formatted Name</code> or wildcard prefix <code>MINISFORUM*</code> so <code>#MINISFORUMS5</code> becomes <code>MINISFORUM S5</code>). Use 📥 Export / 📤 Import to save or load backups as <code>.txt</code> files.</p>
                                                         </div>
                                                         <script>
                                                         function sdToggleVocabWarning(val) {
@@ -1116,12 +1117,13 @@ function social_render_settings_page() {
                             'ellipsis' => ' ... ',
                             'period'   => '. ',
                             'dash'     => ' — ',
-                            'bullet'   => ' • ',
+                            'bullet'   => ' <b>•</b> ',
                             'custom'   => $wb_custom_delim,
                         ];
                         $wb_delim = $wb_delim_map[$wb_delim_key] ?? ' // ';
                         $wb_max_items = absint($opts['excerpt_max_items'] ?? 0);
-                        $wb_first_lines_excerpt = social_build_first_lines_excerpt($candidates, $wb_delim, $wb_max_items);
+                        $wb_append_ellipsis = !empty($opts['excerpt_append_ellipsis']);
+                        $wb_first_lines_excerpt = social_build_first_lines_excerpt($candidates, $wb_delim, $wb_max_items, $wb_append_ellipsis);
                     ?>
                     <div class="postbox" id="social_wb_box_excerpt_preview" style="border-left: 5px solid #10b981;">
                         <div class="postbox-header">

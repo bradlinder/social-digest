@@ -554,12 +554,13 @@ function social_publish_workbench_run($state, $force_status = null) {
                 'ellipsis' => ' ... ',
                 'period'   => '. ',
                 'dash'     => ' — ',
-                'bullet'   => ' • ',
+                'bullet'   => ' <b>•</b> ',
                 'custom'   => $custom_delim,
             ];
             $delim = $delim_map[$delim_key] ?? ' // ';
             $max_items = absint($opts['excerpt_max_items'] ?? 0);
-            $post_excerpt = social_build_first_lines_excerpt($state['candidates'] ?? [], $delim, $max_items);
+            $append_ellipsis = !empty($opts['excerpt_append_ellipsis']);
+            $post_excerpt = social_build_first_lines_excerpt($state['candidates'] ?? [], $delim, $max_items, $append_ellipsis);
         }
 
         if (empty($post_excerpt)) {

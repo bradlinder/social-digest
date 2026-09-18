@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.26',
+  version: '5.7.27',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,24 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.25',
+  rollbackTarget: 'v5.7.26',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.27',
+    tag: 'v5.7.27',
+    isLatest: true,
+    highlights: [
+      'Formatting: Bold Bullet Sentence Divider: Sentence divider bullet option in post excerpts now renders in bold font (<b>•</b>).',
+      'Feature: Trailing Ellipsis Option: Added setting to append "..." to automatically generated post excerpts.',
+      'Feature: Wildcard (*) Prefix Matching in Custom Overrides: Support wildcard rules like MINISFORUM* so #MINISFORUMS5 becomes MINISFORUM S5.'
+    ]
+  },
+  {
     version: '5.7.26',
     tag: 'v5.7.26',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Feature: Custom Tag Title Overrides Import & Export (.txt files): Instant one-click export and file import for tag override lists.',
       'Feature: Configurable Vocabulary Post Scan Depth: Customize scan limits (50, 150, 300, 500, 1000, Full Site) with dynamic warning callouts for large archives.'

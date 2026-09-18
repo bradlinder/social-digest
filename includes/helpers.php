@@ -270,7 +270,7 @@ function social_extract_first_line_or_sentence($text) {
     return trim($first_line);
 }
 
-function social_build_first_lines_excerpt($candidates, $delimiter = ' // ', $max_items = 0) {
+function social_build_first_lines_excerpt($candidates, $delimiter = ' // ', $max_items = 0, $append_ellipsis = false) {
     $lines = [];
     $count = 0;
     foreach ((array)$candidates as $c) {
@@ -285,22 +285,31 @@ function social_build_first_lines_excerpt($candidates, $delimiter = ' // ', $max
     }
     if (empty($lines)) return '';
 
-    $delim_clean = trim($delimiter);
+    $delim_clean = trim(strip_tags($delimiter));
+    $has_html = (strpos($delimiter, '<') !== false);
+
+    $joined = '';
     if ($delim_clean === '.' || $delim_clean === '. ' || $delimiter === '.') {
         $formatted = array_map(function($line) {
             return rtrim($line, " \t\n\r\0\x0B.") . '.';
         }, $lines);
-        return implode(' ', $formatted);
+        $joined = implode(' ', $formatted);
     } else {
-        $glue = ' ' . $delim_clean . ' ';
-        $formatted = array_map(function($line) use ($delim_clean) {
-            if ($delim_clean === '//' || $delim_clean === '...' || $delim_clean === '—' || $delim_clean === '•') {
-                return rtrim($line, " \t\n\r\0\x0B.");
-            }
-            return $line;
+        $glue = ' ' . $delimiter . ' ';
+        $formatted = array_map(function($line) {
+            return rtrim($line, " \t\n\r\0\x0B.");
         }, $lines);
-        return implode($glue, $formatted);
+        $joined = implode($glue, $formatted);
     }
+
+    if ($append_ellipsis) {
+        $joined_trimmed = trim($joined);
+        if ($joined_trimmed !== '' && !preg_match('/(?:\.\.\.|…)\s*$/u', $joined_trimmed)) {
+            $joined = rtrim($joined_trimmed, '.') . '...';
+        }
+    }
+
+    return $joined;
 }
 
 function social_normalize_for_matching($text) {
@@ -662,16 +671,79 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
     $t = ltrim(trim($tag), '#');
     if ($t === '') return '';
 
-    // Check optional custom overrides first (e.g. "rawtag=Formatted Name")
+    // Check optional custom overrides first (e.g. "rawtag=Formatted Name" or "MINISFORUM*")
     if (!empty($custom_overrides_str)) {
         $lines = preg_split('/[\r\n,]+/', $custom_overrides_str);
+        
+        // Pass 1: Exact matches
         foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '') continue;
             if (strpos($line, '=') !== false) {
                 list($k, $v) = explode('=', $line, 2);
                 $k = ltrim(trim($k), '#');
                 $v = trim($v);
+                if (substr($k, -1) === '*') continue; // Skip wildcard rules in exact pass
                 if ($k !== '' && $v !== '' && mb_strtolower(str_replace(' ', '', $t)) === mb_strtolower(str_replace(' ', '', $k))) {
                     return $v;
+                }
+            }
+        }
+
+        // Pass 2: Wildcard prefix matches (e.g. "MINISFORUM*", "SnapdragonX*=Snapdragon X")
+        $t_no_space = str_replace(' ', '', $t);
+        $t_lower_no_space = mb_strtolower($t_no_space);
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '') continue;
+
+            $prefix_raw = '';
+            $formatted_prefix = '';
+
+            if (strpos($line, '=') !== false) {
+                list($k, $v) = explode('=', $line, 2);
+                $k = ltrim(trim($k), '#');
+                $v = trim($v);
+                if (substr($k, -1) === '*') {
+                    $prefix_raw = rtrim($k, '*');
+                    $formatted_prefix = ($v !== '') ? $v : $prefix_raw;
+                }
+            } elseif (substr($line, -1) === '*') {
+                $k = ltrim(trim($line), '#');
+                $prefix_raw = rtrim($k, '*');
+                $formatted_prefix = $prefix_raw;
+            }
+
+            if ($prefix_raw !== '') {
+                $prefix_key = mb_strtolower(str_replace(' ', '', $prefix_raw));
+                if ($prefix_key !== '' && strpos($t_lower_no_space, $prefix_key) === 0) {
+                    // Extract suffix after the matched prefix
+                    $suffix_len = strlen($prefix_key);
+                    $raw_suffix = substr($t_no_space, $suffix_len);
+
+                    if ($raw_suffix === '') {
+                        return $formatted_prefix;
+                    }
+
+                    // Format suffix (CamelCase and letter-number boundary splitting)
+                    $suffix_formatted = preg_replace('/([a-z]{2,})([A-Z0-9])/u', '$1 $2', $raw_suffix);
+                    $suffix_formatted = preg_replace('/([a-zA-Z]{2,})([0-9]+)/u', '$1 $2', $suffix_formatted);
+                    $suffix_formatted = preg_replace('/([0-9]+)([a-zA-Z]{2,})/u', '$1 $2', $suffix_formatted);
+
+                    $sub_words = explode(' ', $suffix_formatted);
+                    $processed_sub = [];
+                    foreach ($sub_words as $sw) {
+                        $sw = trim($sw);
+                        if ($sw === '') continue;
+                        if (strlen($sw) <= 3 || is_numeric($sw) || preg_match('/^[A-Z0-9]+$/', $sw)) {
+                            $processed_sub[] = mb_strtoupper($sw);
+                        } else {
+                            $processed_sub[] = mb_convert_case($sw, MB_CASE_TITLE, "UTF-8");
+                        }
+                    }
+                    $final_suffix = implode(' ', $processed_sub);
+                    return trim($formatted_prefix . ' ' . $final_suffix);
                 }
             }
         }
