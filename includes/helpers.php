@@ -818,3 +818,49 @@ function social_wrap_as_gutenberg_block($html_chunk, $block_name = 'core/html') 
     if ($trimmed === '') return '';
     return "<!-- wp:{$block_name} -->\n" . $trimmed . "\n<!-- /wp:{$block_name} -->";
 }
+
+/**
+ * Automatically purges site caches across W3 Total Cache (W3TC), WP Super Cache, WP Rocket,
+ * LiteSpeed, WP Fastest Cache, SG Optimizer, and core WordPress caches whenever
+ * a digest post is published or updated.
+ *
+ * @param int $post_id Optional post ID to purge specific post cache.
+ */
+function social_purge_site_caches($post_id = 0) {
+    // 1. Core WordPress Post Cache
+    if ($post_id > 0) {
+        clean_post_cache($post_id);
+    }
+
+    // 2. W3 Total Cache (W3TC)
+    if (function_exists('w3tc_flush_posts')) {
+        w3tc_flush_posts();
+    } elseif (function_exists('w3tc_pgcache_flush')) {
+        w3tc_pgcache_flush();
+    }
+
+    // 3. WP Super Cache
+    if (function_exists('wp_cache_clear_cache')) {
+        wp_cache_clear_cache();
+    }
+
+    // 4. WP Rocket
+    if (function_exists('rocket_clean_domain')) {
+        rocket_clean_domain();
+    }
+
+    // 5. LiteSpeed Cache
+    if (has_action('litespeed_purge_all')) {
+        do_action('litespeed_purge_all');
+    }
+
+    // 6. WP Fastest Cache
+    if (has_action('wpfc_clear_all_cache')) {
+        do_action('wpfc_clear_all_cache');
+    }
+
+    // 7. SG Optimizer (SiteGround)
+    if (function_exists('sg_cachepress_purge_cache')) {
+        sg_cachepress_purge_cache();
+    }
+}

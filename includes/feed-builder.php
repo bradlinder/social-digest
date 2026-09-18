@@ -359,6 +359,7 @@ function social_fetch_workbench_candidates() {
 
     $next = [
         'created' => time(),
+        'title_override' => $title,
         'preview' => ['title' => $title, 'tags' => $tags, 'featured_image' => $featured],
         'candidates' => $candidates,
         'framing_override_enabled' => false,
@@ -382,6 +383,13 @@ function social_sanitize_next_run($input) {
         if (!empty($c['key'])) $old_candidates[$c['key']] = $c;
     }
     
+    // Process custom WordPress Post Title override
+    if (isset($input['custom_title'])) {
+        $custom_title = sanitize_text_field($input['custom_title']);
+        $out['title_override'] = $custom_title;
+        $out['preview']['title'] = $custom_title;
+    }
+
     $pinned_key   = sanitize_key($input['pinned_lead_post'] ?? '');
     $featured_sel = sanitize_key($input['selected_featured_post'] ?? '');
 
@@ -493,7 +501,8 @@ function social_publish_workbench_run($state, $force_status = null) {
         }
 
         global $wpdb;
-        $title = sanitize_text_field($state['preview']['title'] ?? 'Social Digest');
+        $raw_title = !empty($state['title_override']) ? $state['title_override'] : ($state['preview']['title'] ?? 'Social Digest');
+        $title = sanitize_text_field($raw_title);
         $base_title = trim(preg_replace('/\s*[:\-–]\s*$/u', '', preg_replace('/\s+/', ' ', $title)));
         $today = wp_date('Y-m-d', time(), wp_timezone());
         $count_today = (int)$wpdb->get_var($wpdb->prepare(
@@ -602,6 +611,13 @@ function social_publish_workbench_run($state, $force_status = null) {
         }
         if ($new_masto > 0) {
             update_option('masto_last_digest_time', $new_masto);
+        }
+
+        // Purge W3 Total Cache and active page/object caches for the newly published digest
+        if (function_exists(__NAMESPACE__ . '\\social_purge_site_caches')) {
+            social_purge_site_caches($post_id);
+        } elseif (function_exists('social_purge_site_caches')) {
+            \social_purge_site_caches($post_id);
         }
 
         $status_label = ($status_to_use === 'draft') ? 'Draft created' : 'Digest published';

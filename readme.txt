@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.13
+Stable tag: 5.7.15
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,12 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.15 =
+* Feature: Customizable WordPress Post Title Input in Next-Run Workbench: Added an editable WordPress Post Title input box (`custom_title`) located prominently at the top of the "Actions & preview" (Next-Run Workbench) tab above social candidate posts. Populates with the auto-generated headline template by default, allowing users to freely edit or replace the title before saving, drafting, or publishing.
+
+= 5.7.14 =
+* Feature: Automated W3 Total Cache (W3TC) & Multi-Cache Purge Engine: Added explicit cache-purging integration (`social_purge_site_caches()`) for W3 Total Cache (`w3tc_flush_posts()` / `w3tc_pgcache_flush()`), WP Super Cache, WP Rocket, LiteSpeed Cache, WP Fastest Cache, SG Optimizer, and core WordPress post caches (`clean_post_cache`). Automatically purges post pages, homepage, archives, and RSS feeds whenever a digest is created or updated.
 
 = 5.7.13 =
 * UI/UX & Layout: WP Media Settings Integration for Multi-Image Galleries: Multi-image post galleries now dynamically query the site's default WordPress thumbnail dimensions (`get_option('thumbnail_size_w')` and `get_option('thumbnail_size_h')`). Renders gallery images as clean, thumbnail-sized inline blocks using the user's configured Media Settings (defaulting to 150x150), while single-image embeds preserve full 400px–450px max dimensions.

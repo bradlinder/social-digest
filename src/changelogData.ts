@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.13',
+  version: '5.7.15',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,30 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.12',
+  rollbackTarget: 'v5.7.14',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.15',
+    tag: 'v5.7.15',
+    isLatest: true,
+    highlights: [
+      'Feature: Customizable WordPress Post Title Input in Next-Run Workbench: Added an editable WordPress Post Title input box (custom_title) located prominently at the top of the "Actions & preview" (Next-Run Workbench) tab above social candidate posts. Populates with the auto-generated headline template by default, allowing users to freely edit or replace the title before saving, drafting, or publishing.',
+    ]
+  },
+  {
+    version: '5.7.14',
+    tag: 'v5.7.14',
+    isLatest: false,
+    highlights: [
+      'Feature: Automated W3 Total Cache (W3TC) & Multi-Cache Purge Engine: Added explicit cache-purging integration (social_purge_site_caches()) for W3 Total Cache (w3tc_flush_posts() / w3tc_pgcache_flush()), WP Super Cache, WP Rocket, LiteSpeed Cache, WP Fastest Cache, SG Optimizer, and core WordPress post caches (clean_post_cache). Automatically purges post pages, homepage, archives, and RSS feeds whenever a digest is created or updated.',
+    ]
+  },
+  {
     version: '5.7.13',
     tag: 'v5.7.13',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'UI/UX & Layout: WP Media Settings Integration for Multi-Image Galleries: Multi-image post galleries now dynamically query the site\'s default WordPress thumbnail dimensions (get_option(\'thumbnail_size_w\') and get_option(\'thumbnail_size_h\')). Renders gallery images as clean, thumbnail-sized inline blocks using the user\'s configured Media Settings (defaulting to 150x150), while single-image embeds preserve full 400px–450px max dimensions.',
     ]

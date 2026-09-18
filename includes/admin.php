@@ -863,6 +863,18 @@ function social_render_settings_page() {
                             <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
                         </div>
                         <div class="inside">
+                            <!-- CUSTOMIZABLE WORDPRESS POST TITLE -->
+                            <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; padding:12px 16px; margin-bottom:16px;">
+                                <label for="sd53_custom_title" style="display:block; font-weight:700; font-size:13px; color:#0f172a; margin-bottom:6px;">
+                                    <span class="dashicons dashicons-editor-textbox" style="color:#0284c7; vertical-align:text-bottom; margin-right:4px;"></span>
+                                    WordPress Post Title:
+                                </label>
+                                <input type="text" id="sd53_custom_title" name="custom_title" class="large-text" value="<?php echo esc_attr($state['title_override'] ?? $state['preview']['title'] ?? ''); ?>" placeholder="Enter custom WordPress post title..." style="font-size:15px; font-weight:600; padding:8px 12px; border-color:#94a3b8; border-radius:4px; width:100%; box-sizing:border-box;" />
+                                <p class="description" style="margin-top:6px; font-size:12px; color:#64748b; margin-bottom:0;">
+                                    Shows the auto-generated headline by default. You can manually edit or customize this title before saving, drafting, or publishing.
+                                </p>
+                            </div>
+
                             <?php if (!$candidates): ?>
                                 <p><strong>No next-run candidates loaded.</strong> Click <em>Fetch / Refresh Next Run</em> above.</p>
                             <?php else: ?>
