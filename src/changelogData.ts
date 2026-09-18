@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.27',
+  version: '5.7.28',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,10 +17,19 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.26',
+  rollbackTarget: 'v5.7.27',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
+  {
+    version: '5.7.28',
+    tag: 'v5.7.28',
+    isLatest: true,
+    highlights: [
+      'UI & Settings Refactoring: Reorganized long Settings tab into 4 distinct, collapsible, drag-and-drop postboxes.',
+      'Feature & UI Controls: Added controls for all previously hidden settings including Ingestion Fetch Order, Default Tags, Hashtag Auto-Tagging parameters, Same-Day Suffix Template, and Article Framing Header/Footer HTML.'
+    ]
+  },
   {
     version: '5.7.27',
     tag: 'v5.7.27',

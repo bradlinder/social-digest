@@ -578,7 +578,17 @@ function social_render_settings_page() {
                                                 </td>
                                             </tr>
                                             <tr>
-                                                <th>Article Ordering</th>
+                                                <th>Ingestion Fetch Order</th>
+                                                 <td>
+                                                     <select name="social_digest_options[fetch_order]" id="social_fetch_order">
+                                                         <option value="newest" <?php selected($opts['fetch_order'] ?? 'newest', 'newest'); ?>>Newest Posts First</option>
+                                                         <option value="oldest" <?php selected($opts['fetch_order'] ?? '', 'oldest'); ?>>Oldest Posts First</option>
+                                                     </select>
+                                                     <p class="description" style="margin-top:4px;">Controls the API fetch traversal sequence when pulling timeline entries from Mastodon and Bluesky servers.</p>
+                                                 </td>
+                                             </tr>
+                                             <tr>
+                                                 <th>Article Ordering</th>
                                                 <td>
                                                     <select name="social_digest_options[display_order]" id="social_display_order">
                                                         <option value="reverse" <?php selected($opts['display_order'] ?? 'reverse', 'reverse'); ?>>Reverse Chronological (Newest First)</option>
@@ -656,11 +666,12 @@ function social_render_settings_page() {
                                 </div>
 
                                 <!-- PUBLISHING & FRAMING -->
-                                <div class="postbox" id="social_box_content" style="border-left: 5px solid #ec4899;">
+                                <!-- PUBLISHING & OUTPUT FORMAT -->
+                                <div class="postbox" id="social_box_publishing" style="border-left: 5px solid #ec4899;">
                                     <div class="postbox-header">
                                         <h2 class="hndle">
                                             <span class="dashicons dashicons-admin-post" style="color:#ec4899; margin-right:4px;"></span>
-                                            Publishing, Tags &amp; Article Framing
+                                            Publishing &amp; Output Format
                                         </h2>
                                         <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
                                     </div>
@@ -696,6 +707,240 @@ function social_render_settings_page() {
                                                         <option value="dark" <?php selected($opts['dark_mode_mode'] ?? '', 'dark'); ?>>Force High-Contrast Dark Theme</option>
                                                     </select>
                                                     <p class="description">Controls card background and typography contrast. <strong>Automatic</strong> mode intelligently checks active website themes (<code>.dark</code>, <code>[data-theme="dark"]</code>, computed background luminance) and browser/OS preferences, ensuring cards never stay dark on a light website (or vice-versa).</p>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Post Author</th>
+                                                <td><?php wp_dropdown_users(['name' => 'social_digest_options[post_author]', 'id' => 'social_post_author', 'selected' => $opts['post_author'] ?? 1]); ?></td>
+                                            </tr>
+                                            <tr>
+                                                <th>Categories</th>
+                                                <td>
+                                                    <div style="max-height: 120px; overflow-y: auto; border: 1px solid #ccd0d4; padding: 6px 10px; width: 280px; background:#fff;">
+                                                        <?php foreach ($all_cats as $cat): ?>
+                                                            <label style="display:block;"><input type="checkbox" name="social_digest_options[categories][]" value="<?php echo $cat->term_id; ?>" <?php checked(in_array($cat->term_id, $selected_cats)); ?> /> <?php echo esc_html($cat->name); ?></label>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Uninstallation Policy</th>
+                                                <td><label><input type="checkbox" name="social_digest_options[wipe_data_on_uninstall]" value="1" <?php checked($opts['wipe_data_on_uninstall'] ?? 1, 1); ?> /> Delete settings on uninstall</label></td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- POST TITLE & VOCABULARY ENGINE -->
+                                <div class="postbox" id="social_box_titles" style="border-left: 5px solid #8b5cf6;">
+                                    <div class="postbox-header">
+                                        <h2 class="hndle">
+                                            <span class="dashicons dashicons-heading" style="color:#8b5cf6; margin-right:4px;"></span>
+                                            Post Title &amp; Vocabulary Engine
+                                        </h2>
+                                        <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
+                                    </div>
+                                    <div class="inside">
+                                        <table class="form-table">
+                                            <tr>
+                                                <th>Title Template</th>
+                                                <td>
+                                                    <input name="social_digest_options[title_template]" type="text" value="<?php echo esc_attr($opts['title_template'] ?? 'Social Digest {hashtags}'); ?>" class="regular-text" />
+                                                    <p class="description">Available variables: <code>{hashtags}</code>, <code>{date}</code>, <code>{count}</code></p>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Same-Day Suffix</th>
+                                                <td>
+                                                    <input name="social_digest_options[same_day_suffix_tpl]" type="text" value="<?php echo esc_attr($opts['same_day_suffix_tpl'] ?? ' (Part {part})'); ?>" class="regular-text" style="width: 220px;" placeholder=" (Part {part})" />
+                                                    <p class="description">Appended to post titles if multiple digests are published on the same calendar day. Use <code>{part}</code> for part number.</p>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Hashtag Formatting Rules</th>
+                                                <td>
+                                                    <div style="padding: 12px; background: #f6f7f7; border: 1px solid #ccd0d4; border-radius: 4px; max-width: 550px;">
+                                                        <div style="margin-bottom: 8px;">
+                                                            <label style="display:inline-block; width: 150px; font-weight:600;">Selection Strategy:</label>
+                                                            <select name="social_digest_options[title_tag_selection_strategy]">
+                                                                <option value="first" <?php selected($opts['title_tag_selection_strategy'] ?? 'first', 'first'); ?>>First Hashtag in Post</option>
+                                                                <option value="popularity" <?php selected($opts['title_tag_selection_strategy'] ?? '', 'popularity'); ?>>Taxonomy Popularity / Frequency</option>
+                                                                <option value="random" <?php selected($opts['title_tag_selection_strategy'] ?? '', 'random'); ?>>Random Hashtag in Post</option>
+                                                            </select>
+                                                        </div>
+                                                        <div style="margin-bottom: 8px;">
+                                                            <label style="display:inline-block; width: 150px; font-weight:600;">Max Tags in Title:</label>
+                                                            <select name="social_digest_options[title_tag_max_count]">
+                                                                <?php for ($i = 1; $i <= 5; $i++): ?>
+                                                                    <option value="<?php echo $i; ?>" <?php selected((int)($opts['title_tag_max_count'] ?? 3), $i); ?>><?php echo $i; ?> <?php echo $i === 1 ? 'tag' : 'tags'; ?></option>
+                                                                <?php endfor; ?>
+                                                            </select>
+                                                        </div>
+                                                        <div style="margin-bottom: 8px;">
+                                                            <label style="display:inline-block; width: 150px; font-weight:600;">Enclosure:</label>
+                                                            <select name="social_digest_options[title_tag_enclosure]">
+                                                                <option value="parentheses" <?php selected($opts['title_tag_enclosure'] ?? 'parentheses', 'parentheses'); ?>>(Tag 1, Tag 2)</option>
+                                                                <option value="brackets" <?php selected($opts['title_tag_enclosure'] ?? '', 'brackets'); ?>>[Tag 1, Tag 2]</option>
+                                                                <option value="none" <?php selected($opts['title_tag_enclosure'] ?? '', 'none'); ?>>Tag 1, Tag 2 (No Enclosure)</option>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label style="display:inline-block; width: 150px; font-weight:600;">Delimiter:</label>
+                                                            <select name="social_digest_options[title_tag_delimiter]">
+                                                                <option value="oxford" <?php selected($opts['title_tag_delimiter'] ?? 'oxford', 'oxford'); ?>>Tag 1, Tag 2, and Tag 3</option>
+                                                                <option value="commas" <?php selected($opts['title_tag_delimiter'] ?? '', 'commas'); ?>>Tag 1, Tag 2, Tag 3</option>
+                                                                <option value="ampersand" <?php selected($opts['title_tag_delimiter'] ?? '', 'ampersand'); ?>>Tag 1, Tag 2 &amp; Tag 3</option>
+                                                                <option value="pipe" <?php selected($opts['title_tag_delimiter'] ?? '', 'pipe'); ?>>Tag 1 | Tag 2 | Tag 3</option>
+                                                                <option value="slash" <?php selected($opts['title_tag_delimiter'] ?? '', 'slash'); ?>>Tag 1 / Tag 2 / Tag 3</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Site Vocabulary Engine</th>
+                                                <td>
+                                                    <div style="padding: 12px; background: #f6f7f7; border: 1px solid #ccd0d4; border-radius: 4px; max-width: 550px;">
+                                                        <div style="margin-bottom: 6px;">
+                                                            <label><input type="checkbox" name="social_digest_options[learn_site_vocabulary]" value="1" <?php checked(!isset($opts['learn_site_vocabulary']) || !empty($opts['learn_site_vocabulary'])); ?>> Automatically learn vocabulary from published WordPress post titles, tags &amp; categories</label>
+                                                        </div>
+                                                        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 8px;">
+                                                            <div>
+                                                                <label style="display:inline-block; width: 120px; font-size: 12px;">Scan Frequency:</label>
+                                                                <select name="social_digest_options[vocabulary_scan_frequency]" style="font-size: 12px;">
+                                                                    <option value="24_hours" <?php selected($opts['vocabulary_scan_frequency'] ?? '', '24_hours'); ?>>Every 24 Hours</option>
+                                                                    <option value="7_days" <?php selected($opts['vocabulary_scan_frequency'] ?? '7_days', '7_days'); ?>>Every 7 Days (Recommended)</option>
+                                                                    <option value="30_days" <?php selected($opts['vocabulary_scan_frequency'] ?? '', '30_days'); ?>>Every 30 Days</option>
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <?php $scan_limit_val = (int)($opts['vocabulary_post_scan_limit'] ?? 150); ?>
+                                                                <label style="display:inline-block; width: 120px; font-size: 12px;">Post Scan Depth:</label>
+                                                                <select name="social_digest_options[vocabulary_post_scan_limit]" id="sd_vocab_scan_limit_select" style="font-size: 12px;" onchange="sdToggleVocabWarning(this.value)">
+                                                                    <option value="50" <?php selected($scan_limit_val, 50); ?>>50 Posts (Light &amp; Fast)</option>
+                                                                    <option value="150" <?php selected($scan_limit_val, 150); ?>>150 Posts (Recommended Baseline)</option>
+                                                                    <option value="300" <?php selected($scan_limit_val, 300); ?>>300 Posts (Deep Coverage)</option>
+                                                                    <option value="500" <?php selected($scan_limit_val, 500); ?>>500 Posts (Extended Archive)</option>
+                                                                    <option value="1000" <?php selected($scan_limit_val, 1000); ?>>1,000 Posts (Heavy Archive)</option>
+                                                                    <option value="-1" <?php selected($scan_limit_val, -1); ?>>All Published Posts (Full Site History)</option>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                        <div id="sd_vocab_scan_warning" style="display: <?php echo ($scan_limit_val > 300 || $scan_limit_val === -1) ? 'block' : 'none'; ?>; background: #fff8e5; border: 1px solid #f0c36d; color: #8a6d3b; padding: 8px 12px; border-radius: 4px; font-size: 11px; margin-bottom: 8px;">
+                                                            <strong>⚠️ Large Archive Scan Warning:</strong> Indexing <span id="sd_scan_num_label"><?php echo $scan_limit_val === -1 ? 'all published' : $scan_limit_val; ?></span> posts scans your database for product titles &amp; taxonomies. Re-indexing large archives (>300 posts) may temporarily increase memory usage.
+                                                        </div>
+                                                        <?php 
+                                                        $current_vocab = social_get_site_vocabulary_dictionary();
+                                                        $vocab_count = count($current_vocab);
+                                                        ?>
+                                                        <div style="background: #fff; border: 1px solid #dcdcde; padding: 8px 12px; border-radius: 4px; font-size: 11px; margin-bottom: 6px;">
+                                                            <strong>Vocabulary Cache Status:</strong> Currently indexed <strong><?php echo $vocab_count; ?></strong> brand &amp; topic terms from your site content.
+                                                            <button type="submit" name="sd53_reindex_vocab" class="button button-small" style="margin-left: 10px;">Re-index Vocabulary Now</button>
+                                                        </div>
+                                                        <p class="description" style="margin-top: 2px; font-size: 11px;">Extracts proper nouns and product terms from your site so all-lowercase social hashtags (e.g. <code>#eliteminipc</code>) map automatically to your site's exact terminology.</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Custom Tag Title Overrides</th>
+                                                <td>
+                                                    <div style="max-width: 550px;">
+                                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                                            <label style="font-weight:600;">Tag Override Rules:</label>
+                                                            <div>
+                                                                <button type="button" class="button button-small" onclick="sdExportCustomOverrides()" title="Export custom overrides">📥 Export (.txt)</button>
+                                                                <button type="button" class="button button-small" onclick="document.getElementById('sd_import_overrides_file').click()" title="Import custom overrides">📤 Import (.txt)</button>
+                                                                <input type="file" id="sd_import_overrides_file" accept=".txt,.csv" style="display:none;" onchange="sdImportCustomOverrides(this)">
+                                                            </div>
+                                                        </div>
+                                                        <textarea id="sd_title_tag_custom_overrides" name="social_digest_options[title_tag_custom_overrides]" rows="3" class="large-text" style="font-family: monospace; font-size: 12px;" placeholder="SnapdragonX=Snapdragon X, MINISFORUM*, GEEKOM*, NVIDIA* (one per line or comma-separated)"><?php echo esc_textarea($opts['title_tag_custom_overrides'] ?? ''); ?></textarea>
+                                                        <p class="description" style="margin-top: 2px; font-size: 11px;">Optional escape hatch to manually map specific raw tags to custom formatted titles (e.g. <code>rawtag=Formatted Name</code> or wildcard prefix <code>MINISFORUM*</code> so <code>#MINISFORUMS5</code> becomes <code>MINISFORUM S5</code>). Use 📥 Export / 📤 Import to save or load backups as <code>.txt</code> files.</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- WORDPRESS TAGS & HASHTAG AUTO-TAGGING -->
+                                <div class="postbox" id="social_box_tags" style="border-left: 5px solid #06b6d4;">
+                                    <div class="postbox-header">
+                                        <h2 class="hndle">
+                                            <span class="dashicons dashicons-tag" style="color:#06b6d4; margin-right:4px;"></span>
+                                            WordPress Tags &amp; Hashtag Auto-Tagging
+                                        </h2>
+                                        <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
+                                    </div>
+                                    <div class="inside">
+                                        <table class="form-table">
+                                            <tr>
+                                                <th>Default Post Tags</th>
+                                                <td>
+                                                    <input name="social_digest_options[default_tags]" type="text" value="<?php echo esc_attr($opts['default_tags'] ?? 'Social Digest, Roundup'); ?>" class="regular-text" placeholder="Social Digest, Roundup" />
+                                                    <p class="description">Comma-separated default WordPress tags attached to every published digest post.</p>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Hashtag Auto-Tagging</th>
+                                                <td>
+                                                    <label><input type="checkbox" name="social_digest_options[extract_tags]" value="1" <?php checked(!isset($opts['extract_tags']) || !empty($opts['extract_tags'])); ?> /> <strong>Automatically convert social hashtags into WordPress post tags</strong></label>
+                                                    <p class="description">Extracts hashtags from included social updates and attaches them as taxonomy tags to the published WordPress post.</p>
+
+                                                    <div style="margin-top: 10px; padding: 12px; background: #f6f7f7; border: 1px solid #ccd0d4; border-radius: 4px; max-width: 500px;">
+                                                        <div style="margin-bottom: 8px;">
+                                                            <label style="display:inline-block; width: 170px; font-weight:600;">Minimum Character Length:</label>
+                                                            <select name="social_digest_options[min_tag_length]">
+                                                                <?php for ($i = 1; $i <= 5; $i++): ?>
+                                                                    <option value="<?php echo $i; ?>" <?php selected((int)($opts['min_tag_length'] ?? 3), $i); ?>><?php echo $i; ?> <?php echo $i === 1 ? 'character' : 'characters'; ?></option>
+                                                                <?php endfor; ?>
+                                                            </select>
+                                                        </div>
+                                                        <div style="margin-bottom: 8px;">
+                                                            <label style="display:inline-block; width: 170px; font-weight:600;">Max Tags Per Social Entry:</label>
+                                                            <select name="social_digest_options[max_tags_per_post]">
+                                                                <?php for ($i = 1; $i <= 5; $i++): ?>
+                                                                    <option value="<?php echo $i; ?>" <?php selected((int)($opts['max_tags_per_post'] ?? 2), $i); ?>><?php echo $i; ?> <?php echo $i === 1 ? 'tag' : 'tags'; ?></option>
+                                                                <?php endfor; ?>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label style="display:inline-block; width: 170px; font-weight:600;">Max Total Tags Per Digest:</label>
+                                                            <select name="social_digest_options[max_total_tags]">
+                                                                <?php for ($i = 1; $i <= 20; $i++): ?>
+                                                                    <option value="<?php echo $i; ?>" <?php selected((int)($opts['max_total_tags'] ?? 8), $i); ?>><?php echo $i; ?> <?php echo $i === 1 ? 'tag' : 'tags'; ?></option>
+                                                                <?php endfor; ?>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- ARTICLE FRAMING & TEMPLATES -->
+                                <div class="postbox" id="social_box_framing_templates" style="border-left: 5px solid #10b981;">
+                                    <div class="postbox-header">
+                                        <h2 class="hndle">
+                                            <span class="dashicons dashicons-layout" style="color:#10b981; margin-right:4px;"></span>
+                                            Article Framing &amp; Lead-In / Footer Templates
+                                        </h2>
+                                        <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
+                                    </div>
+                                    <div class="inside">
+                                        <table class="form-table">
+                                            <tr>
+                                                <th>Global Lead-In Header HTML</th>
+                                                <td>
+                                                    <textarea name="social_digest_options[header_text]" rows="3" class="large-text" placeholder="&lt;p&gt;Here is what we shared across social channels today:&lt;/p&gt;"><?php echo esc_textarea($opts['header_text'] ?? '<p>Here is what we shared across social channels today:</p>'); ?></textarea>
+                                                    <p class="description">Default HTML content inserted at the top of every generated digest post.</p>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Global Closing Footer HTML</th>
+                                                <td>
+                                                    <textarea name="social_digest_options[footer_text]" rows="3" class="large-text" placeholder="&lt;hr&gt;&lt;p&gt;Follow us directly on social media for real-time updates!&lt;/p&gt;"><?php echo esc_textarea($opts['footer_text'] ?? '<hr><p>Follow us directly on social media for real-time updates!</p>'); ?></textarea>
+                                                    <p class="description">Default HTML content appended at the bottom of every generated digest post.</p>
                                                 </td>
                                             </tr>
                                             <tr>
@@ -742,199 +987,68 @@ function social_render_settings_page() {
                                                     </div>
                                                 </td>
                                             </tr>
-                                            <tr>
-                                                <th>Post Author</th>
-                                                <td><?php wp_dropdown_users(['name' => 'social_digest_options[post_author]', 'id' => 'social_post_author', 'selected' => $opts['post_author'] ?? 1]); ?></td>
-                                            </tr>
-                                            <tr>
-                                                <th>Categories</th>
-                                                <td>
-                                                    <div style="max-height: 120px; overflow-y: auto; border: 1px solid #ccd0d4; padding: 6px 10px; width: 280px; background:#fff;">
-                                                        <?php foreach ($all_cats as $cat): ?>
-                                                            <label style="display:block;"><input type="checkbox" name="social_digest_options[categories][]" value="<?php echo $cat->term_id; ?>" <?php checked(in_array($cat->term_id, $selected_cats)); ?> /> <?php echo esc_html($cat->name); ?></label>
-                                                        <?php endforeach; ?>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <th>Title Template</th>
-                                                <td>
-                                                    <input name="social_digest_options[title_template]" type="text" value="<?php echo esc_attr($opts['title_template'] ?? 'Social Digest {hashtags}'); ?>" class="regular-text" />
-                                                    <p class="description">Available variables: <code>{hashtags}</code>, <code>{date}</code>, <code>{count}</code></p>
-                                                    <div style="margin-top: 10px; padding: 12px; background: #f6f7f7; border: 1px solid #ccd0d4; border-radius: 4px; max-width: 500px;">
-                                                        <strong style="display:block; margin-bottom: 8px;">Hashtag Formatting Rules:</strong>
-                                                        <div style="margin-bottom: 8px;">
-                                                            <label style="display:inline-block; width: 140px;">Selection Strategy:</label>
-                                                            <select name="social_digest_options[title_tag_selection_strategy]">
-                                                                <option value="first" <?php selected($opts['title_tag_selection_strategy'] ?? 'first', 'first'); ?>>First Hashtag in Post</option>
-                                                                <option value="popularity" <?php selected($opts['title_tag_selection_strategy'] ?? '', 'popularity'); ?>>Taxonomy Popularity / Frequency</option>
-                                                                <option value="random" <?php selected($opts['title_tag_selection_strategy'] ?? '', 'random'); ?>>Random Hashtag in Post</option>
-                                                            </select>
-                                                        </div>
-                                                        <div style="margin-bottom: 8px;">
-                                                            <label style="display:inline-block; width: 140px;">Max Tags in Title:</label>
-                                                            <select name="social_digest_options[title_tag_max_count]">
-                                                                <?php for ($i = 1; $i <= 5; $i++): ?>
-                                                                    <option value="<?php echo $i; ?>" <?php selected((int)($opts['title_tag_max_count'] ?? 3), $i); ?>><?php echo $i; ?> <?php echo $i === 1 ? 'tag' : 'tags'; ?></option>
-                                                                <?php endfor; ?>
-                                                            </select>
-                                                        </div>
-                                                        <div style="margin-bottom: 8px;">
-                                                            <label style="display:inline-block; width: 140px;">Enclosure:</label>
-                                                            <select name="social_digest_options[title_tag_enclosure]">
-                                                                <option value="parentheses" <?php selected($opts['title_tag_enclosure'] ?? 'parentheses', 'parentheses'); ?>>(Tag 1, Tag 2)</option>
-                                                                <option value="brackets" <?php selected($opts['title_tag_enclosure'] ?? '', 'brackets'); ?>>[Tag 1, Tag 2]</option>
-                                                                <option value="none" <?php selected($opts['title_tag_enclosure'] ?? '', 'none'); ?>>Tag 1, Tag 2 (No Enclosure)</option>
-                                                            </select>
-                                                        </div>
-                                                        <div>
-                                                            <label style="display:inline-block; width: 80px;">Delimiter:</label>
-                                                            <select name="social_digest_options[title_tag_delimiter]">
-                                                                <option value="oxford" <?php selected($opts['title_tag_delimiter'] ?? 'oxford', 'oxford'); ?>>Tag 1, Tag 2, and Tag 3</option>
-                                                                <option value="commas" <?php selected($opts['title_tag_delimiter'] ?? '', 'commas'); ?>>Tag 1, Tag 2, Tag 3</option>
-                                                                <option value="ampersand" <?php selected($opts['title_tag_delimiter'] ?? '', 'ampersand'); ?>>Tag 1, Tag 2 &amp; Tag 3</option>
-                                                                <option value="pipe" <?php selected($opts['title_tag_delimiter'] ?? '', 'pipe'); ?>>Tag 1 | Tag 2 | Tag 3</option>
-                                                                <option value="slash" <?php selected($opts['title_tag_delimiter'] ?? '', 'slash'); ?>>Tag 1 / Tag 2 / Tag 3</option>
-                                                            </select>
-                                                        </div>
-                                                        <div style="margin-top: 12px; border-top: 1px dashed #ccd0d4; padding-top: 10px;">
-                                                            <label style="display:block; font-weight:600; margin-bottom: 6px;">🧠 Site Vocabulary Engine (Organic Learning):</label>
-                                                            <div style="margin-bottom: 6px;">
-                                                                <label><input type="checkbox" name="social_digest_options[learn_site_vocabulary]" value="1" <?php checked(!isset($opts['learn_site_vocabulary']) || !empty($opts['learn_site_vocabulary'])); ?>> Automatically learn vocabulary from published WordPress post titles, tags &amp; categories</label>
-                                                            </div>
-                                                            <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 8px;">
-                                                                <div>
-                                                                    <label style="display:inline-block; width: 120px; font-size: 12px;">Scan Frequency:</label>
-                                                                    <select name="social_digest_options[vocabulary_scan_frequency]" style="font-size: 12px;">
-                                                                        <option value="24_hours" <?php selected($opts['vocabulary_scan_frequency'] ?? '', '24_hours'); ?>>Every 24 Hours</option>
-                                                                        <option value="7_days" <?php selected($opts['vocabulary_scan_frequency'] ?? '7_days', '7_days'); ?>>Every 7 Days (Recommended)</option>
-                                                                        <option value="30_days" <?php selected($opts['vocabulary_scan_frequency'] ?? '', '30_days'); ?>>Every 30 Days</option>
-                                                                    </select>
-                                                                </div>
-                                                                <div>
-                                                                    <?php $scan_limit_val = (int)($opts['vocabulary_post_scan_limit'] ?? 150); ?>
-                                                                    <label style="display:inline-block; width: 120px; font-size: 12px;">Post Scan Depth:</label>
-                                                                    <select name="social_digest_options[vocabulary_post_scan_limit]" id="sd_vocab_scan_limit_select" style="font-size: 12px;" onchange="sdToggleVocabWarning(this.value)">
-                                                                        <option value="50" <?php selected($scan_limit_val, 50); ?>>50 Posts (Light &amp; Fast)</option>
-                                                                        <option value="150" <?php selected($scan_limit_val, 150); ?>>150 Posts (Recommended Baseline)</option>
-                                                                        <option value="300" <?php selected($scan_limit_val, 300); ?>>300 Posts (Deep Coverage)</option>
-                                                                        <option value="500" <?php selected($scan_limit_val, 500); ?>>500 Posts (Extended Archive)</option>
-                                                                        <option value="1000" <?php selected($scan_limit_val, 1000); ?>>1,000 Posts (Heavy Archive)</option>
-                                                                        <option value="-1" <?php selected($scan_limit_val, -1); ?>>All Published Posts (Full Site History)</option>
-                                                                    </select>
-                                                                </div>
-                                                            </div>
-                                                            <div id="sd_vocab_scan_warning" style="display: <?php echo ($scan_limit_val > 300 || $scan_limit_val === -1) ? 'block' : 'none'; ?>; background: #fff8e5; border: 1px solid #f0c36d; color: #8a6d3b; padding: 8px 12px; border-radius: 4px; font-size: 11px; margin-bottom: 8px;">
-                                                                <strong>⚠️ Large Archive Scan Warning:</strong> Indexing <span id="sd_scan_num_label"><?php echo $scan_limit_val === -1 ? 'all published' : $scan_limit_val; ?></span> posts scans your database for product titles &amp; taxonomies. While transient caching keeps normal page loads fast, re-indexing large archives (>300 posts or full site) may temporarily increase PHP memory usage and execution time. <em>150–300 posts is recommended for optimal balance.</em>
-                                                            </div>
-                                                            <?php 
-                                                            $current_vocab = social_get_site_vocabulary_dictionary();
-                                                            $vocab_count = count($current_vocab);
-                                                            ?>
-                                                            <div style="background: #f6f7f7; border: 1px solid #dcdcde; padding: 8px 12px; border-radius: 4px; font-size: 11px; margin-bottom: 6px;">
-                                                                <strong>Vocabulary Cache Status:</strong> Currently indexed <strong><?php echo $vocab_count; ?></strong> brand &amp; topic terms from your local WordPress site content.
-                                                                <button type="submit" name="sd53_reindex_vocab" class="button button-small" style="margin-left: 10px;">Re-index Site Vocabulary Now</button>
-                                                            </div>
-                                                            <p class="description" style="margin-top: 2px; font-size: 11px;">Extracts proper nouns and product terms from your site so all-lowercase social hashtags (e.g. <code>#eliteminipc</code>) map automatically to your site's exact terminology.</p>
-                                                        </div>
-                                                        <div style="margin-top: 10px; border-top: 1px dashed #ccd0d4; padding-top: 8px;">
-                                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                                                <label style="font-weight:600;">Custom Tag Title Overrides (Optional):</label>
-                                                                <div>
-                                                                    <button type="button" class="button button-small" onclick="sdExportCustomOverrides()" title="Export current custom overrides as a text file">📥 Export (.txt)</button>
-                                                                    <button type="button" class="button button-small" onclick="document.getElementById('sd_import_overrides_file').click()" title="Import custom overrides from a text file">📤 Import (.txt)</button>
-                                                                    <input type="file" id="sd_import_overrides_file" accept=".txt,.csv" style="display:none;" onchange="sdImportCustomOverrides(this)">
-                                                                </div>
-                                                            </div>
-                                                            <textarea id="sd_title_tag_custom_overrides" name="social_digest_options[title_tag_custom_overrides]" rows="3" class="large-text" style="font-family: monospace; font-size: 12px;" placeholder="SnapdragonX=Snapdragon X, MINISFORUM*, GEEKOM*, NVIDIA* (one per line or comma-separated)"><?php echo esc_textarea($opts['title_tag_custom_overrides'] ?? ''); ?></textarea>
-                                                            <p class="description" style="margin-top: 2px; font-size: 11px;">Optional escape hatch to manually map specific raw tags to custom formatted titles (e.g. <code>rawtag=Formatted Name</code> or wildcard prefix <code>MINISFORUM*</code> so <code>#MINISFORUMS5</code> becomes <code>MINISFORUM S5</code>). Use 📥 Export / 📤 Import to save or load backups as <code>.txt</code> files.</p>
-                                                        </div>
-                                                        <script>
-                                                        function sdToggleVocabWarning(val) {
-                                                            var box = document.getElementById('sd_vocab_scan_warning');
-                                                            var label = document.getElementById('sd_scan_num_label');
-                                                            var num = parseInt(val, 10);
-                                                            if (num > 300 || num === -1) {
-                                                                box.style.display = 'block';
-                                                                label.textContent = (num === -1) ? 'all published' : num;
-                                                            } else {
-                                                                box.style.display = 'none';
-                                                            }
-                                                        }
-
-                                                        function sdExportCustomOverrides() {
-                                                            var textarea = document.getElementById('sd_title_tag_custom_overrides');
-                                                            var content = textarea ? textarea.value.trim() : '';
-                                                            if (!content) {
-                                                                alert('There are no custom tag overrides to export.');
-                                                                return;
-                                                            }
-                                                            var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-                                                            var url = URL.createObjectURL(blob);
-                                                            var a = document.createElement('a');
-                                                            a.href = url;
-                                                            a.download = 'custom-tag-overrides.txt';
-                                                            document.body.appendChild(a);
-                                                            a.click();
-                                                            document.body.removeChild(a);
-                                                            URL.revokeObjectURL(url);
-                                                        }
-
-                                                        function sdImportCustomOverrides(input) {
-                                                            if (!input.files || !input.files[0]) return;
-                                                            var file = input.files[0];
-                                                            var reader = new FileReader();
-                                                            reader.onload = function(e) {
-                                                                var importedText = e.target.result;
-                                                                var textarea = document.getElementById('sd_title_tag_custom_overrides');
-                                                                if (textarea) {
-                                                                    if (textarea.value.trim() !== '') {
-                                                                        if (confirm('Do you want to append the imported overrides to your existing list?\n\nClick OK to Append, or Cancel to Replace existing overrides.')) {
-                                                                            textarea.value = textarea.value.trim() + '\n' + importedText.trim();
-                                                                        } else {
-                                                                            textarea.value = importedText.trim();
-                                                                        }
-                                                                    } else {
-                                                                        textarea.value = importedText.trim();
-                                                                    }
-                                                                    alert('Import successful! Remember to click "Save Changes" at the bottom of the page to apply.');
-                                                                }
-                                                            };
-                                                            reader.readAsText(file);
-                                                            input.value = '';
-                                                        }
-                                                        </script>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <th>Article Header &amp; Footer</th>
-                                                <td>
-                                                    <div style="max-width: 800px;">
-                                                        <?php 
-                                                        wp_editor($unified_editor_value, 'social_digest_unified_content', [
-                                                            'textarea_name' => 'social_digest_options[unified_content]',
-                                                            'textarea_rows' => 10,
-                                                            'media_buttons' => false,
-                                                            'teeny'         => false
-                                                        ]); 
-                                                        ?>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <th>Uninstallation Policy</th>
-                                                <td><label><input type="checkbox" name="social_digest_options[wipe_data_on_uninstall]" value="1" <?php checked($opts['wipe_data_on_uninstall'] ?? 1, 1); ?> /> Delete settings on uninstall</label></td>
-                                            </tr>
                                         </table>
                                     </div>
                                 </div>
+                                <script>
+                                function sdToggleVocabWarning(val) {
+                                    var box = document.getElementById('sd_vocab_scan_warning');
+                                    var label = document.getElementById('sd_scan_num_label');
+                                    var num = parseInt(val, 10);
+                                    if (num > 300 || num === -1) {
+                                        box.style.display = 'block';
+                                        label.textContent = (num === -1) ? 'all published' : num;
+                                    } else {
+                                        box.style.display = 'none';
+                                    }
+                                }
 
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <?php submit_button('Save Settings'); ?>
+                                function sdExportCustomOverrides() {
+                                    var textarea = document.getElementById('sd_title_tag_custom_overrides');
+                                    var content = textarea ? textarea.value.trim() : '';
+                                    if (!content) {
+                                        alert('There are no custom tag overrides to export.');
+                                        return;
+                                    }
+                                    var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                                    var url = URL.createObjectURL(blob);
+                                    var a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = 'custom-tag-overrides.txt';
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                    URL.revokeObjectURL(url);
+                                }
+
+                                function sdImportCustomOverrides(input) {
+                                    if (!input.files || !input.files[0]) return;
+                                    var file = input.files[0];
+                                    var reader = new FileReader();
+                                    reader.onload = function(e) {
+                                        var importedText = e.target.result;
+                                        var textarea = document.getElementById('sd_title_tag_custom_overrides');
+                                        if (textarea) {
+                                            if (textarea.value.trim() !== '') {
+                                                if (confirm('Do you want to append the imported overrides to your existing list?
+
+Click OK to Append, or Cancel to Replace existing overrides.')) {
+                                                    textarea.value = textarea.value.trim() + '
+' + importedText.trim();
+                                                } else {
+                                                    textarea.value = importedText.trim();
+                                                }
+                                            } else {
+                                                textarea.value = importedText.trim();
+                                            }
+                                            alert('Import successful! Remember to click "Save Changes" at the bottom of the page to apply.');
+                                        }
+                                    };
+                                    reader.readAsText(file);
+                                    input.value = '';
+                                }
+                                </script>
+                                <?php submit_button('Save Settings'); ?>
             </form>
 
         <?php elseif ($active_tab === 'workbench'): ?>
