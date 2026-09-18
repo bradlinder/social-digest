@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.6.6',
+  version: '5.6.9',
   requiresWP: '6.0+',
   testedUpTo: '6.7',
   requiresPHP: '7.4+',
@@ -17,14 +17,48 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.6.5',
+  rollbackTarget: 'v5.6.8',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.6.9',
+    tag: 'v5.6.9',
+    isLatest: true,
+    highlights: [
+      'Automated Social Thread Collapsing: Grouped multi-post author threads into single unified cards with a "View full thread" expand toggle.',
+      'Accessibility ALT Badges: Added interactive overlay "ALT" badges on embedded images displaying author descriptions in browser tooltips.',
+      'Native Mobile Deep-Linking: Added bsky:// and mastodon:// app deep links with dedicated 📲 App badges in card footers.'
+    ]
+  },
+  {
+    version: '5.6.8',
+    tag: 'v5.6.8',
+    isLatest: false,
+    highlights: [
+      'Amended image gallery previews on Bluesky and Mastodon so clicking any thumbnail opens the original post in a new tab.',
+      'Allows readers to view full-resolution multi-photo posts directly on the source platform without importing large images to WordPress.',
+      'Added descriptive hover tooltips (`View full gallery on Bluesky` / `View full gallery on Mastodon`) for seamless UX.'
+    ]
+  },
+  {
+    version: '5.6.7',
+    tag: 'v5.6.7',
+    isLatest: false,
+    highlights: [
+      'Added automated excerpt builder constructing WordPress post excerpts from the first line or sentence of each social post entry.',
+      'Added customizable excerpt delimiter setting (` // `, ` ... `, `. `, ` — `, ` • `, or custom text) with configurable item count limits.',
+      'Added live Digest Excerpt Inspection box to the Next-Run Workbench for real-time validation prior to publishing.',
+      'Integrated OpenGraph metadata scraper fallback for both Bluesky and Mastodon, guaranteeing clickable rich link cards (title, summary, image, domain) even when native API embeds omit them.',
+      'Made entire preview cards clickable directly through to source articles with proper security attributes (`target="_blank" rel="noopener"`).',
+      'Hidden visible hashtags from post body text and removed redundant trailing URLs when an interactive preview card is present.',
+      'Ensured raw fallback links remain styled and clickable when no card preview is available.'
+    ]
+  },
+  {
     version: '5.6.6',
     tag: 'v5.6.6',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Added `data-nosnippet` tags to link card domains and providers so search engines do not extract them as part of the post snippet.',
       'Extracted the root domain for Bluesky link cards and display it as the provider fallback.'

@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 5.6.6
+Stable tag: 5.6.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,20 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.6.9 =
+* Feature: Automated Social Thread Collapsing: Multi-post threads authored on Bluesky or Mastodon are now automatically grouped into unified cards featuring an "Expand Thread" toggle rather than flooding the digest with separate cards.
+* Feature: Accessibility "ALT" Badges: Added subtle, semi-transparent "ALT" overlay badges on all embedded images. Hovering or clicking reveals the author's image description in a browser-native tooltip.
+* Feature: Native Mobile App Deep-Linking: Added native deep-linking support (`bsky://` and `mastodon://`), displaying a dedicated `📲 App` badge in card footers to open posts directly in installed mobile apps.
+* Settings: Added configurable toggles for thread collapsing and mobile deep-linking in the Feed Rules settings section.
+
+= 5.6.7 =
+* Feature: First-Line Excerpt Automation: Added setting and generator allowing WordPress post excerpts to be built automatically from the first line or sentence of each social post entry, joined by configurable delimiters (` // `, ` ... `, `. `, ` — `, ` • `, or custom string).
+* Feature: Next-Run Workbench Excerpt Inspection: Added real-time Digest Excerpt Inspection box in the Workbench to preview the generated excerpt before publishing.
+* Fix: Rich Link Card Previews: Enhanced Bluesky and Mastodon link handling with cached OpenGraph metadata scraper fallback (`social_get_og_card_cached`), ensuring all social posts with external links render full clickable preview cards (title, description, domain, and image) even when network embeds omit them.
+* Fix: Entire Link Card Clickable: Made the entire preview card clickable (`<a>`) directing visitors to the source article.
+* Fix: Clean Body Text: Hidden visible hashtags from post bodies and automatically stripped redundant trailing URLs when an interactive preview card is displayed.
+* Fix: Clickable Fallback URLs: Ensured raw links in posts without preview cards remain cleanly formatted and clickable with `target="_blank"` and `rel="noopener"`.
 
 = 5.6.6 =
 * Fix: Added `data-nosnippet` tags to link card domains and providers so search engines do not extract them as part of the post snippet.
