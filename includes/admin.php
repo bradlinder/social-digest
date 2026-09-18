@@ -231,6 +231,9 @@ function social_sanitize_settings($input) {
     $output['convert_modern_media'] = !empty($input['convert_modern_media']) ? 1 : 0;
     $output['cache_local_assets']   = !empty($input['cache_local_assets']) ? 1 : 0;
     $output['generate_srcsets']     = !empty($input['generate_srcsets']) ? 1 : 0;
+    $output['sideload_all_media']   = !empty($input['sideload_all_media']) ? 1 : 0;
+    $allowed_dark_modes             = ['auto', 'light', 'dark'];
+    $output['dark_mode_mode']       = in_array($input['dark_mode_mode'] ?? '', $allowed_dark_modes, true) ? $input['dark_mode_mode'] : 'auto';
 
     $output['enable_staging_queue'] = !empty($input['enable_staging_queue']) ? 1 : 0;
     $output['rss_only_mode']        = !empty($input['rss_only_mode']) ? 1 : 0;
@@ -584,7 +587,9 @@ function social_render_settings_page() {
                                                 <td>
                                                     <label><input type="checkbox" name="social_digest_options[convert_modern_media]" value="1" <?php checked($opts['convert_modern_media'] ?? 1, 1); ?> /> Convert images to WebP / AVIF</label><br>
                                                     <label><input type="checkbox" name="social_digest_options[cache_local_assets]" value="1" <?php checked($opts['cache_local_assets'] ?? 1, 1); ?> /> Cache remote avatars &amp; cards locally</label><br>
-                                                    <label><input type="checkbox" name="social_digest_options[generate_srcsets]" value="1" <?php checked($opts['generate_srcsets'] ?? 1, 1); ?> /> Generate standard responsive srcset sizes</label>
+                                                    <label><input type="checkbox" name="social_digest_options[generate_srcsets]" value="1" <?php checked($opts['generate_srcsets'] ?? 1, 1); ?> /> Generate standard responsive srcset sizes</label><br>
+                                                    <label><input type="checkbox" name="social_digest_options[sideload_all_media]" value="1" <?php checked($opts['sideload_all_media'] ?? 0, 1); ?> /> <strong>Sideload all embedded post media into WordPress Media Library</strong></label>
+                                                    <p class="description">Automatically downloads and imports all embedded update images directly into the local Media Library when publishing or drafting, protecting against external link rot and server outages.</p>
                                                 </td>
                                             </tr>
                                         </table>
@@ -659,6 +664,17 @@ function social_render_settings_page() {
                                                 <td>
                                                     <label><input type="checkbox" name="social_digest_options[output_gutenberg_blocks]" value="1" <?php checked($opts['output_gutenberg_blocks'] ?? 1, 1); ?> /> <strong>Format content as native WordPress Gutenberg blocks</strong></label>
                                                     <p class="description">Wraps digest headers, social post cards, and footers into native <code>&lt;!-- wp:core/html --&gt;</code> and paragraph block structures so published digests can be edited smoothly in the block editor without "Attempt Block Recovery" warnings.</p>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Dark Mode Adaptability</th>
+                                                <td>
+                                                    <select name="social_digest_options[dark_mode_mode]" id="social_dark_mode_mode">
+                                                        <option value="auto" <?php selected($opts['dark_mode_mode'] ?? 'auto', 'auto'); ?>>Automatic (System prefers-color-scheme &amp; Dark Theme detection)</option>
+                                                        <option value="light" <?php selected($opts['dark_mode_mode'] ?? '', 'light'); ?>>Force Light Theme</option>
+                                                        <option value="dark" <?php selected($opts['dark_mode_mode'] ?? '', 'dark'); ?>>Force High-Contrast Dark Theme</option>
+                                                    </select>
+                                                    <p class="description">Controls card background and text colors. Automatic mode dynamically matches user OS dark preferences as well as popular WordPress dark themes (<code>.dark</code>, <code>.dark-theme</code>, <code>[data-theme="dark"]</code>).</p>
                                                 </td>
                                             </tr>
                                             <tr>
@@ -934,15 +950,15 @@ function social_render_settings_page() {
                     <?php if ($has_candidates): 
                         $wb_delim_key = $opts['excerpt_delimiter'] ?? 'slash';
                         $wb_custom_delim = $opts['excerpt_custom_delimiter'] ?? ' // ';
-                        $wb_delim = match($wb_delim_key) {
+                        $wb_delim_map = [
                             'slash'    => ' // ',
                             'ellipsis' => ' ... ',
                             'period'   => '. ',
                             'dash'     => ' — ',
                             'bullet'   => ' • ',
                             'custom'   => $wb_custom_delim,
-                            default    => ' // ',
-                        };
+                        ];
+                        $wb_delim = $wb_delim_map[$wb_delim_key] ?? ' // ';
                         $wb_max_items = absint($opts['excerpt_max_items'] ?? 0);
                         $wb_first_lines_excerpt = social_build_first_lines_excerpt($candidates, $wb_delim, $wb_max_items);
                     ?>

@@ -3,14 +3,28 @@ Social Digest - Feature Roadmap & Release Status
 
 🎯 Immediate Recommended Next Steps (To Do List)
 ------------------------------------------------
-1. Interactive Post Card Dark Mode Stylesheet Toggle [Accessibility]:
-   - Provide high-contrast dark theme styles for native cards matching dark WordPress theme parent containers and CSS prefers-color-scheme.
-2. Direct Sideloading for All Post Media Attachments [Performance & Resilience]:
-   - Directly sideload all post images/media attachments into the WordPress Media Library to serve all assets strictly from the local origin and protect against remote server outages.
-3. Batch Tag Popularity Transients [Database Optimization]:
-   - Implement temporary 5-minute WordPress transients for batch `get_terms()` lookups to reduce database query loads during high-frequency manual test cycles.
+1. Granular Media Optimization WebP/AVIF Quality Slider [Storage Hygiene]:
+   - Add fine-grained image compression quality sliders (60-100%) for converted WebP and AVIF assets in Media Optimization settings.
+2. Fediverse Interaction Reply Syndication [Decentralization]:
+   - Optional webhook/ActivityPub hook to notify federated networks when a digest referencing their updates is published.
 
-0. Release v5.7.1 Gutenberg Block Editor, Video/GIFs, Fediverse Attribution & Resilience (Completed in v5.7.1)
+0. Release v5.7.3 WordPress 7.1.1 & PHP 7.4 Compatibility & Outage Prevention (Completed in v5.7.3)
+---------------------------------------------------------------------------------------------------
+[x] PHP 7.4 Backward Compatibility & Site Crash Fix (v5.7.3): Replaced PHP 8.0+ `match()` expressions with associative array maps in `includes/feed-builder.php` and `includes/admin.php`. Prevents fatal parse error and 500 white-screen crash on servers running PHP 7.4 or earlier.
+[x] PHP 8.1+ Type Safety & Fediverse Attribution Hardening (v5.7.3): Guarded `wp_head` fediverse creator logic against `null` post contents and boolean return values; integrated `wp_parse_url()` to eliminate PHP 8.1+ TypeError exceptions.
+[x] WordPress 7.1.1 Full Audit & Compatibility (v5.7.3): Verified all hooks, options registration, cron actions, and query modifications across WordPress 6.0 through 7.1.1.
+[x] Media Sideloading Safety Guards (v5.7.3): Conditionally verifies and loads WordPress core admin `image.php`, `file.php`, and `media.php` libraries before calling attachment generators in background cron or frontend hooks.
+[x] Query Filter Object Safety (v5.7.3): Added object and method presence checks to `pre_get_posts` before running RSS-only queries.
+
+0. Release v5.7.2 Dark Mode, Media Sideloading, Tag Transients & Safety UX (Completed in v5.7.2)
+-------------------------------------------------------------------------------------------------
+[x] Interactive Post Card Dark Mode Stylesheet Toggle (v5.7.2): High-contrast dark theme styling for native post cards supporting `prefers-color-scheme: dark`, parent theme dark classes (`.dark`, `.dark-theme`, `[data-theme="dark"]`, `body.dark-mode`), and an admin display mode switch.
+[x] Direct Sideloading for All Post Media Attachments (v5.7.2): Expands media library imports to download and attach all embedded update images directly into the WordPress Media Library, updating HTML sources to local paths.
+[x] Batch Tag Popularity Transients (v5.7.2): Implemented 5-minute WordPress transient caching (`social_digest_tag_weights`) for tag usage lookups, reducing taxonomy query load and prioritizing established tags in digest titles.
+[x] Cron vs. Manual Staging Collision Warning (v5.7.2): Prominently warns administrators in the Workbench tab when automated cron scheduling is running while uncommitted manual edits exist.
+[x] Refresh Confirmation Dialog (v5.7.2): Added safety confirmation prompts to the "Fetch / Refresh Next Run" button to prevent accidental data loss of staged exclusions, pinned lead stories, and notes.
+
+0.1. Release v5.7.1 Gutenberg Block Editor, Video/GIFs, Fediverse Attribution & Resilience (Completed in v5.7.1)
 --------------------------------------------------------------------------------------------------------------
 [x] Gutenberg Block Editor Support (v5.7.1): Formats published post content as native WordPress block comments (`<!-- wp:core/html -->`), enabling seamless visual editing without "Attempt Block Recovery" warnings. Configurable via Publishing settings.
 [x] Video & Animated GIF Support (v5.7.1): Added rich video preview cards with play badges for Bluesky (`app.bsky.embed.video`) and native autoplaying, looping, muted `<video>` players for Mastodon animated GIFs (`gifv`) and video attachments.

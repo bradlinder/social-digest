@@ -456,7 +456,7 @@ function social_build_workbench_content($state) {
 
     $use_blocks = !isset($opts['output_gutenberg_blocks']) || !empty($opts['output_gutenberg_blocks']);
 
-    if ($use_blocks && function_exists('social_wrap_as_gutenberg_block')) {
+    if ($use_blocks && (function_exists(__NAMESPACE__ . '\\social_wrap_as_gutenberg_block') || function_exists('social_wrap_as_gutenberg_block'))) {
         $block_elements = [];
         if ($header !== '') {
             $block_elements[] = social_wrap_as_gutenberg_block($header, 'core/html');
@@ -514,15 +514,15 @@ function social_publish_workbench_run($state, $force_status = null) {
         if (!empty($opts['excerpt_first_lines'])) {
             $delim_key = $opts['excerpt_delimiter'] ?? 'slash';
             $custom_delim = $opts['excerpt_custom_delimiter'] ?? ' // ';
-            $delim = match($delim_key) {
+            $delim_map = [
                 'slash'    => ' // ',
                 'ellipsis' => ' ... ',
                 'period'   => '. ',
                 'dash'     => ' — ',
                 'bullet'   => ' • ',
                 'custom'   => $custom_delim,
-                default    => ' // ',
-            };
+            ];
+            $delim = $delim_map[$delim_key] ?? ' // ';
             $max_items = absint($opts['excerpt_max_items'] ?? 0);
             $post_excerpt = social_build_first_lines_excerpt($state['candidates'] ?? [], $delim, $max_items);
         }
@@ -559,6 +559,18 @@ function social_publish_workbench_run($state, $force_status = null) {
         if (!empty($opts['rss_only_mode'])) {
             update_post_meta($post_id, '_social_digest_rss_only', 1);
         }
+
+        // Sideload all embedded post media attachments into Media Library if enabled
+        if (!empty($opts['sideload_all_media'])) {
+            $updated_content = social_sideload_content_media($built['content'], $post_id);
+            if ($updated_content !== $built['content']) {
+                wp_update_post([
+                    'ID'           => $post_id,
+                    'post_content' => $updated_content,
+                ]);
+            }
+        }
+
         if (!empty($state['preview']['featured_image'])) {
             $attachment_id = social_sideload_image_by_mime($state['preview']['featured_image'], $post_id, $title);
             if ($attachment_id) {

@@ -2,9 +2,9 @@
 Contributors: BradLinder, wp-plugin-studio
 Tags: bluesky, mastodon, digest, social media, curation, automation, staging, webp
 Requires at least: 6.0
-Tested up to: 6.7
+Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.1
+Stable tag: 5.7.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,20 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.3 =
+* Critical Fix: PHP 7.4 Compatibility & Site Outage Prevention: Replaced PHP 8.0+ `match()` expressions in `includes/feed-builder.php` and `includes/admin.php` with backwards-compatible array mappings. In v5.7.1/v5.7.2, servers running PHP 7.4 or earlier crashed with a fatal syntax parse error on file load, causing a 500 white screen site outage.
+* Fix: PHP 8.1+ Type Safety & Fediverse Creator Meta Tag: Hardened `wp_head` Fediverse creator attribution tag formatting to use `wp_parse_url()` and guard against `null` post contents and boolean return types, preventing PHP 8.1+ TypeError exceptions.
+* Compatibility: Full WordPress 7.1.1 & PHP 7.4-8.4 Validation: Verified all core hooks, functions, and query filters across WordPress 6.0 through 7.1.1 and PHP 7.4 through 8.4 environments.
+* Reliability: Media Sideloading Safety Guards: Ensured `wp-admin/includes/image.php`, `file.php`, and `media.php` are conditionally verified before invoking attachment metadata generators in cron/background contexts.
+* Reliability: Query Filter Object Guards: Hardened `pre_get_posts` query inspection to verify valid query object and method existence before applying RSS-only post suppression.
+
+= 5.7.2 =
+* Feature: Dark Mode Adaptability & Stylesheet Toggle: Embedded social cards now dynamically support OS dark color preferences (`prefers-color-scheme: dark`) and parent theme classes (`.dark`, `.dark-theme`, `[data-theme="dark"]`, `body.dark-mode`) with custom high-contrast dark palette styling and an admin display mode switch.
+* Feature: Direct Sideloading for All Embedded Post Media: Expanded media library imports beyond featured images to download and attach all embedded update images directly into the WordPress Media Library, rewriting image URLs to local paths.
+* Optimization: Batch Tag Popularity Transients: Added 5-minute WordPress transient caching (`social_digest_tag_weights`) for tag usage lookups, reducing taxonomy query load and prioritizing established tags in digest titles.
+* Safety: Automated Schedule Collision Warning: Prominently warns administrators on the Workbench tab when an automated background cron run is approaching while uncommitted manual edits or exclusions exist.
+* UX: Refresh Confirmation Dialog: Added safety prompts to the "Fetch / Refresh Next Run" action to prevent accidental loss of customized exclusions, pinned lead stories, and notes.
 
 = 5.7.1 =
 * Feature: Gutenberg Block Editor Markup: Outputs digest content wrapped into native WordPress block comments (`<!-- wp:core/html -->`), preventing "Attempt Block Recovery" warnings and allowing effortless visual editing in the modern block editor.

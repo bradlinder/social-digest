@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.7.1
+ * Version: 5.7.3
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) exit;
 
 // Plugin constants
 if (!defined('SOCIAL_DIGEST_VERSION')) {
-    define('SOCIAL_DIGEST_VERSION', '5.7.1');
+    define('SOCIAL_DIGEST_VERSION', '5.7.3');
 }
 if (!defined('SOCIAL_DIGEST_FILE')) {
     define('SOCIAL_DIGEST_FILE', __FILE__);
@@ -139,6 +139,8 @@ add_action('social_digest_cron', __NAMESPACE__ . '\social_run_digest_import');
 
 add_action('wp_head', function() {
     if (is_singular('post')) {
+        $opts = get_option('social_digest_options', []);
+        $dark_mode_mode = $opts['dark_mode_mode'] ?? 'auto';
         ?>
         <style id="social-digest-embed-styles">
         /* Social Digest Native Card Styling */
@@ -156,8 +158,10 @@ add_action('wp_head', function() {
             border-radius: 12px;
             padding: 18px;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+            color: #1e293b;
         }
         div.social-post.social-card a {
+            color: #0284c7;
             text-decoration: none;
             transition: opacity 0.15s ease;
         }
@@ -183,6 +187,117 @@ add_action('wp_head', function() {
                 align-items: flex-start !important;
             }
         }
+
+        <?php if ($dark_mode_mode === 'auto' || $dark_mode_mode === 'dark'): ?>
+        /* Dark mode support: OS preference & parent theme classes */
+        <?php if ($dark_mode_mode === 'auto'): ?>
+        @media (prefers-color-scheme: dark) {
+            div.social-post.social-card {
+                background: #0f172a !important;
+                border-color: #334155 !important;
+                border-left-color: #38bdf8 !important;
+                color: #f1f5f9 !important;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45) !important;
+            }
+            div.social-post.social-card a {
+                color: #38bdf8 !important;
+            }
+            div.social-post.social-card .social-card-header {
+                border-bottom-color: #1e293b !important;
+            }
+            div.social-post.social-card .social-link-card {
+                background: #1e293b !important;
+                border-color: #334155 !important;
+            }
+            div.social-post.social-card .social-thread-collapse {
+                border-top-color: #334155 !important;
+            }
+            div.social-post.social-card .social-thread-replies {
+                border-left-color: #38bdf8 !important;
+            }
+            div.social-post.social-card .social-thread-reply-item {
+                color: #cbd5e1 !important;
+            }
+            div.social-post.social-card .social-badge {
+                background: #1e293b !important;
+                border-color: #334155 !important;
+                color: #94a3b8 !important;
+            }
+        }
+        <?php endif; ?>
+
+        .dark div.social-post.social-card,
+        .dark-theme div.social-post.social-card,
+        [data-theme="dark"] div.social-post.social-card,
+        [data-bs-theme="dark"] div.social-post.social-card,
+        body.dark-mode div.social-post.social-card
+        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card'; ?> {
+            background: #0f172a !important;
+            border-color: #334155 !important;
+            border-left-color: #38bdf8 !important;
+            color: #f1f5f9 !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45) !important;
+        }
+        .dark div.social-post.social-card a,
+        .dark-theme div.social-post.social-card a,
+        [data-theme="dark"] div.social-post.social-card a,
+        [data-bs-theme="dark"] div.social-post.social-card a,
+        body.dark-mode div.social-post.social-card a
+        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card a'; ?> {
+            color: #38bdf8 !important;
+        }
+        .dark div.social-post.social-card .social-card-header,
+        .dark-theme div.social-post.social-card .social-card-header,
+        [data-theme="dark"] div.social-post.social-card .social-card-header,
+        [data-bs-theme="dark"] div.social-post.social-card .social-card-header,
+        body.dark-mode div.social-post.social-card .social-card-header
+        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-card-header'; ?> {
+            border-bottom-color: #1e293b !important;
+        }
+        .dark div.social-post.social-card .social-link-card,
+        .dark-theme div.social-post.social-card .social-link-card,
+        [data-theme="dark"] div.social-post.social-card .social-link-card,
+        [data-bs-theme="dark"] div.social-post.social-card .social-link-card,
+        body.dark-mode div.social-post.social-card .social-link-card
+        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-link-card'; ?> {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+        }
+        .dark div.social-post.social-card .social-thread-collapse,
+        .dark-theme div.social-post.social-card .social-thread-collapse,
+        [data-theme="dark"] div.social-post.social-card .social-thread-collapse,
+        [data-bs-theme="dark"] div.social-post.social-card .social-thread-collapse,
+        body.dark-mode div.social-post.social-card .social-thread-collapse
+        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-thread-collapse'; ?> {
+            border-top-color: #334155 !important;
+        }
+        .dark div.social-post.social-card .social-thread-replies,
+        .dark-theme div.social-post.social-card .social-thread-replies,
+        [data-theme="dark"] div.social-post.social-card .social-thread-replies,
+        [data-bs-theme="dark"] div.social-post.social-card .social-thread-replies,
+        body.dark-mode div.social-post.social-card .social-thread-replies
+        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-thread-replies'; ?> {
+            border-left-color: #38bdf8 !important;
+        }
+        .dark div.social-post.social-card .social-thread-reply-item,
+        .dark-theme div.social-post.social-card .social-thread-reply-item,
+        [data-theme="dark"] div.social-post.social-card .social-thread-reply-item,
+        [data-bs-theme="dark"] div.social-post.social-card .social-thread-reply-item,
+        body.dark-mode div.social-post.social-card .social-thread-reply-item
+        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-thread-reply-item'; ?> {
+            color: #cbd5e1 !important;
+        }
+        .dark div.social-post.social-card .social-badge,
+        .dark-theme div.social-post.social-card .social-badge,
+        [data-theme="dark"] div.social-post.social-card .social-badge,
+        [data-bs-theme="dark"] div.social-post.social-card .social-badge,
+        body.dark-mode div.social-post.social-card .social-badge
+        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-badge'; ?> {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+            color: #94a3b8 !important;
+        }
+        <?php endif; ?>
         </style>
         <?php
     }
@@ -202,9 +317,10 @@ add_action('wp_head', function() {
             // Check if this post is a social digest
             $is_digest = false;
             if ($post && !empty($post->ID)) {
+                $post_content = (string)($post->post_content ?? '');
                 if (get_post_meta($post->ID, '_social_digest_created', true) || get_post_meta($post->ID, '_social_digest_rss_only', true)) {
                     $is_digest = true;
-                } elseif (strpos($post->post_content, 'class="social-post') !== false || strpos($post->post_content, 'wp:social-digest/') !== false) {
+                } elseif ($post_content !== '' && (strpos($post_content, 'class="social-post') !== false || strpos($post_content, 'wp:social-digest/') !== false)) {
                     $is_digest = true;
                 }
             }
@@ -212,8 +328,9 @@ add_action('wp_head', function() {
             if ($is_digest) {
                 // Format handle to standard @user@instance if full profile URL was provided
                 if (filter_var($creator_handle, FILTER_VALIDATE_URL)) {
-                    $parsed_host = parse_url($creator_handle, PHP_URL_HOST);
-                    $parsed_path = trim(parse_url($creator_handle, PHP_URL_PATH) ?? '', '/');
+                    $parsed_host = wp_parse_url($creator_handle, PHP_URL_HOST);
+                    $raw_path = wp_parse_url($creator_handle, PHP_URL_PATH);
+                    $parsed_path = is_string($raw_path) ? trim($raw_path, '/') : '';
                     $parts = explode('/', $parsed_path);
                     $account = end($parts);
                     if ($parsed_host && $account) {
@@ -260,7 +377,7 @@ add_filter('mce_external_plugins', function($plugins) {
 
 // Hide RSS-Only digests from main public queries if enabled
 add_action('pre_get_posts', function($query) {
-    if (!is_admin() && $query->is_main_query() && !$query->is_feed()) {
+    if (!is_admin() && is_object($query) && method_exists($query, 'is_main_query') && $query->is_main_query() && !$query->is_feed()) {
         $meta_query = $query->get('meta_query') ?: [];
         $meta_query[] = [
             'key'     => '_social_digest_rss_only',

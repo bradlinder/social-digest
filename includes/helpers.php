@@ -328,7 +328,7 @@ function social_post_links_to_site($item) {
         $u_host = wp_parse_url((string)$u, PHP_URL_HOST);
         if ($u_host) {
             $u_host = strtolower(preg_replace('#^www\.#i', '', (string)$u_host));
-            if ($u_host === $site_host || str_ends_with($u_host, '.' . $site_host)) {
+            if ($u_host === $site_host || (strlen($u_host) > strlen($site_host) && substr($u_host, -strlen('.' . $site_host)) === '.' . $site_host)) {
                 return true;
             }
         }
@@ -341,7 +341,7 @@ function social_post_links_to_site($item) {
             $u_host = wp_parse_url($match_url, PHP_URL_HOST);
             if ($u_host) {
                 $u_host = strtolower(preg_replace('#^www\.#i', '', (string)$u_host));
-                if ($u_host === $site_host || str_ends_with($u_host, '.' . $site_host)) {
+                if ($u_host === $site_host || (strlen($u_host) > strlen($site_host) && substr($u_host, -strlen('.' . $site_host)) === '.' . $site_host)) {
                     return true;
                 }
             }
@@ -412,7 +412,15 @@ function social_sideload_image_by_mime($url, $post_id, $desc = '') {
     ], $upload['file'], $post_id);
 
     if ($attach_id && !is_wp_error($attach_id)) {
-        require_once(ABSPATH . 'wp-admin/includes/image.php');
+        if (!function_exists('wp_generate_attachment_metadata')) {
+            require_once(ABSPATH . 'wp-admin/includes/image.php');
+        }
+        if (!function_exists('wp_handle_sideload')) {
+            require_once(ABSPATH . 'wp-admin/includes/file.php');
+        }
+        if (!function_exists('media_sideload_image')) {
+            require_once(ABSPATH . 'wp-admin/includes/media.php');
+        }
 
         // CPU & Memory Mitigation: Limit thumbnail resizing to essential standard sizes
         $size_limiter = function($sizes) {
@@ -432,6 +440,95 @@ function social_sideload_image_by_mime($url, $post_id, $desc = '') {
     return false;
 }
 
+/**
+ * Sideloads all external images referenced in post HTML content directly into the WordPress Media Library.
+ * Replaces remote image src URLs with local attachment URLs to protect against link rot and server outages.
+ *
+ * @param string $content HTML content containing potential remote image references.
+ * @param int $post_id WordPress post ID to attach the media items to.
+ * @return string Content with remote image URLs replaced with local attachment URLs.
+ */
+function social_sideload_content_media($content, $post_id) {
+    if (empty($content) || empty($post_id)) {
+        return $content;
+    }
+
+    $site_url = home_url();
+    $site_host = wp_parse_url($site_url, PHP_URL_HOST);
+
+    // Static cache for URLs already processed in this request to prevent duplicate downloads
+    static $processed_media_urls = [];
+
+    // Find all img tags with src
+    if (preg_match_all('/<img[^>]+src=["\']([^"\']+)["\']/i', $content, $matches)) {
+        $urls = array_unique($matches[1]);
+        foreach ($urls as $img_url) {
+            $img_url_clean = trim($img_url);
+            $parsed_host = wp_parse_url($img_url_clean, PHP_URL_HOST);
+
+            // Skip relative URLs or URLs already hosted on this site
+            if (empty($parsed_host) || ($site_host && strcasecmp($parsed_host, $site_host) === 0)) {
+                continue;
+            }
+
+            // Check if already sideloaded in this request
+            if (isset($processed_media_urls[$img_url_clean])) {
+                $local_url = $processed_media_urls[$img_url_clean];
+                if ($local_url) {
+                    $content = str_replace($img_url, $local_url, $content);
+                }
+                continue;
+            }
+
+            // Sideload the image
+            $attachment_id = social_sideload_image_by_mime($img_url_clean, $post_id, 'Digest media asset');
+            if ($attachment_id && !is_wp_error($attachment_id)) {
+                $local_url = wp_get_attachment_url($attachment_id);
+                if ($local_url) {
+                    $processed_media_urls[$img_url_clean] = $local_url;
+                    $content = str_replace($img_url, $local_url, $content);
+                }
+            } else {
+                $processed_media_urls[$img_url_clean] = false;
+            }
+        }
+    }
+
+    return $content;
+}
+
+/**
+ * Retrieves cached post tag usage counts using a 5-minute transient.
+ * Reduces SQL taxonomy lookup overhead during batch candidate processing and manual workbench tests.
+ *
+ * @return array Associative array of lowercase tag name => post count.
+ */
+function social_get_cached_tag_weights() {
+    $cache_key = 'social_digest_tag_weights';
+    $cached = get_transient($cache_key);
+    if ($cached !== false && is_array($cached)) {
+        return $cached;
+    }
+
+    $terms = get_terms([
+        'taxonomy'   => 'post_tag',
+        'hide_empty' => false,
+        'number'     => 500,
+        'orderby'    => 'count',
+        'order'      => 'DESC',
+    ]);
+
+    $weights = [];
+    if (!is_wp_error($terms) && is_array($terms)) {
+        foreach ($terms as $term) {
+            $weights[mb_strtolower($term->name)] = (int)$term->count;
+        }
+    }
+
+    set_transient($cache_key, $weights, 300); // 5-minute transient
+    return $weights;
+}
+
 function social_split_camelcase_tag($tag) {
     $t = ltrim(trim($tag), '#');
     $t = preg_replace('/([a-z]{2,})([A-Z0-9])/u', '$1 $2', $t);
@@ -441,6 +538,7 @@ function social_split_camelcase_tag($tag) {
 function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $enclosure = 'parentheses', $delimiter = 'oxford') {
     $selected_tags = [];
     $seen_normalized = [];
+    $tag_weights = social_get_cached_tag_weights();
 
     if (!empty($candidate_tags)) {
         $is_grouped = false;
@@ -452,11 +550,21 @@ function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $
         }
 
         if ($is_grouped) {
-            // Select at most 1 distinct tag per post
+            // Select at most 1 distinct tag per post, prioritizing higher taxonomy frequency
             foreach ($candidate_tags as $post_tags) {
                 if (!is_array($post_tags)) {
                     $post_tags = [$post_tags];
                 }
+
+                // Sort tags within the post by cached tag popularity if available
+                if (count($post_tags) > 1 && !empty($tag_weights)) {
+                    usort($post_tags, function($a, $b) use ($tag_weights) {
+                        $w_a = $tag_weights[mb_strtolower(trim(ltrim($a, '#')))] ?? 0;
+                        $w_b = $tag_weights[mb_strtolower(trim(ltrim($b, '#')))] ?? 0;
+                        return $w_b <=> $w_a;
+                    });
+                }
+
                 foreach ($post_tags as $tag) {
                     $clean_tag = social_split_camelcase_tag($tag);
                     $norm = mb_strtolower(trim($clean_tag));
@@ -471,8 +579,17 @@ function social_rank_and_format_title_tags($candidate_tags, $default_tags_str, $
                 }
             }
         } else {
-            // Flat array fallback
-            foreach ($candidate_tags as $tag) {
+            // Flat array fallback - sort by popularity if available
+            $flat_tags = $candidate_tags;
+            if (count($flat_tags) > 1 && !empty($tag_weights)) {
+                usort($flat_tags, function($a, $b) use ($tag_weights) {
+                    $w_a = $tag_weights[mb_strtolower(trim(ltrim($a, '#')))] ?? 0;
+                    $w_b = $tag_weights[mb_strtolower(trim(ltrim($b, '#')))] ?? 0;
+                    return $w_b <=> $w_a;
+                });
+            }
+
+            foreach ($flat_tags as $tag) {
                 $clean_tag = social_split_camelcase_tag($tag);
                 $norm = mb_strtolower(trim($clean_tag));
                 if ($norm !== '' && !isset($seen_normalized[$norm])) {

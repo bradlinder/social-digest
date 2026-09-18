@@ -9,22 +9,46 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.1',
+  version: '5.7.3',
   requiresWP: '6.0+',
-  testedUpTo: '6.7',
+  testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
   license: 'GPLv2 or later',
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.0',
+  rollbackTarget: 'v5.7.2',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.3',
+    tag: 'v5.7.3',
+    isLatest: true,
+    highlights: [
+      'Critical Fix: PHP 7.4 Compatibility & Outage Prevention: Replaced PHP 8.0+ match() expressions with backwards-compatible array mappings. In previous builds, servers running PHP 7.4 or earlier suffered a fatal parse error on startup, causing a 500 white-screen site outage.',
+      'Fix: PHP 8.1+ Type Safety & Fediverse Attribution: Hardened wp_head Fediverse creator attribution tag formatting to use wp_parse_url() and guard against null post content and boolean return types, preventing PHP 8.1+ TypeErrors.',
+      'WordPress 7.1.1 & PHP 7.4-8.4 Compatibility: Completed comprehensive audit of all hooks, query filters, and callbacks across WordPress 6.0 through 7.1.1 and PHP 7.4 through 8.4.',
+      'Media Sideloading Safety Guards: Ensured WordPress admin image, file, and media libraries are safely verified and loaded before invoking attachment metadata generators in cron/background contexts.',
+      'Query Filter Object Guards: Hardened pre_get_posts filter to verify object and method validity before applying RSS-only query alterations.'
+    ]
+  },
+  {
+    version: '5.7.2',
+    tag: 'v5.7.2',
+    isLatest: false,
+    highlights: [
+      'Dark Mode Adaptability: Embedded social cards support OS dark mode (prefers-color-scheme) and dark WordPress parent theme classes (.dark, .dark-theme, [data-theme="dark"], body.dark-mode) with a dedicated mode switch.',
+      'All-Media Sideloading: Sideload all embedded post images directly into the local WordPress Media Library, updating post HTML to local URLs and protecting against external link rot.',
+      'Batch Tag Popularity Transients: Added 5-minute transient caching for term lookups (social_digest_tag_weights), reducing taxonomy load and prioritizing established tags.',
+      'Automated Schedule Collision Warning: Prominent warning banner in the Workbench when a background cron schedule is active while uncommitted manual drafts exist.',
+      'Refresh Confirmation Dialog: Added safety prompt to "Fetch / Refresh Next Run" to prevent accidental data loss of staged exclusions, pinned lead stories, and notes.'
+    ]
+  },
+  {
     version: '5.7.1',
     tag: 'v5.7.1',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Gutenberg Block Editor Support: Output digest articles using native WordPress block comment structures (<!-- wp:core/html -->) to avoid "Attempt Block Recovery" warnings when editing digests.',
       'Native Video & GIF Embeds: Added rich video preview cards with play badges for Bluesky video embeds and native looping muted video players for Mastodon video/GIFv attachments.',
