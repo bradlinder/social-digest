@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.28',
+  version: '5.7.29',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,24 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.27',
+  rollbackTarget: 'v5.7.28',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.29',
+    tag: 'v5.7.29',
+    isLatest: true,
+    highlights: [
+      'Tagging & Splitting: Applied CamelCase & acronym word splitting to all imported WordPress post tags (e.g., #AcerGooglebook14 -> "Acer Googlebook 14", #DellXPSGooglebook -> "Dell XPS Googlebook", #Android17QPR2 -> "Android 17 QPR 2", #MediaTekDimensityCXC10Max -> "MediaTek Dimensity CX C10 Max").',
+      'All Hashtags Ingestion: All hashtags associated with included posts are now imported as WordPress tags, while only the primary/first hashtag per post is considered for post titles.',
+      'Workbench Overrides UI: Replaced unified split editor with separate Header TinyMCE and Footer HTML fields equipped with quick format toolbar buttons (Bold, Italic, Link, HR, BR).',
+      'Context-Aware Framing Checkbox: Automatically enables the temporary header/footer override checkbox when text is entered into either override field.'
+    ]
+  },
+  {
     version: '5.7.28',
     tag: 'v5.7.28',
-    isLatest: true,
     highlights: [
       'UI & Settings Refactoring: Reorganized long Settings tab into 4 distinct, collapsible, drag-and-drop postboxes.',
       'Feature & UI Controls: Added controls for all previously hidden settings including Ingestion Fetch Order, Default Tags, Hashtag Auto-Tagging parameters, Same-Day Suffix Template, and Article Framing Header/Footer HTML.'

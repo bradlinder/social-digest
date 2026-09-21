@@ -578,6 +578,12 @@ function social_get_site_vocabulary_dictionary() {
         'snapdragonx1'      => 'Snapdragon X1',
         'snapdragonx'       => 'Snapdragon X',
         'snapdragon'        => 'Snapdragon',
+        'mediatek'          => 'MediaTek',
+        'dellxps'           => 'Dell XPS',
+        'xps'               => 'XPS',
+        'googlebook'        => 'Googlebook',
+        'chromebook'        => 'Chromebook',
+        'pocketbook'        => 'PocketBook',
         'eliteminipc'       => 'Elite Mini PC',
         'minipc'            => 'Mini PC',
         'minipcs'           => 'Mini PCs',
@@ -773,13 +779,13 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
     // Replace underscores and hyphens with spaces
     $t = str_replace(['_', '-'], ' ', $t);
 
-    // CamelCase transitions (e.g. "SteamFrame" -> "Steam Frame", "GalaxyTab" -> "Galaxy Tab")
-    $t = preg_replace('/([a-z]{2,})([A-Z0-9])/u', '$1 $2', $t);
-    $t = preg_replace('/([A-Z]+)([A-Z][a-z])/u', '$1 $2', $t);
+    // CamelCase transitions (e.g. "AcerGooglebook" -> "Acer Googlebook", "Android17QPR" -> "Android 17 QPR")
+    $t = preg_replace('/([a-z0-9])([A-Z])/u', '$1 $2', $t);
+    $t = preg_replace('/([A-Z]{2,})([A-Z][a-z])/u', '$1 $2', $t);
 
-    // Letter-number boundary splitting (e.g. "minimalphone2" -> "minimalphone 2", "gen7" -> "gen 7")
-    $t = preg_replace('/([a-zA-Z]{2,})([0-9]+)/u', '$1 $2', $t);
-    $t = preg_replace('/([0-9]+)([a-zA-Z]{2,})/u', '$1 $2', $t);
+    // Letter-number boundary splitting (e.g. "Googlebook14" -> "Googlebook 14", "QPR2" -> "QPR 2", "gen7" -> "gen 7")
+    $t = preg_replace('/([a-zA-Z]+)([0-9]+)/u', '$1 $2', $t);
+    $t = preg_replace('/([0-9]+)([a-zA-Z]+)/u', '$1 $2', $t);
 
     // Specific model/chip designation regex splits
     $t = preg_replace('/(elite)(mini)(pc)/i', '$1 $2 $3', $t);
@@ -808,6 +814,13 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
     $raw_tokens = explode(' ', $t);
     $processed_phrases = [];
 
+    $upper_acronyms = [
+        'AI', 'PC', 'PCS', 'VR', 'X', 'X1', 'X2', 'X3', '3D', '2K', '4K', '8K',
+        '5G', '4G', 'US', 'UK', 'EU', 'OLED', 'AMOLED', 'RAM', 'CPU', 'GPU',
+        'S10', 'S11', 'S12', 'S24', 'QN10', 'OS', 'UI', 'HD', 'QPR', 'QPR1',
+        'QPR2', 'QPR3', 'CX', 'XPS', 'GTX', 'RTX', 'RX', 'SOC', 'NPU', 'SSD'
+    ];
+
     foreach ($raw_tokens as $token) {
         $token = trim($token);
         if ($token === '') continue;
@@ -820,10 +833,10 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
             if ($sw === '') continue;
 
             $sw_upper = mb_strtoupper($sw);
-            if (in_array($sw_upper, ['AI', 'PC', 'PCS', 'VR', 'X', 'X1', 'X2', 'X3', '3D', '2K', '4K', '8K', '5G', '4G', 'US', 'UK', 'EU', 'OLED', 'AMOLED', 'RAM', 'CPU', 'GPU', 'S10', 'S11', 'S12', 'S24', 'QN10', 'OS', 'UI', 'HD'], true)) {
+            if (in_array($sw_upper, $upper_acronyms, true)) {
                 $processed_phrases[] = $sw_upper;
-            } elseif (preg_match('/^[A-Z0-9\-\.]/u', $sw)) {
-                // Preserve exact capitalization if provided by site vocabulary term
+            } elseif (preg_match('/^[A-Z0-9\-\.]/u', $sw) && !ctype_lower($sw) && !ctype_upper($sw)) {
+                // Preserve exact mixed capitalization if provided by site vocabulary term (e.g. MediaTek, ThinkBook)
                 $processed_phrases[] = $sw;
             } else {
                 $processed_phrases[] = mb_convert_case($sw, MB_CASE_TITLE, "UTF-8");
@@ -836,6 +849,7 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
     $res = preg_replace('/\bSamsung Galaxy Tabs (\d+)\b/i', 'Samsung Galaxy Tab S$1', $res);
     $res = preg_replace('/\bGalaxy Tabs (\d+)\b/i', 'Galaxy Tab S$1', $res);
     $res = preg_replace('/\bSnapdragon X (\d+)\b/i', 'Snapdragon X$1', $res);
+    $res = preg_replace('/\bMedia\s*Tek\b/i', 'MediaTek', $res);
 
     return $res;
 }

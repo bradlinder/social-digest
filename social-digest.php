@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.7.28
+ * Version: 5.7.29
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) exit;
 
 // Plugin constants
 if (!defined('SOCIAL_DIGEST_VERSION')) {
-    define('SOCIAL_DIGEST_VERSION', '5.7.28');
+    define('SOCIAL_DIGEST_VERSION', '5.7.29');
 }
 if (!defined('SOCIAL_DIGEST_FILE')) {
     define('SOCIAL_DIGEST_FILE', __FILE__);
@@ -448,27 +448,6 @@ add_filter('plugin_action_links_' . plugin_basename(__FILE__), function($links) 
     return $links;
 });
 
-// Custom TinyMCE Toolbar Button for inserting the Splitter
-add_filter('mce_buttons', function($buttons) {
-    if (!is_array($buttons)) {
-        $buttons = [];
-    }
-    if (isset($_GET['page']) && $_GET['page'] === 'social-digest-settings') {
-        $buttons[] = 'social_digest_split_button';
-    }
-    return $buttons;
-});
-
-add_filter('mce_external_plugins', function($plugins) {
-    if (!is_array($plugins)) {
-        $plugins = [];
-    }
-    if (isset($_GET['page']) && $_GET['page'] === 'social-digest-settings') {
-        $plugins['social_digest_split_plugin'] = plugin_dir_url(__FILE__) . 'assets/js/social-digest-editor.js';
-    }
-    return $plugins;
-});
-
 // Hide RSS-Only digests from main public queries if enabled
 add_action('pre_get_posts', function($query) {
     if (is_admin() || !is_object($query) || !method_exists($query, 'is_main_query') || !$query->is_main_query() || (method_exists($query, 'is_feed') && $query->is_feed())) {
@@ -699,40 +678,6 @@ add_action('admin_footer', function() {
     $screen = function_exists('get_current_screen') ? get_current_screen() : null;
     if ($screen && strpos($screen->id, 'social-digest') !== false) {
         social_digest_render_smart_deep_links_script();
-        ?>
-        <script>
-        if (window.tinymce && !tinymce.PluginManager.get('social_digest_split_plugin')) {
-            tinymce.PluginManager.add('social_digest_split_plugin', function(editor) {
-                var insertSplitter = function() {
-                    editor.insertContent(
-                        '<p class="social-digest-split-marker" style="text-align:center;background:#eee;padding:6px;border:1px dashed #999;color:#555;font-weight:bold;user-select:none;">' +
-                        '<!--digest_split-->--- POSTS APPEAR HERE (Header / Footer Split) ---' +
-                        '</p><p></p>'
-                    );
-                };
-                if (editor.ui && editor.ui.registry) {
-                    editor.ui.registry.addButton('social_digest_split_button', {
-                        text: 'Insert Post Splitter',
-                        tooltip: 'Insert Post Splitter (Separates Header and Footer)',
-                        onAction: insertSplitter
-                    });
-                } else if (typeof editor.addButton === 'function') {
-                    editor.addButton('social_digest_split_button', {
-                        text: 'Insert Post Splitter',
-                        icon: 'hr',
-                        tooltip: 'Insert Post Splitter (Separates Header and Footer)',
-                        onclick: insertSplitter
-                    });
-                }
-                return {
-                    getMetadata: function() {
-                        return { name: 'Social Digest Splitter' };
-                    }
-                };
-            });
-        }
-        </script>
-        <?php
     }
 });
 

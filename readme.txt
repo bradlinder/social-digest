@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.28
+Stable tag: 5.7.29
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -15,7 +15,14 @@ Social Digest is a WordPress plugin that automates the aggregation and publicati
 
 == Changelog ==
 
-= 5.7.28 =
+= 5.7.29 =
+* Tagging & Formatting: Full Hashtag Ingestion & Refined CamelCase/Acronym Word Splitting:
+  1. Extended CamelCase and acronym word splitting to all imported WordPress post tags (e.g. `#AcerGooglebook14` -> `Acer Googlebook 14`, `#DellXPSGooglebook` -> `Dell XPS Googlebook`, `#Android17QPR2` -> `Android 17 QPR 2`, `#MediaTekDimensityCXC10Max` -> `MediaTek Dimensity CX C10 Max`).
+  2. All hashtags from all included posts (such as `#Google`, `#Acer`, `#Dell`) are now retained as WordPress tags, while only the primary/first hashtag per post is considered for post title generation.
+* UI & Workflow: Dedicated Header & Footer Override Fields with Quick Formatting Toolbar:
+  1. Replaced the single split editor with two separate input fields in the Workbench for Temporary Lead-In Header (rich text via TinyMCE) and Temporary Closing Footer (HTML with 1-click Bold, Italic, Link, HR, and BR formatting buttons).
+  2. Permanently eliminated split markers (`<!--digest_split-->`) from publishing flows.
+  3. Added real-time auto-enabling for the temporary framing override checkbox whenever text is entered into either override field.
 * UI & Settings Refactoring: Reorganized Settings Tab & Added Missing Settings Controls:
   1. Refactored the monolithic 'Publishing, Tags & Article Framing' section into 4 distinct, collapsible, drag-and-drop postboxes.
   2. Added dedicated controls for all previously hidden backend settings, including Ingestion Fetch Order (), Default Post Tags (), Hashtag Auto-Tagging Controls (, , , ), Same-Day Suffix Template (), and Article Framing HTML (, ).

@@ -326,24 +326,35 @@ function social_fetch_workbench_candidates() {
         }
     }
 
-    $raw_tags = [];
+    $custom_overrides = $opts['title_tag_custom_overrides'] ?? '';
+    $all_imported_tags = [];
     $post_tags_list = [];
     
-    // Add the featured post tags first so they are prioritized for the title
+    // Add the featured post primary tag first so it is prioritized for the title
     if (!empty($featured_post_tags)) {
-        $post_tags_list[] = $featured_post_tags;
+        $first_f = reset($featured_post_tags);
+        if ($first_f) {
+            $post_tags_list[] = [$first_f];
+        }
+        foreach ($featured_post_tags as $f_t) {
+            $all_imported_tags[] = $f_t;
+        }
     }
 
     foreach ($eligible as $item) {
-        // Skip featured post if its tags were already prioritized in post_tags_list
-        if ($featured_sel_id !== null && isset($item['id']) && $item['id'] === $featured_sel_id && !empty($featured_post_tags)) {
-            continue;
-        }
         $tags = array_merge((array)($item['extra_tags'] ?? []), preg_match_all('/#(\w+)/u', $item['text'] ?? '', $tm) ? $tm[1] : []);
-        $valid_post_tags = array_slice(array_values(array_unique(array_filter($tags, fn($t) => mb_strlen($t) >= $min_tag_length))), 0, $max_tags_per_post);
-        $raw_tags = array_merge($raw_tags, $valid_post_tags);
-        if (!empty($valid_post_tags)) {
-            $post_tags_list[] = $valid_post_tags;
+        $valid_tags = array_values(array_unique(array_filter($tags, fn($t) => mb_strlen($t) >= $min_tag_length)));
+
+        // Include all hashtags from every post for WordPress tags
+        foreach ($valid_tags as $vt) {
+            $all_imported_tags[] = $vt;
+        }
+
+        // For post title: skip if already handled via featured post, and take only the first hashtag
+        if (!($featured_sel_id !== null && isset($item['id']) && $item['id'] === $featured_sel_id && !empty($featured_post_tags))) {
+            if (!empty($valid_tags)) {
+                $post_tags_list[] = [$valid_tags[0]]; // Only first hashtag per post for title
+            }
         }
     }
     
@@ -362,12 +373,29 @@ function social_fetch_workbench_candidates() {
         $opts['title_tag_delimiter'] ?? 'oxford',
         $opts['title_tag_max_count'] ?? 3,
         $opts['title_tag_selection_strategy'] ?? 'first',
-        $opts['title_tag_custom_overrides'] ?? ''
+        $custom_overrides
     );    
+
+    // Format all WordPress tags (capitalization, camelcase splitting, vocabulary matching)
     $tag_map = [];
-    foreach (array_filter(array_map('trim', explode(',', $opts['default_tags'] ?? ''))) as $tag) $tag_map[mb_strtolower($tag)] = $tag;
-    foreach ($raw_tags as $tag) $tag_map[mb_strtolower($tag)] = $tag;
-    $tags = array_slice(array_values($tag_map), 0, $max_total_tags);
+    foreach (array_filter(array_map('trim', explode(',', $opts['default_tags'] ?? ''))) as $d_tag) {
+        $fmt_d = social_split_camelcase_tag($d_tag, $custom_overrides);
+        if ($fmt_d !== '') {
+            $tag_map[mb_strtolower($fmt_d)] = $fmt_d;
+        }
+    }
+    if (!isset($opts['extract_tags']) || !empty($opts['extract_tags'])) {
+        foreach ($all_imported_tags as $raw_tag) {
+            $fmt_tag = social_split_camelcase_tag($raw_tag, $custom_overrides);
+            if ($fmt_tag !== '') {
+                $tag_map[mb_strtolower($fmt_tag)] = $fmt_tag;
+            }
+        }
+    }
+    $tags = array_values($tag_map);
+    if ($max_total_tags > 0 && count($tags) > $max_total_tags) {
+        $tags = array_slice($tags, 0, $max_total_tags);
+    }
     $title_tpl = $opts['title_template'] ?? 'Social Digest {hashtags}';
     $title = str_replace(['{hashtags}','{date}','{count}'], [$title_hashtags, wp_date(get_option('date_format'), time(), wp_timezone()), count($candidates)], $title_tpl);
     $title = preg_replace('/\s+/', ' ', $title);
@@ -433,19 +461,17 @@ function social_sanitize_next_run($input) {
         $out['candidates'][] = $base;
     }
 
-    $out['framing_override_enabled'] = !empty($input['framing_override_enabled']);
+    $header_override = wp_kses_post(trim($input['workbench_header_override'] ?? ''));
+    $footer_override = wp_kses_post(trim($input['workbench_footer_override'] ?? ''));
 
-    // Parse the unified TinyMCE visual editor split by <!--digest_split-->
-    $raw_content = $input['workbench_unified_content'] ?? '';
-    $cleaned_raw = preg_replace('/<p[^>]*class=["\'][^"\']*social-digest-split-marker[^"\']*["\'][^>]*>.*?<!--digest_split-->.*?<\/p>/is', '<!--digest_split-->', $raw_content);
+    $out['header_override'] = $header_override;
+    $out['footer_override'] = $footer_override;
 
-    if (strpos($cleaned_raw, '<!--digest_split-->') !== false) {
-        $parts = explode('<!--digest_split-->', $cleaned_raw, 2);
-        $out['header_override'] = wp_kses_post(trim($parts[0]));
-        $out['footer_override'] = wp_kses_post(trim($parts[1]));
+    // Checkbox auto-enabled if text exists in header/footer override or explicitly checked
+    if (!empty($input['framing_override_enabled']) || $header_override !== '' || $footer_override !== '') {
+        $out['framing_override_enabled'] = true;
     } else {
-        $out['header_override'] = wp_kses_post(trim($cleaned_raw));
-        $out['footer_override'] = '';
+        $out['framing_override_enabled'] = false;
     }
 
     return $out;

@@ -294,16 +294,16 @@ function social_sanitize_settings($input) {
     $output['same_day_suffix_tpl'] = sanitize_text_field($input['same_day_suffix_tpl'] ?? ' (Part {part})');
     $output['excluded_words']      = sanitize_textarea_field($input['excluded_words'] ?? '');
 
-    $raw_unified = $input['unified_content'] ?? '';
-    $cleaned_raw = preg_replace('/<p[^>]*class=["\'][^"\']*social-digest-split-marker[^"\']*["\'][^>]*>.*?<!--digest_split-->.*?<\/p>/is', '<!--digest_split-->', $raw_unified);
-    
-    if (strpos($cleaned_raw, '<!--digest_split-->') !== false) {
-        $parts = explode('<!--digest_split-->', $cleaned_raw, 2);
-        $output['header_text'] = wp_kses_post(trim($parts[0]));
-        $output['footer_text'] = wp_kses_post(trim($parts[1]));
+    if (isset($input['header_text'])) {
+        $output['header_text'] = wp_kses_post(trim($input['header_text']));
     } else {
-        $output['header_text'] = wp_kses_post(trim($cleaned_raw));
-        $output['footer_text'] = '';
+        $output['header_text'] = $opts['header_text'] ?? '<p>Here is what we shared across social channels today:</p>';
+    }
+
+    if (isset($input['footer_text'])) {
+        $output['footer_text'] = wp_kses_post(trim($input['footer_text']));
+    } else {
+        $output['footer_text'] = $opts['footer_text'] ?? '<hr><p>Follow us directly on social media for real-time updates!</p>';
     }
 
     $output['nosnippet_header']       = !empty($input['nosnippet_header']) ? 1 : 0;
@@ -339,8 +339,6 @@ function social_render_settings_page() {
 
     $saved_header = $opts['header_text'] ?? '';
     $saved_footer = $opts['footer_text'] ?? '';
-    $split_marker_html = '<p class="social-digest-split-marker" style="text-align:center; background:#eee; padding:6px; border:1px dashed #999; color:#555; font-weight:bold; user-select:none;"><!--digest_split--> (Header / Footer Split)</p>';
-    $unified_editor_value = trim($saved_header) . "\n\n" . $split_marker_html . "\n\n" . trim($saved_footer);
     ?>
     <style>
         .postbox {
@@ -1200,31 +1198,61 @@ Click OK to Append, or Cancel to Replace existing overrides.')) {
                         </div>
                         <div class="inside">
                             <p style="margin-top:0; color:#50575e; font-size:12px;">
-                                Overrides apply only to the next published digest. Use the <strong>Insert Post Splitter</strong> button to place the divider between header and footer.
-                            </p>
-
-                            <p style="margin-bottom:15px;">
-                                <label>
-                                    <input type="checkbox" name="framing_override_enabled" value="1" <?php checked(!empty($state['framing_override_enabled'])); ?>>
-                                    <strong>Enable temporary header &amp; footer overrides for this run</strong>
-                                </label>
+                                Overrides apply only to the next published digest. When enabled, your custom header and footer below will replace the global templates for this run.
                             </p>
 
                             <?php
-                            $wb_header = !empty($state['header_override']) ? $state['header_override'] : ($opts['header_text'] ?? '');
-                            $wb_footer = !empty($state['footer_override']) ? $state['footer_override'] : ($opts['footer_text'] ?? '');
-                            $wb_unified = trim($wb_header) . "\n\n" . $split_marker_html . "\n\n" . trim($wb_footer);
-
-                            wp_editor($wb_unified, 'social_digest_workbench_unified_content', [
-                                'textarea_name' => 'workbench_unified_content',
-                                'textarea_rows' => 8,
-                                'media_buttons' => false,
-                                'teeny'         => false,
-                                'quicktags'     => [
-                                    'buttons' => 'strong,em,link,close'
-                                ]
-                            ]);
+                            $wb_header = $state['header_override'] ?? '';
+                            $wb_footer = $state['footer_override'] ?? '';
+                            $has_override_text = (trim(wp_strip_all_tags($wb_header)) !== '' || trim(wp_strip_all_tags($wb_footer)) !== '');
+                            $override_checked = !empty($state['framing_override_enabled']) || $has_override_text;
                             ?>
+
+                            <p style="margin-bottom:15px;">
+                                <label>
+                                    <input type="checkbox" id="sd_framing_override_enabled" name="framing_override_enabled" value="1" <?php checked($override_checked); ?>>
+                                    <strong>Enable temporary header &amp; footer overrides for this run</strong>
+                                </label>
+                                <span class="description" style="display:block; margin-top:3px; font-size:11px; color:#64748b;">
+                                    (Automatically enabled when text is entered below)
+                                </span>
+                            </p>
+
+                            <div style="margin-bottom: 20px;">
+                                <label style="display:block; font-weight:600; margin-bottom:6px; color:#1d2327;">
+                                    Temporary Lead-In Header HTML / Rich Text:
+                                </label>
+                                <?php
+                                wp_editor($wb_header, 'social_digest_workbench_header_override', [
+                                    'textarea_name' => 'workbench_header_override',
+                                    'textarea_rows' => 4,
+                                    'media_buttons' => false,
+                                    'teeny'         => false,
+                                    'quicktags'     => [
+                                        'buttons' => 'strong,em,link,close'
+                                    ]
+                                ]);
+                                ?>
+                            </div>
+
+                            <div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                    <label for="sd_workbench_footer_override" style="font-weight:600; color:#1d2327;">
+                                        Temporary Closing Footer HTML:
+                                    </label>
+                                    <div class="sd-quicktags-toolbar" style="display:flex; gap:4px;">
+                                        <button type="button" class="button button-small" onclick="sdInsertFooterTag('strong')" title="Bold text"><strong>B</strong></button>
+                                        <button type="button" class="button button-small" onclick="sdInsertFooterTag('em')" title="Italic text"><em>I</em></button>
+                                        <button type="button" class="button button-small" onclick="sdInsertFooterTag('link')" title="Insert Link">🔗 Link</button>
+                                        <button type="button" class="button button-small" onclick="sdInsertFooterText('<hr>\n')" title="Horizontal rule">&mdash; HR</button>
+                                        <button type="button" class="button button-small" onclick="sdInsertFooterText('<br>\n')" title="Line break">&ldsh; BR</button>
+                                    </div>
+                                </div>
+                                <textarea id="sd_workbench_footer_override" name="workbench_footer_override" rows="4" class="large-text" style="font-family:monospace; font-size:12px;" placeholder="<hr><p>Follow us directly on social media for real-time updates!</p>"><?php echo esc_textarea($wb_footer); ?></textarea>
+                                <p class="description" style="margin-top:3px; font-size:11px;">
+                                    Optional closing footer markup for this run. Use the quick format buttons above to insert HTML tags.
+                                </p>
+                            </div>
                         </div>
                     </div>
 
@@ -1320,6 +1348,70 @@ Click OK to Append, or Cancel to Replace existing overrides.')) {
     </div>
 
     <script>
+    function sdInsertFooterText(text) {
+        var textarea = document.getElementById('sd_workbench_footer_override');
+        if (!textarea) return;
+        var start = textarea.selectionStart || 0;
+        var end = textarea.selectionEnd || 0;
+        var val = textarea.value;
+        textarea.value = val.substring(0, start) + text + val.substring(end);
+        textarea.focus();
+        textarea.selectionStart = textarea.selectionEnd = start + text.length;
+        sdCheckFramingOverrideAutoState();
+    }
+
+    function sdInsertFooterTag(tag) {
+        var textarea = document.getElementById('sd_workbench_footer_override');
+        if (!textarea) return;
+        var start = textarea.selectionStart || 0;
+        var end = textarea.selectionEnd || 0;
+        var val = textarea.value;
+        var selected = val.substring(start, end);
+
+        var replacement = '';
+        if (tag === 'strong') {
+            replacement = '<strong>' + (selected || 'Bold text') + '</strong>';
+        } else if (tag === 'em') {
+            replacement = '<em>' + (selected || 'Italic text') + '</em>';
+        } else if (tag === 'link') {
+            var url = prompt('Enter link URL (e.g. https://example.com):', 'https://');
+            if (url) {
+                replacement = '<a href="' + url + '">' + (selected || 'Link text') + '</a>';
+            } else {
+                return;
+            }
+        }
+        if (replacement) {
+            textarea.value = val.substring(0, start) + replacement + val.substring(end);
+            textarea.focus();
+            textarea.selectionStart = textarea.selectionEnd = start + replacement.length;
+            sdCheckFramingOverrideAutoState();
+        }
+    }
+
+    function sdCheckFramingOverrideAutoState() {
+        var chk = document.getElementById('sd_framing_override_enabled');
+        if (!chk) return;
+
+        var headerText = '';
+        if (typeof tinymce !== 'undefined' && tinymce.get('social_digest_workbench_header_override')) {
+            var ed = tinymce.get('social_digest_workbench_header_override');
+            headerText = ed.getContent({ format: 'text' }).trim();
+        } else {
+            var headerEl = document.getElementById('social_digest_workbench_header_override');
+            if (headerEl) headerText = headerEl.value.replace(/<[^>]*>/g, '').trim();
+        }
+
+        var footerEl = document.getElementById('sd_workbench_footer_override');
+        var footerText = footerEl ? footerEl.value.replace(/<[^>]*>/g, '').trim() : '';
+
+        if (headerText !== '' || footerText !== '') {
+            chk.checked = true;
+        } else {
+            chk.checked = false;
+        }
+    }
+
     function socialToggleScheduleFields(freq) {
         const configWrap = document.getElementById('socialIntervalConfig');
         if (configWrap) configWrap.style.display = (freq === 'interval_days') ? 'block' : 'none';
@@ -1345,6 +1437,20 @@ Click OK to Append, or Cancel to Replace existing overrides.')) {
                 forcePlaceholderSize: true,
                 opacity: 0.8,
                 cursor: 'grabbing'
+            });
+        }
+
+        // Real-time listener on Footer textarea
+        $('#sd_workbench_footer_override').on('input change keyup', sdCheckFramingOverrideAutoState);
+
+        // Real-time listener on Header TinyMCE editor
+        if (typeof tinymce !== 'undefined') {
+            tinymce.on('AddEditor', function(e) {
+                if (e.editor.id === 'social_digest_workbench_header_override') {
+                    e.editor.on('input change keyup SetContent NodeChange', function() {
+                        sdCheckFramingOverrideAutoState();
+                    });
+                }
             });
         }
     });
