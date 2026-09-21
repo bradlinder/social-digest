@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.7.29
+ * Version: 5.7.30
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) exit;
 
 // Plugin constants
 if (!defined('SOCIAL_DIGEST_VERSION')) {
-    define('SOCIAL_DIGEST_VERSION', '5.7.29');
+    define('SOCIAL_DIGEST_VERSION', '5.7.30');
 }
 if (!defined('SOCIAL_DIGEST_FILE')) {
     define('SOCIAL_DIGEST_FILE', __FILE__);
@@ -693,16 +693,21 @@ $module_files  = [
     "admin"        => $includes_path . "admin.php",
 ];
 
-$missing_modules = [];
+$embedded_modules = social_digest_get_embedded_modules();
+$outdated_modules = [];
 foreach ($module_files as $key => $file) {
     if (!file_exists($file)) {
-        $missing_modules[] = $key;
+        $outdated_modules[] = $key;
+    } elseif (is_readable($file) && isset($embedded_modules[$key])) {
+        // If file on disk differs from the embedded module of this version, mark for sync
+        if (md5_file($file) !== md5($embedded_modules[$key])) {
+            $outdated_modules[] = $key;
+        }
     }
 }
 
-// Self-healing check: If the user updated only social-digest.php and the /includes/ directory
-// is missing on disk, automatically provision the modular files to prevent fatal errors.
-if (!empty($missing_modules)) {
+// Self-healing & Auto-Sync check: Ensure /includes/ directory and files match current plugin version
+if (!empty($outdated_modules)) {
     if (!file_exists($includes_path)) {
         if (function_exists("wp_mkdir_p")) {
             wp_mkdir_p($includes_path);
@@ -711,11 +716,10 @@ if (!empty($missing_modules)) {
         }
     }
     
-    // Auto-generate missing files if filesystem is writable
+    // Auto-update/generate files if filesystem is writable
     if (is_dir($includes_path) && is_writable($includes_path)) {
-        $embedded_modules = social_digest_get_embedded_modules();
-        foreach ($missing_modules as $mod_key) {
-            if (isset($embedded_modules[$mod_key])) {
+        foreach ($outdated_modules as $mod_key) {
+            if (isset($embedded_modules[$mod_key]) && (!file_exists($module_files[$mod_key]) || is_writable($module_files[$mod_key]))) {
                 @file_put_contents($module_files[$mod_key], $embedded_modules[$mod_key]);
             }
         }
@@ -739,7 +743,6 @@ if (file_exists($module_files["admin"])) {
 // Safety check: if modules could neither be found nor written (read-only filesystem without /includes/),
 // evaluate embedded code dynamically in-memory to guarantee 0% downtime and display an admin notice.
 if (!function_exists(__NAMESPACE__ . "\\social_workbench_state")) {
-    $embedded_modules = social_digest_get_embedded_modules();
     foreach (["helpers", "api-clients", "feed-builder", "admin"] as $mod_key) {
         if (!empty($embedded_modules[$mod_key])) {
             $code = $embedded_modules[$mod_key];

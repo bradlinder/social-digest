@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.29
+Stable tag: 5.7.30
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,12 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.30 =
+* Core & Distribution: Automated Module File-Sync & Self-Healing Version Integrity:
+  1. Enhanced module bootstrapping to detect outdated `/includes/` files on disk (via MD5 signature comparison against the active version's embedded payload) and automatically synchronize/overwrite them with the latest release code.
+  2. Ensures that updating or uploading `social-digest.php` immediately activates all new features (including separate Temporary Lead-In Header and Closing Footer controls) even on systems where disk permissions or caching previously prevented file replacements.
+  3. Cleaned up legacy split plugin JavaScript assets and updated standalone deployment package.
 
 = 5.7.29 =
 * Tagging & Formatting: Full Hashtag Ingestion & Refined CamelCase/Acronym Word Splitting:

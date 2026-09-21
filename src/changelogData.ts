@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.29',
+  version: '5.7.30',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,24 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.28',
+  rollbackTarget: 'v5.7.29',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.30',
+    tag: 'v5.7.30',
+    isLatest: true,
+    highlights: [
+      'Auto-Sync & Self-Healing: Added active MD5 integrity checks between installed files in /includes/ and the current plugin version, auto-updating outdated module files on disk on execution.',
+      'Framing Overrides UI: Separate Dedicated Lead-In Header TinyMCE editor and Closing Footer HTML field with 1-click formatting buttons (B, I, Link, HR, BR).',
+      'No Split Marker: Completely removed legacy <!--digest_split--> divider workflows.',
+      'Tagging & Splitting: Complete CamelCase and acronym word splitting for all imported post tags.'
+    ]
+  },
+  {
     version: '5.7.29',
     tag: 'v5.7.29',
-    isLatest: true,
     highlights: [
       'Tagging & Splitting: Applied CamelCase & acronym word splitting to all imported WordPress post tags (e.g., #AcerGooglebook14 -> "Acer Googlebook 14", #DellXPSGooglebook -> "Dell XPS Googlebook", #Android17QPR2 -> "Android 17 QPR 2", #MediaTekDimensityCXC10Max -> "MediaTek Dimensity CX C10 Max").',
       'All Hashtags Ingestion: All hashtags associated with included posts are now imported as WordPress tags, while only the primary/first hashtag per post is considered for post titles.',
