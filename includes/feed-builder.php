@@ -96,7 +96,7 @@ function social_collapse_thread_posts($eligible, $opts) {
 
                 $parent_item['text'] .= ' ' . ($child['text'] ?? '');
                 if (!empty($child['extra_tags'])) {
-                    $parent_item['extra_tags'] = array_values(array_unique(array_merge((array)($parent_item['extra_tags'] ?? []), (array)$child['extra_tags'])));
+                    $parent_item['extra_tags'] = social_dedupe_cased_tags(array_merge((array)($parent_item['extra_tags'] ?? []), (array)$child['extra_tags']));
                 }
             }
 
@@ -237,9 +237,15 @@ function social_fetch_workbench_candidates() {
                     $prefer_masto = true;
                 }
                 if ($prefer_masto) { $winner = $secondary; $secondary = $bp; }
-                $winner_tags = array_merge((array)($winner['extra_tags'] ?? []), preg_match_all('/#(\w+)/u', $winner['text'] ?? '', $wm) ? $wm[1] : []);
-                $secondary_tags = array_merge((array)($secondary['extra_tags'] ?? []), preg_match_all('/#(\w+)/u', $secondary['text'] ?? '', $sm) ? $sm[1] : []);
-                $winner['extra_tags'] = array_values(array_unique(array_merge($winner_tags, array_diff($secondary_tags, $winner_tags))));
+                $winner_tags = (array)($winner['extra_tags'] ?? []);
+                if (preg_match_all('/#(\w+)/u', $winner['text'] ?? '', $wm)) {
+                    $winner_tags = array_merge($winner_tags, $wm[1]);
+                }
+                $secondary_tags = (array)($secondary['extra_tags'] ?? []);
+                if (preg_match_all('/#(\w+)/u', $secondary['text'] ?? '', $sm)) {
+                    $secondary_tags = array_merge($secondary_tags, $sm[1]);
+                }
+                $winner['extra_tags'] = social_dedupe_cased_tags(array_merge($winner_tags, $secondary_tags));
                 if (empty($winner['thumb_image']) && !empty($secondary['thumb_image'])) $winner['thumb_image'] = $secondary['thumb_image'];
 
                 // Merge platform links for dual-network footer actions
@@ -321,8 +327,11 @@ function social_fetch_workbench_candidates() {
             
             $featured = esc_url_raw($sel['thumb_image']);
             $featured_sel_id = $sel['id'] ?? null;
-            $featured_post_tags = array_merge((array)($sel['extra_tags'] ?? []), preg_match_all('/#(\w+)/u', $sel['text'] ?? '', $tm) ? $tm[1] : []);
-            $featured_post_tags = array_values(array_unique(array_filter($featured_post_tags, fn($t) => mb_strlen($t) >= $min_tag_length)));
+            $featured_raw_tags = (array)($sel['extra_tags'] ?? []);
+            if (preg_match_all('/#(\w+)/u', $sel['text'] ?? '', $tm)) {
+                $featured_raw_tags = array_merge($featured_raw_tags, $tm[1]);
+            }
+            $featured_post_tags = social_dedupe_cased_tags(array_filter($featured_raw_tags, fn($t) => mb_strlen($t) >= $min_tag_length));
         }
     }
 
@@ -342,8 +351,11 @@ function social_fetch_workbench_candidates() {
     }
 
     foreach ($eligible as $item) {
-        $tags = array_merge((array)($item['extra_tags'] ?? []), preg_match_all('/#(\w+)/u', $item['text'] ?? '', $tm) ? $tm[1] : []);
-        $valid_tags = array_values(array_unique(array_filter($tags, fn($t) => mb_strlen($t) >= $min_tag_length)));
+        $item_raw_tags = (array)($item['extra_tags'] ?? []);
+        if (preg_match_all('/#(\w+)/u', $item['text'] ?? '', $tm)) {
+            $item_raw_tags = array_merge($item_raw_tags, $tm[1]);
+        }
+        $valid_tags = social_dedupe_cased_tags(array_filter($item_raw_tags, fn($t) => mb_strlen($t) >= $min_tag_length));
 
         // Include all hashtags from every post for WordPress tags
         foreach ($valid_tags as $vt) {

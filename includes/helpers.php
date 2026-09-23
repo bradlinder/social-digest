@@ -673,6 +673,33 @@ function social_flush_site_vocabulary_cache() {
     return social_get_site_vocabulary_dictionary();
 }
 
+/**
+ * Deduplicate a list of tags case-insensitively, strictly preferring versions
+ * with CamelCase/uppercase casing over all-lowercase duplicates.
+ */
+function social_dedupe_cased_tags($tags) {
+    if (!is_array($tags)) {
+        return [];
+    }
+    $map = [];
+    foreach ($tags as $tag) {
+        $tag = trim(ltrim((string)$tag, '#'));
+        if ($tag === '') continue;
+        $key = mb_strtolower($tag);
+        if (!isset($map[$key])) {
+            $map[$key] = $tag;
+        } else {
+            // Count uppercase characters to prefer CamelCase over lowercase
+            $existing_caps = preg_match_all('/[A-Z]/u', $map[$key]);
+            $new_caps      = preg_match_all('/[A-Z]/u', $tag);
+            if ($new_caps > $existing_caps) {
+                $map[$key] = $tag;
+            }
+        }
+    }
+    return array_values($map);
+}
+
 function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
     $t = ltrim(trim($tag), '#');
     if ($t === '') return '';

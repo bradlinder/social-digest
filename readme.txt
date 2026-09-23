@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.30
+Stable tag: 5.7.31
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,12 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.31 =
+* Tagging & Parsing: Mastodon & Bluesky CamelCase Preservation & Case-Aware Deduplication:
+  1. Fixed an issue where Mastodon's REST/ActivityPub API normalized tag objects to lowercase (`triplescreenlaptop`), which previously shadowed and discarded original CamelCase hashtag casing from author post content (`#TripleScreenLaptop`).
+  2. Enhanced Mastodon and Bluesky ingestion to extract CamelCase tags directly from post body HTML anchor links, span wrappers, and plain text before merging with API metadata.
+  3. Added `social_dedupe_cased_tags()` to ensure CamelCase/uppercase casing is strictly preserved across thread unrolling, cross-network deduplication, candidate tag aggregation, and WordPress post title generation.
 
 = 5.7.30 =
 * Core & Distribution: Automated Module File-Sync & Self-Healing Version Integrity:

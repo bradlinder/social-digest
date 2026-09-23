@@ -387,7 +387,7 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
 
         $bsky_record_tags = (array)($post['record']['tags'] ?? []);
         preg_match_all('/#(\w+)/u', $text, $bsky_text_tags);
-        $bsky_extra_tags = array_values(array_unique(array_merge($bsky_record_tags, $bsky_text_tags[1] ?? [])));
+        $bsky_extra_tags = social_dedupe_cased_tags(array_merge($bsky_text_tags[1] ?? [], $bsky_record_tags));
 
         $item_data = [
             'network'        => 'bsky',
@@ -636,17 +636,38 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
 
         $body_html = social_clean_mastodon_html($body_content, $has_card, $primary_card_url);
 
-        $masto_tags = [];
-        if (!empty($post_data['tags']) && is_array($post_data['tags'])) {
-            foreach ($post_data['tags'] as $t) {
-                if (!empty($t['name'])) $masto_tags[] = ltrim($t['name'], '#');
+        $masto_raw_tags = [];
+
+        // 1. Extract CamelCase hashtags from anchor tag URLs (e.g. href=".../tags/TripleScreenLaptop")
+        if (preg_match_all('/href=["\'][^"\']*\/tags\/([a-zA-Z0-9_\-]+)["\']/iu', $body_content, $href_matches)) {
+            foreach ($href_matches[1] as $ht) {
+                $masto_raw_tags[] = $ht;
             }
         }
-        preg_match_all('/#(\w+)/u', $clean_text, $m_tags_matches);
-        if (!empty($m_tags_matches[1])) {
-            $masto_tags = array_merge($masto_tags, $m_tags_matches[1]);
+
+        // 2. Extract CamelCase hashtags from formatted spans (e.g. #<span>TripleScreenLaptop</span>)
+        if (preg_match_all('/#\s*<span>\s*([a-zA-Z0-9_]+)\s*<\/span>/iu', $body_content, $span_matches)) {
+            foreach ($span_matches[1] as $st) {
+                $masto_raw_tags[] = $st;
+            }
         }
-        $masto_extra_tags = array_values(array_unique($masto_tags));
+
+        // 3. Extract hashtags from stripped text
+        if (preg_match_all('/#(\w+)/u', $clean_text, $m_tags_matches)) {
+            foreach ($m_tags_matches[1] as $mt) {
+                $masto_raw_tags[] = $mt;
+            }
+        }
+
+        // 4. Extract from Mastodon API metadata tags array
+        if (!empty($post_data['tags']) && is_array($post_data['tags'])) {
+            foreach ($post_data['tags'] as $t) {
+                if (!empty($t['name'])) $masto_raw_tags[] = ltrim($t['name'], '#');
+            }
+        }
+
+        // Deduplicate case-insensitively, strictly preferring CamelCase/uppercase casing over lowercase
+        $masto_extra_tags = social_dedupe_cased_tags($masto_raw_tags);
 
         $clean_text = trim(preg_replace('/#[\p{L}\p{N}_]+/u', '', $clean_text));
 

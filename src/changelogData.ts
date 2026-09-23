@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.30',
+  version: '5.7.31',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,23 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.29',
+  rollbackTarget: 'v5.7.30',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.31',
+    tag: 'v5.7.31',
+    isLatest: true,
+    highlights: [
+      'CamelCase Tag Preservation: Extracted author-authored CamelCase hashtags (#TripleScreenLaptop) directly from Mastodon post HTML links and spans, preventing Mastodon API lowercase normalization from overriding casing.',
+      'Casing-Aware Tag Deduplication: Implemented social_dedupe_cased_tags() to strictly prefer mixed-case/CamelCase hashtags across candidate collection, cross-network merging, and WordPress title generation.',
+      'Title Split Accuracy: Guaranteed multi-word hashtags like #TripleScreenLaptop, #DuraBook, and #RuggedLaptop format with proper spacing in post titles.'
+    ]
+  },
+  {
     version: '5.7.30',
     tag: 'v5.7.30',
-    isLatest: true,
     highlights: [
       'Auto-Sync & Self-Healing: Added active MD5 integrity checks between installed files in /includes/ and the current plugin version, auto-updating outdated module files on disk on execution.',
       'Framing Overrides UI: Separate Dedicated Lead-In Header TinyMCE editor and Closing Footer HTML field with 1-click formatting buttons (B, I, Link, HR, BR).',
