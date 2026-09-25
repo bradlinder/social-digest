@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.34
+Stable tag: 5.7.35
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,14 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.35 =
+* Taxonomy & Media Hardening: Guaranteed Post Tag Assignment & Featured Image Resolution:
+  1. Unconditional WordPress Tag Assignment: Fixed an issue where WordPress core `wp_insert_post()` silently dropped the `tags_input` argument when executed under automated WP-Cron or unauthenticated background execution (due to internal `current_user_can('assign_terms')` checks). Added direct, unconditional `wp_set_post_tags()` and `wp_set_object_terms()` execution following post insertion.
+  2. Robust Auto-Thumbnail Extraction: Fixed `auto_thumb` default setting fallback (`!isset($opts['auto_thumb']) || !empty($opts['auto_thumb'])`), preventing auto-thumbnail selection from being disabled on unmigrated option records.
+  3. Dynamic Thumbnail & Tag Fallback: Added automatic fallback extraction for both featured images and taxonomy tags directly from candidate updates during publish/drafting, ensuring neither thumbnails nor tags are lost even if preview state was empty.
+  4. Enhanced Bluesky Quote-Post Media: Added support for `app.bsky.embed.recordWithMedia` in Bluesky, properly extracting images, videos, and link cards attached to quoted posts.
+  5. Sideloading Network Resilience: Added standard browser user-agent, accept headers, and automatic file extension detection (.png, .webp, .avif, .gif, .jpg) to `social_sideload_image_by_mime()`, preventing 403 Forbidden rejections from remote CDNs.
 
 = 5.7.34 =
 * Tagging & Title Formatting: Underscore-to-Hyphen Hashtag Conversion:

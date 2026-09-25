@@ -241,8 +241,11 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
         $gallery_html = '';
         $card_html = '';
 
-        if (isset($post['embed']['images']) && is_array($post['embed']['images'])) {
-            $images = $post['embed']['images'];
+        // Support standard media embeds as well as quote-posts with media (app.bsky.embed.recordWithMedia)
+        $embed = (!empty($post['embed']['media']) && is_array($post['embed']['media'])) ? $post['embed']['media'] : ($post['embed'] ?? []);
+
+        if (isset($embed['images']) && is_array($embed['images'])) {
+            $images = $embed['images'];
             $num_imgs = count($images);
             if ($num_imgs > 1) {
                 $wp_thumb_w = (int)get_option('thumbnail_size_w', 150) ?: 150;
@@ -276,11 +279,12 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
 
         // Bluesky Video Embed Support (app.bsky.embed.video)
         if (
-            (isset($post['embed']['$type']) && $post['embed']['$type'] === 'app.bsky.embed.video') ||
-            isset($post['embed']['playlist'])
+            (isset($embed['$type']) && $embed['$type'] === 'app.bsky.embed.video') ||
+            isset($embed['playlist']) ||
+            !empty($embed['thumbnail'])
         ) {
-            $video_thumb = esc_url($post['embed']['thumbnail'] ?? '');
-            $alt_raw = trim($post['embed']['alt'] ?? '');
+            $video_thumb = esc_url($embed['thumbnail'] ?? '');
+            $alt_raw = trim($embed['alt'] ?? '');
             $alt_txt = esc_attr($alt_raw ?: 'Bluesky video');
             if ($video_thumb && !$first_image_url) {
                 $first_image_url = $video_thumb;
@@ -303,13 +307,15 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
 
         $extracted_urls = [];
         $links_map = [];
+        $bsky_facet_tags = [];
 
-        // Check facets
+        // Check facets for links and hashtag facets
         if (!empty($post['record']['facets']) && is_array($post['record']['facets'])) {
             foreach ($post['record']['facets'] as $facet) {
                 if (!empty($facet['features']) && is_array($facet['features'])) {
                     foreach ($facet['features'] as $feat) {
-                        if (($feat['$type'] ?? '') === 'app.bsky.richtext.facet#link' && !empty($feat['uri'])) {
+                        $f_type = $feat['$type'] ?? '';
+                        if ($f_type === 'app.bsky.richtext.facet#link' && !empty($feat['uri'])) {
                             $u = esc_url_raw($feat['uri']);
                             $extracted_urls[] = $u;
                             if (isset($facet['index']['byteStart'], $facet['index']['byteEnd'])) {
@@ -320,13 +326,15 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
                                     $links_map[$disp_text] = $u;
                                 }
                             }
+                        } elseif ($f_type === 'app.bsky.richtext.facet#tag' && !empty($feat['tag'])) {
+                            $bsky_facet_tags[] = (string)$feat['tag'];
                         }
                     }
                 }
             }
         }
 
-        if (isset($post['embed']['external']['uri'])) $extracted_urls[] = esc_url_raw($post['embed']['external']['uri']);
+        if (isset($embed['external']['uri'])) $extracted_urls[] = esc_url_raw($embed['external']['uri']);
         if (preg_match_all('/\b(?:https?:\/\/|www\.)[^\s<"\'\)]+/i', $text, $u_m)) {
             foreach ($u_m[0] as $match_url) {
                 $extracted_urls[] = esc_url_raw($match_url);
@@ -337,8 +345,8 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
         $has_card = false;
         $primary_card_url = '';
 
-        if (isset($post['embed']['external'])) {
-            $ext = $post['embed']['external'];
+        if (isset($embed['external'])) {
+            $ext = $embed['external'];
             $link_url   = esc_url_raw($ext['uri'] ?? '');
             $link_title = $ext['title'] ?? '';
             $link_desc  = $ext['description'] ?? '';
@@ -386,8 +394,8 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
         $body_html = social_clean_body_text($text, $has_card, $primary_card_url, $links_map);
 
         $bsky_record_tags = (array)($post['record']['tags'] ?? []);
-        preg_match_all('/#(\w+)/u', $text, $bsky_text_tags);
-        $bsky_extra_tags = social_dedupe_cased_tags(array_merge($bsky_text_tags[1] ?? [], $bsky_record_tags));
+        preg_match_all('/#([\p{L}\p{N}_\-]+)/u', $text, $bsky_text_tags);
+        $bsky_extra_tags = social_dedupe_cased_tags(array_merge($bsky_text_tags[1] ?? [], $bsky_record_tags, $bsky_facet_tags));
 
         $item_data = [
             'network'        => 'bsky',
@@ -645,15 +653,15 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
             }
         }
 
-        // 2. Extract CamelCase hashtags from formatted spans (e.g. #<span>TripleScreenLaptop</span>)
-        if (preg_match_all('/#\s*<span>\s*([a-zA-Z0-9_]+)\s*<\/span>/iu', $body_content, $span_matches)) {
+        // 2. Extract CamelCase hashtags from formatted spans (e.g. #<span>TripleScreenLaptop</span>, #<span>F_Droid</span>, #<span>F-Droid</span>)
+        if (preg_match_all('/#\s*<span>\s*([\p{L}\p{N}_\-]+)\s*<\/span>/iu', $body_content, $span_matches)) {
             foreach ($span_matches[1] as $st) {
                 $masto_raw_tags[] = $st;
             }
         }
 
         // 3. Extract hashtags from stripped text
-        if (preg_match_all('/#(\w+)/u', $clean_text, $m_tags_matches)) {
+        if (preg_match_all('/#([\p{L}\p{N}_\-]+)/u', $clean_text, $m_tags_matches)) {
             foreach ($m_tags_matches[1] as $mt) {
                 $masto_raw_tags[] = $mt;
             }

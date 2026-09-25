@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.34',
+  version: '5.7.35',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,26 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.33',
+  rollbackTarget: 'v5.7.34',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.35',
+    tag: 'v5.7.35',
+    isLatest: true,
+    highlights: [
+      'Unconditional WordPress Tag Assignment: Fixed a core WordPress limitation where wp_insert_post() silently ignores tags_input during automated background WP-Cron execution. Directly applies wp_set_post_tags() and wp_set_object_terms() post-insertion.',
+      'Auto-Thumb Option Fallback: Resolved auto_thumb default initialization so automated featured image selection is always active by default across unmigrated options records.',
+      'Dynamic Fallback for Thumbnails & Tags: Added automatic fallback extraction for featured images and post taxonomy tags directly from candidate updates during publish/drafting, ensuring neither thumbnails nor tags are lost even if preview state was empty.',
+      'Bluesky Quote-Post Media Support: Extended ATProto parsing to inspect embed.media (recordWithMedia), enabling seamless thumbnail extraction from images, video, and link cards attached to quoted posts.',
+      'Image Sideloading Network Resilience: Added standard browser user-agent, accept headers, and automatic file extension detection (.png, .webp, .avif, .gif, .jpg) to social_sideload_image_by_mime() to prevent 403 Forbidden CDN blocks.'
+    ]
+  },
+  {
     version: '5.7.34',
     tag: 'v5.7.34',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Underscore-to-Hyphen Hashtag Conversion: Automatically converts underscores in hashtags to hyphens (e.g. #F_Droid -> F-Droid, #E_ink -> E-ink, #Wi_Fi -> Wi-Fi, #U_Boot -> U-Boot).',
       'Mastodon & ActivityPub Syntax Support: Overcomes hashtag punctuation restrictions where hyphens are not supported, enabling natural hashtag authoring for hyphenated product names.',
