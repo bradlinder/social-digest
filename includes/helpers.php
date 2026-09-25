@@ -761,14 +761,14 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
                 $k = ltrim(trim($k), '#');
                 $v = trim($v);
                 if (substr($k, -1) === '*') continue; // Skip wildcard rules in exact pass
-                if ($k !== '' && $v !== '' && mb_strtolower(str_replace(' ', '', $t)) === mb_strtolower(str_replace(' ', '', $k))) {
+                if ($k !== '' && $v !== '' && mb_strtolower(str_replace([' ', '_', '-'], '', $t)) === mb_strtolower(str_replace([' ', '_', '-'], '', $k))) {
                     return $v;
                 }
             }
         }
 
         // Pass 2: Wildcard prefix matches (e.g. "MINISFORUM*", "SnapdragonX*=Snapdragon X")
-        $t_no_space = str_replace(' ', '', $t);
+        $t_no_space = str_replace([' ', '_', '-'], '', $t);
         $t_lower_no_space = mb_strtolower($t_no_space);
 
         foreach ($lines as $line) {
@@ -793,7 +793,7 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
             }
 
             if ($prefix_raw !== '') {
-                $prefix_key = mb_strtolower(str_replace(' ', '', $prefix_raw));
+                $prefix_key = mb_strtolower(str_replace([' ', '_', '-'], '', $prefix_raw));
                 if ($prefix_key !== '' && strpos($t_lower_no_space, $prefix_key) === 0) {
                     // Extract suffix after the matched prefix
                     $suffix_len = strlen($prefix_key);
@@ -847,8 +847,9 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
     // Get dynamic vocabulary dictionary learned from site content + baseline terms
     $compound_map = social_get_site_vocabulary_dictionary();
 
-    // Replace underscores and hyphens with spaces
-    $t = str_replace(['_', '-'], ' ', $t);
+    // Treat underscores as hyphens (social platforms like Mastodon do not allow hyphens in hashtags, so underscores represent hyphens)
+    $t = preg_replace('/_+/u', '-', $t);
+    $t = trim($t, "- \t\n\r\0\x0B");
 
     // CamelCase transitions (e.g. "AcerGooglebook" -> "Acer Googlebook", "Android17QPR" -> "Android 17 QPR")
     $t = preg_replace('/([a-z0-9])([A-Z])/u', '$1 $2', $t);

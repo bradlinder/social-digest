@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.33',
+  version: '5.7.34',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,25 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.32',
+  rollbackTarget: 'v5.7.33',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.34',
+    tag: 'v5.7.34',
+    isLatest: true,
+    highlights: [
+      'Underscore-to-Hyphen Hashtag Conversion: Automatically converts underscores in hashtags to hyphens (e.g. #F_Droid -> F-Droid, #E_ink -> E-ink, #Wi_Fi -> Wi-Fi, #U_Boot -> U-Boot).',
+      'Mastodon & ActivityPub Syntax Support: Overcomes hashtag punctuation restrictions where hyphens are not supported, enabling natural hashtag authoring for hyphenated product names.',
+      'Exact Case Preservation: Retains author-specified casing across hyphen boundaries (such as lowercase in #E_ink -> E-ink and titlecase in #F_Droid -> F-Droid).',
+      'Interchangeable Custom Overrides: Tag override rules normalize hyphens and underscores interchangeably.'
+    ]
+  },
+  {
     version: '5.7.33',
     tag: 'v5.7.33',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Single-Letter Prefix CamelCase Splitting: Enhanced CamelCase parsing with word-boundary single-capital prefix splitting (e.g. #FDroid -> F Droid, #GSuite -> G Suite, #XScreen -> X Screen) without disrupting uppercase acronyms like AI or PC.',
       'Native Hyphenated Brand Formatting: Added automatic precision formatting for hyphenated tech brands, ensuring #FDroid, #fdroid, and #F_Droid cleanly render as F-Droid, and #EInk renders as E-Ink.',

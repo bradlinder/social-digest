@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.33
+Stable tag: 5.7.34
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,12 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.34 =
+* Tagging & Title Formatting: Underscore-to-Hyphen Hashtag Conversion:
+  1. Mastodon & ActivityPub Platform Adaptation: Mastodon and related social networks forbid hyphens in hashtags (breaking e.g. `#F-Droid` into `#F`), forcing authors to use underscores. The hashtag-to-title parser now automatically treats underscores as hyphens (`#F_Droid` -> `F-Droid`, `#E_ink` -> `E-ink`, `#Wi_Fi` -> `Wi-Fi`, `#U_Boot` -> `U-Boot`).
+  2. Author Casing Preservation: Preserves the exact casing chosen across hyphen boundaries (e.g. `#E_ink` reliably converts to `E-ink` while `#F_Droid` converts to `F-Droid`).
+  3. Custom Override & Prefix Rule Normalization: Custom tag override rules now match hyphenated and underscore variations interchangeably.
 
 = 5.7.33 =
 * Tagging & Title Formatting: Single-Letter Prefix CamelCase Splitting & Hyphenated Brand Recognition:
