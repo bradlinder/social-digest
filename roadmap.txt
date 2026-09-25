@@ -3,10 +3,21 @@ Social Digest - Feature Roadmap & Release Status
 
 🎯 Immediate Recommended Next Steps (To Do List)
 ------------------------------------------------
-1. Granular Media Optimization WebP/AVIF Quality Slider [Storage Hygiene]:
-   - Add fine-grained image compression quality sliders (60-100%) for converted WebP and AVIF assets in Media Optimization settings.
-2. Fediverse Interaction Reply Syndication [Decentralization]:
+1. Fediverse Interaction Reply Syndication [Decentralization]:
    - Optional webhook/ActivityPub hook to notify federated networks when a digest referencing their updates is published.
+2. Automated Weekly Archive Digest View [Publishing]:
+   - Dedicated weekly/monthly archive rollup view grouping published digests with summary metrics.
+
+0. Release v5.7.33 Single-Letter Prefix CamelCase & Hyphenated Brand Support (Completed in v5.7.33)
+--------------------------------------------------------------------------------------------------
+[x] Single-Letter Prefix CamelCase Splitting (v5.7.33): Added `\b([A-Z])([A-Z][a-z]+)` to accurately split single-capital prefixes (e.g., `#FDroid` -> `F Droid`, `#GSuite` -> `G Suite`) without affecting uppercase acronyms (`AI`, `PC`).
+[x] Native Hyphenated Brand Formatting (v5.7.33): Automatically formats `#FDroid`, `#fdroid`, and `#F_Droid` as canonical `F-Droid`, and `#EInk` as `E-Ink`.
+[x] Baseline Vocabulary Expansion (v5.7.33): Added `F-Droid`, `E-Ink`, `U-Boot`, and `Coreboot` to the plugin's baseline vocabulary dictionary.
+
+0. Release v5.7.32 Granular Media Optimization WebP/AVIF Quality Sliders (Completed in v5.7.32)
+----------------------------------------------------------------------------------------------
+[x] Fine-Grained WebP/AVIF Quality Sliders (v5.7.32): Added 60-100% compression range sliders in Media Optimization & Storage Hygiene settings.
+[x] WordPress Image Editor Integration (v5.7.32): Hooked into `wp_get_image_editor()` to apply user-specified quality settings upon format conversion.
 
 0. Release v5.7.4 Gallery Layout Order & Streamlined Smart Mobile Deep-Linking (Completed in v5.7.4)
 ----------------------------------------------------------------------------------------------------

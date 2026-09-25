@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.31',
+  version: '5.7.33',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,33 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.30',
+  rollbackTarget: 'v5.7.32',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.33',
+    tag: 'v5.7.33',
+    isLatest: true,
+    highlights: [
+      'Single-Letter Prefix CamelCase Splitting: Enhanced CamelCase parsing with word-boundary single-capital prefix splitting (e.g. #FDroid -> F Droid, #GSuite -> G Suite, #XScreen -> X Screen) without disrupting uppercase acronyms like AI or PC.',
+      'Native Hyphenated Brand Formatting: Added automatic precision formatting for hyphenated tech brands, ensuring #FDroid, #fdroid, and #F_Droid cleanly render as F-Droid, and #EInk renders as E-Ink.',
+      'Baseline Vocabulary Enrichment: Added F-Droid, E-Ink, U-Boot, and Coreboot to the baseline vocabulary dictionary for instant zero-config recognition.'
+    ]
+  },
+  {
+    version: '5.7.32',
+    tag: 'v5.7.32',
+    isLatest: false,
+    highlights: [
+      'Granular WebP & AVIF Compression Quality Sliders: Added fine-grained image compression quality sliders (60-100%) for converted WebP and AVIF assets in Media Optimization & Storage Hygiene settings.',
+      'WordPress Image Editor Integration: Upgraded image sideloading and conversion to use WordPress image editor with user-defined WebP and AVIF quality settings.'
+    ]
+  },
+  {
     version: '5.7.31',
     tag: 'v5.7.31',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'CamelCase Tag Preservation: Extracted author-authored CamelCase hashtags (#TripleScreenLaptop) directly from Mastodon post HTML links and spans, preventing Mastodon API lowercase normalization from overriding casing.',
       'Casing-Aware Tag Deduplication: Implemented social_dedupe_cased_tags() to strictly prefer mixed-case/CamelCase hashtags across candidate collection, cross-network merging, and WordPress title generation.',

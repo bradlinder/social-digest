@@ -75,6 +75,8 @@ add_action('admin_init', function() {
             'thumb_selection_scope'  => 'exclude_first',
             'thumb_selection_mode'   => 'random',
             'convert_modern_media'   => 1,
+            'webp_quality'           => 82,
+            'avif_quality'           => 80,
             'cache_local_assets'     => 1,
             'generate_srcsets'       => 1,
             'enable_staging_queue'   => 0,
@@ -237,6 +239,8 @@ function social_sanitize_settings($input) {
     $output['thumb_selection_mode'] = in_array($input['thumb_selection_mode'] ?? '', $allowed_modes, true) ? $input['thumb_selection_mode'] : 'random';
 
     $output['convert_modern_media'] = !empty($input['convert_modern_media']) ? 1 : 0;
+    $output['webp_quality']         = max(60, min(100, absint($input['webp_quality'] ?? 82)));
+    $output['avif_quality']         = max(60, min(100, absint($input['avif_quality'] ?? 80)));
     $output['cache_local_assets']   = !empty($input['cache_local_assets']) ? 1 : 0;
     $output['generate_srcsets']     = !empty($input['generate_srcsets']) ? 1 : 0;
     $output['sideload_all_media']   = !empty($input['sideload_all_media']) ? 1 : 0;
@@ -621,6 +625,21 @@ function social_render_settings_page() {
                                                     <p class="description">Automatically downloads and imports all embedded update images directly into the local Media Library when publishing or drafting, protecting against external link rot and server outages.</p>
                                                 </td>
                                             </tr>
+                                            <tr>
+                                                <th>WebP Compression Quality</th>
+                                                <td>
+                                                    <input type="range" name="social_digest_options[webp_quality]" min="60" max="100" step="1" value="<?php echo esc_attr($opts['webp_quality'] ?? 82); ?>" oninput="this.nextElementSibling.value = this.value + '%'" style="vertical-align:middle; width:200px;" />
+                                                    <output style="font-weight:600; margin-left:8px; display:inline-block; width:40px;"><?php echo esc_attr($opts['webp_quality'] ?? 82); ?>%</output>
+                                                    <p class="description">Fine-tune compression quality for converted WebP assets (60% = maximum compression, 100% = lossless quality).</p>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>AVIF Compression Quality</th>
+                                                <td>
+                                                    <input type="range" name="social_digest_options[avif_quality]" min="60" max="100" step="1" value="<?php echo esc_attr($opts['avif_quality'] ?? 80); ?>" oninput="this.nextElementSibling.value = this.value + '%'" style="vertical-align:middle; width:200px;" />
+                                                    <output style="font-weight:600; margin-left:8px; display:inline-block; width:40px;"><?php echo esc_attr($opts['avif_quality'] ?? 80); ?>%</output>
+                                                    <p class="description">Fine-tune compression quality for converted AVIF assets (superior compression efficiency for modern browsers).</p>
+                                                </td>
                                         </table>
                                     </div>
                                 </div>

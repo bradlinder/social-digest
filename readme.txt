@@ -4,16 +4,27 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.31
+Stable tag: 5.7.33
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, interactive next-run workbench, dry-run preview, media optimization (WebP/AVIF), and local asset caching.
+Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, interactive next-run workbench, dry-run preview, media optimization (WebP/AVIF with quality sliders), and local asset caching.
 
 == Description ==
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.33 =
+* Tagging & Title Formatting: Single-Letter Prefix CamelCase Splitting & Hyphenated Brand Recognition:
+  1. Enhanced CamelCase splitting with `\b([A-Z])([A-Z][a-z]+)` to properly parse single-capital prefixes (e.g. `#FDroid` -> `F Droid`, `#GSuite` -> `G Suite`, `#XScreen` -> `X Screen`) without disrupting uppercase acronyms like `AI`, `PC`, or `OLED`.
+  2. Native Hyphenated Brand Support: Added built-in precision formatting rules for hyphenated entities (`#FDroid`, `#fdroid`, and `#F_Droid` format cleanly as `F-Droid`; `#EInk` formats as `E-Ink`).
+  3. Baseline Vocabulary Enrichment: Added `F-Droid`, `E-Ink`, `U-Boot`, and `Coreboot` to the plugin's baseline vocabulary dictionary for instant zero-configuration recognition.
+
+= 5.7.32 =
+* Storage Hygiene & Media Optimization: Granular WebP and AVIF Compression Quality Sliders:
+  1. Added fine-grained image compression quality sliders (60-100%) for converted WebP and AVIF assets in Media Optimization & Storage Hygiene settings.
+  2. Upgraded image sideloading and conversion to use WordPress image editor with user-defined WebP and AVIF quality settings.
 
 = 5.7.31 =
 * Tagging & Parsing: Mastodon & Bluesky CamelCase Preservation & Case-Aware Deduplication:

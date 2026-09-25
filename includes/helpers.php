@@ -419,9 +419,49 @@ function social_sideload_image_by_mime($url, $post_id, $desc = '') {
     $upload = wp_upload_bits($filename, null, $image_data);
     if (!empty($upload['error'])) return false;
 
+    $opts = get_option('social_digest_options', []);
+    $mime_type = 'image/jpeg';
+
+    if (!empty($opts['convert_modern_media'])) {
+        if (!function_exists('wp_get_image_editor')) {
+            require_once(ABSPATH . WPINC . '/class-wp-image-editor.php');
+            require_once(ABSPATH . WPINC . '/class-wp-image-editor-gd.php');
+            require_once(ABSPATH . WPINC . '/class-wp-image-editor-imagick.php');
+        }
+        $editor = wp_get_image_editor($upload['file']);
+        if (!is_wp_error($editor)) {
+            $mimes = $editor->get_output_mime_types();
+            $webp_q = max(60, min(100, (int)($opts['webp_quality'] ?? 82)));
+            $avif_q = max(60, min(100, (int)($opts['avif_quality'] ?? 80)));
+
+            if (!empty($mimes['image/avif']) && function_exists('imageavif')) {
+                $editor->set_quality($avif_q);
+                $new_file = preg_replace('/\.[^.]+$/', '.avif', $upload['file']);
+                $saved = $editor->save($new_file, 'image/avif');
+                if (!is_wp_error($saved)) {
+                    @unlink($upload['file']);
+                    $upload['file'] = $saved['path'];
+                    $mime_type = 'image/avif';
+                }
+            } elseif (!empty($mimes['image/webp']) && function_exists('imagewebp')) {
+                $editor->set_quality($webp_q);
+                $new_file = preg_replace('/\.[^.]+$/', '.webp', $upload['file']);
+                $saved = $editor->save($new_file, 'image/webp');
+                if (!is_wp_error($saved)) {
+                    @unlink($upload['file']);
+                    $upload['file'] = $saved['path'];
+                    $mime_type = 'image/webp';
+                }
+            } else {
+                $editor->set_quality($webp_q);
+                $editor->save($upload['file']);
+            }
+        }
+    }
+
     $attach_id = wp_insert_attachment([
-        'post_mime_type' => 'image/jpeg',
-        'post_title'     => sanitize_file_name($desc ?: $filename),
+        'post_mime_type' => $mime_type,
+        'post_title'     => sanitize_file_name($desc ?: basename($upload['file'])),
         'post_status'    => 'inherit'
     ], $upload['file'], $post_id);
 
@@ -600,6 +640,10 @@ function social_get_site_vocabulary_dictionary() {
         'dimensity'         => 'Dimensity',
         'qualcomm'          => 'Qualcomm',
         'adreno'            => 'Adreno',
+        'fdroid'            => 'F-Droid',
+        'eink'              => 'E-Ink',
+        'uboot'             => 'U-Boot',
+        'coreboot'          => 'Coreboot',
     ];
     foreach ($baseline as $k => $v) {
         $dict[$k] = $v;
@@ -809,6 +853,8 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
     // CamelCase transitions (e.g. "AcerGooglebook" -> "Acer Googlebook", "Android17QPR" -> "Android 17 QPR")
     $t = preg_replace('/([a-z0-9])([A-Z])/u', '$1 $2', $t);
     $t = preg_replace('/([A-Z]{2,})([A-Z][a-z])/u', '$1 $2', $t);
+    // Single uppercase letter prefix before Titlecase word (e.g. "FDroid" -> "F Droid", "GSuite" -> "G Suite", "XScreen" -> "X Screen")
+    $t = preg_replace('/(?:\b|^)([A-Z])([A-Z][a-z]+)/u', '$1 $2', $t);
 
     // Letter-number boundary splitting (e.g. "Googlebook14" -> "Googlebook 14", "QPR2" -> "QPR 2", "gen7" -> "gen 7")
     $t = preg_replace('/([a-zA-Z]+)([0-9]+)/u', '$1 $2', $t);
@@ -877,6 +923,8 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
     $res = preg_replace('/\bGalaxy Tabs (\d+)\b/i', 'Galaxy Tab S$1', $res);
     $res = preg_replace('/\bSnapdragon X (\d+)\b/i', 'Snapdragon X$1', $res);
     $res = preg_replace('/\bMedia\s*Tek\b/i', 'MediaTek', $res);
+    $res = preg_replace('/\bF\s+Droid\b/i', 'F-Droid', $res);
+    $res = preg_replace('/\bE\s+Ink\b/i', 'E-Ink', $res);
 
     return $res;
 }
