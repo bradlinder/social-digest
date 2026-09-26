@@ -107,9 +107,11 @@ add_action('admin_init', function() {
             'excluded_words'         => '#ad, sponsored',
             'header_text'            => '<p>Here is what we shared across social channels today:</p>',
             'footer_text'            => '<hr><p>Follow us directly on social media for real-time updates!</p>',
-            'nosnippet_header'       => 1,
-            'nosnippet_footer'       => 1,
-            'wipe_data_on_uninstall' => 1
+            'nosnippet_header'               => 1,
+            'nosnippet_footer'               => 1,
+            'allow_snippet_on_custom_header' => 0,
+            'allow_snippet_on_custom_footer' => 0,
+            'wipe_data_on_uninstall'         => 1
         ]
     ]);
 
@@ -304,9 +306,11 @@ function social_sanitize_settings($input) {
         $output['footer_text'] = $opts['footer_text'] ?? '<hr><p>Follow us directly on social media for real-time updates!</p>';
     }
 
-    $output['nosnippet_header']       = !empty($input['nosnippet_header']) ? 1 : 0;
-    $output['nosnippet_footer']       = !empty($input['nosnippet_footer']) ? 1 : 0;
-    $output['wipe_data_on_uninstall'] = !empty($input['wipe_data_on_uninstall']) ? 1 : 0;
+    $output['nosnippet_header']               = isset($input['nosnippet_header']) ? (!empty($input['nosnippet_header']) ? 1 : 0) : 1;
+    $output['nosnippet_footer']               = isset($input['nosnippet_footer']) ? (!empty($input['nosnippet_footer']) ? 1 : 0) : 1;
+    $output['allow_snippet_on_custom_header'] = !empty($input['allow_snippet_on_custom_header']) ? 1 : 0;
+    $output['allow_snippet_on_custom_footer'] = !empty($input['allow_snippet_on_custom_footer']) ? 1 : 0;
+    $output['wipe_data_on_uninstall']         = !empty($input['wipe_data_on_uninstall']) ? 1 : 0;
 
     $output['excerpt_first_lines']      = !empty($input['excerpt_first_lines']) ? 1 : 0;
     $output['excerpt_append_ellipsis']  = !empty($input['excerpt_append_ellipsis']) ? 1 : 0;
@@ -929,6 +933,13 @@ function social_render_settings_page() {
                                                 <td>
                                                     <textarea name="social_digest_options[header_text]" rows="3" class="large-text" placeholder="&lt;p&gt;Here is what we shared across social channels today:&lt;/p&gt;"><?php echo esc_textarea($opts['header_text'] ?? '<p>Here is what we shared across social channels today:</p>'); ?></textarea>
                                                     <p class="description">Default HTML content inserted at the top of every generated digest post.</p>
+                                                    <div style="margin-top: 8px;">
+                                                        <label>
+                                                            <input type="checkbox" name="social_digest_options[allow_snippet_on_custom_header]" value="1" <?php checked(!empty($opts['allow_snippet_on_custom_header'])); ?> />
+                                                            <strong>Make temporary header overrides visible to Google Search</strong>
+                                                        </label>
+                                                        <p class="description" style="margin-top:2px;">When enabled, entering a custom header on the Actions workbench for a specific digest will omit the <code>data-nosnippet</code> attribute so Google can display it in search snippets. When disabled, or if no custom header is entered, default headers remain protected from snippets.</p>
+                                                    </div>
                                                 </td>
                                             </tr>
                                             <tr>
@@ -936,6 +947,13 @@ function social_render_settings_page() {
                                                 <td>
                                                     <textarea name="social_digest_options[footer_text]" rows="3" class="large-text" placeholder="&lt;hr&gt;&lt;p&gt;Follow us directly on social media for real-time updates!&lt;/p&gt;"><?php echo esc_textarea($opts['footer_text'] ?? '<hr><p>Follow us directly on social media for real-time updates!</p>'); ?></textarea>
                                                     <p class="description">Default HTML content appended at the bottom of every generated digest post.</p>
+                                                    <div style="margin-top: 8px;">
+                                                        <label>
+                                                            <input type="checkbox" name="social_digest_options[allow_snippet_on_custom_footer]" value="1" <?php checked(!empty($opts['allow_snippet_on_custom_footer'])); ?> />
+                                                            <strong>Make temporary footer overrides visible to Google Search</strong>
+                                                        </label>
+                                                        <p class="description" style="margin-top:2px;">When enabled, entering a custom footer on the Actions workbench for a specific digest will omit the <code>data-nosnippet</code> attribute so Google can display it in search snippets. When disabled, or if no custom footer is entered, default footers remain protected from snippets.</p>
+                                                    </div>
                                                 </td>
                                             </tr>
                                             <tr>
@@ -1218,6 +1236,11 @@ Click OK to Append, or Cancel to Replace existing overrides.')) {
                             <div style="margin-bottom: 20px;">
                                 <label style="display:block; font-weight:600; margin-bottom:6px; color:#1d2327;">
                                     Temporary Lead-In Header HTML / Rich Text:
+                                    <?php if (!empty($opts['allow_snippet_on_custom_header'])): ?>
+                                        <span style="font-size:11px; font-weight:normal; color:#059669; margin-left:6px; background:#ecfdf5; border:1px solid #a7f3d0; padding:2px 6px; border-radius:3px;">
+                                            <span class="dashicons dashicons-visibility" style="font-size:13px; width:13px; height:13px; vertical-align:-2px;"></span> Google Search Snippets Enabled
+                                        </span>
+                                    <?php endif; ?>
                                 </label>
                                 <?php
                                 wp_editor($wb_header, 'social_digest_workbench_header_override', [
@@ -1236,6 +1259,11 @@ Click OK to Append, or Cancel to Replace existing overrides.')) {
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                                     <label for="sd_workbench_footer_override" style="font-weight:600; color:#1d2327;">
                                         Temporary Closing Footer HTML:
+                                        <?php if (!empty($opts['allow_snippet_on_custom_footer'])): ?>
+                                            <span style="font-size:11px; font-weight:normal; color:#059669; margin-left:6px; background:#ecfdf5; border:1px solid #a7f3d0; padding:2px 6px; border-radius:3px;">
+                                                <span class="dashicons dashicons-visibility" style="font-size:13px; width:13px; height:13px; vertical-align:-2px;"></span> Google Search Snippets Enabled
+                                            </span>
+                                        <?php endif; ?>
                                     </label>
                                     <div class="sd-quicktags-toolbar" style="display:flex; gap:4px;">
                                         <button type="button" class="button button-small" onclick="sdInsertFooterTag('strong')" title="Bold text"><strong>B</strong></button>

@@ -609,11 +609,40 @@ function social_build_workbench_content($state) {
     if (!$selected) return ['success' => false, 'message' => 'No articles are selected for the next run.'];
 
     $use_override = !empty($state['framing_override_enabled']);
-    $header = $use_override ? trim($state['header_override'] ?? '') : trim($opts['header_text'] ?? '');
-    $footer = $use_override ? trim($state['footer_override'] ?? '') : trim($opts['footer_text'] ?? '');
+    $raw_header_override = (string)($state['header_override'] ?? '');
+    $clean_header_text = trim(wp_strip_all_tags(html_entity_decode($raw_header_override, ENT_QUOTES, 'UTF-8')));
+    $clean_header_text = str_replace(["\xc2\xa0", '&nbsp;'], '', $clean_header_text);
+    $header_is_custom = $use_override && trim($clean_header_text) !== '';
 
-    if (!empty($opts['nosnippet_header']) && $header !== '') $header = '<section data-nosnippet class="social-digest-header">' . $header . '</section>';
-    if (!empty($opts['nosnippet_footer']) && $footer !== '') $footer = '<section data-nosnippet class="social-digest-footer">' . $footer . '</section>';
+    $raw_footer_override = (string)($state['footer_override'] ?? '');
+    $clean_footer_text = trim(wp_strip_all_tags(html_entity_decode($raw_footer_override, ENT_QUOTES, 'UTF-8')));
+    $clean_footer_text = str_replace(["\xc2\xa0", '&nbsp;'], '', $clean_footer_text);
+    $footer_is_custom = $use_override && trim($clean_footer_text) !== '';
+
+    $header = $use_override ? trim($raw_header_override) : trim($opts['header_text'] ?? '');
+    $footer = $use_override ? trim($raw_footer_override) : trim($opts['footer_text'] ?? '');
+
+    $apply_nosnippet_header = !empty($opts['nosnippet_header']);
+    if ($apply_nosnippet_header && !empty($opts['allow_snippet_on_custom_header']) && $header_is_custom) {
+        $apply_nosnippet_header = false;
+    }
+
+    $apply_nosnippet_footer = !empty($opts['nosnippet_footer']);
+    if ($apply_nosnippet_footer && !empty($opts['allow_snippet_on_custom_footer']) && $footer_is_custom) {
+        $apply_nosnippet_footer = false;
+    }
+
+    if ($header !== '') {
+        $header = $apply_nosnippet_header
+            ? '<section data-nosnippet class="social-digest-header">' . $header . '</section>'
+            : '<section class="social-digest-header">' . $header . '</section>';
+    }
+
+    if ($footer !== '') {
+        $footer = $apply_nosnippet_footer
+            ? '<section data-nosnippet class="social-digest-footer">' . $footer . '</section>'
+            : '<section class="social-digest-footer">' . $footer . '</section>';
+    }
 
     $use_blocks = !isset($opts['output_gutenberg_blocks']) || !empty($opts['output_gutenberg_blocks']);
 

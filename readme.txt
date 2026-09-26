@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.46
+Stable tag: 5.7.47
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,13 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.47 =
+* Granular Google Search Snippet Visibility Controls for Temporary Framing Overrides:
+  1. Temporary Header Search Snippet Toggle: Added a settings toggle under "Article Framing & Lead-In / Footer Templates" allowing custom lead-in headers entered on the Actions workbench for a specific digest edition to be visible to Google Search snippets (by omitting the `data-nosnippet` attribute).
+  2. Strict Fallback Protection: When the toggle is off, or when enabled but no custom header text is provided (or if the box is empty / whitespace only), default headers remain fully protected with `data-nosnippet` to avoid boilerplate snippet pollution.
+  3. Independent Temporary Footer Snippet Toggle: Added an independent companion toggle for closing footer overrides on the Actions workbench, allowing publishers to selectively expose custom footers to search snippets while protecting standard closing boilerplate.
+  4. Workbench Status Indicators: Added contextual visual badges directly on the Actions workbench framing panel so editors can immediately verify when search snippet visibility is active for temporary overrides.
 
 = 5.7.46 =
 * Character Entity Protection & Apostrophe Ingestion Fix:

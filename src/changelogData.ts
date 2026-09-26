@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.46',
+  version: '5.7.47',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,25 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.45',
+  rollbackTarget: 'v5.7.46',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.47',
+    tag: 'v5.7.47',
+    isLatest: true,
+    highlights: [
+      'Temporary Header Search Snippet Toggle: Added an independent settings toggle under "Article Framing & Lead-In / Footer Templates" that allows custom lead-in headers entered on the Actions workbench for a specific digest to be visible to Google Search snippets (by omitting the data-nosnippet attribute).',
+      'Strict Default Protection: When the toggle is off, or if no custom header text is entered on the workbench, standard default headers remain strictly protected from search snippets with data-nosnippet.',
+      'Independent Footer Snippet Toggle: Added an optional companion toggle for temporary closing footer overrides on the Actions workbench.',
+      'Workbench Status Badges: Displays visual confirmation badges on the Actions workbench framing panel when search snippet visibility is active.'
+    ]
+  },
+  {
     version: '5.7.46',
     tag: 'v5.7.46',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Apostrophe Mangling Fix: Resolved an issue where numeric HTML entities (e.g. &#39; and &#8217;) were stripped into "&;re" / "&;s" / "&;t" by hashtag regexes that inadvertently matched the leading "#39". Added strict negative lookbehinds and non-digit hashtag pattern validation.',
       'Apostrophe Entity Healing: Added pre-decoding on post bodies and retroactive entity repair routines so that any posts with broken contractions (e.g. "they&;re", "it&;s", "don&;t") are automatically restored to proper punctuation.',
