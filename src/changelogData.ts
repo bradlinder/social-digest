@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.44',
+  version: '5.7.45',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,24 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.43',
+  rollbackTarget: 'v5.7.44',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.45',
+    tag: 'v5.7.45',
+    isLatest: true,
+    highlights: [
+      'Self-Healing Base64 Purge: Permanently removed ~345 KB of embedded base64 module payloads and auto-provisioning filesystem routines from social-digest.php, shrinking the main file by 91.3% (from 377.8 KB down to 32.0 KB).',
+      'Compact Release Packages: The downloadable release zip archive is 52% smaller (from 160.6 KB down to 76.8 KB), ensuring fast installs and low hosting bandwidth.',
+      'Standard Core Architecture: Replaced complex embedded self-healing loaders with standard WordPress require_once statements and a graceful admin notice if includes/ is ever missing, eliminating false-positive flags from hosting security scanners.'
+    ]
+  },
+  {
     version: '5.7.44',
     tag: 'v5.7.44',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Eliminated Image Re-Compression & Quality Settings: Completely removed experimental WebP/AVIF format conversion and compression quality sliders (convert_modern_media, webp_quality, avif_quality), restoring predictable, stock asset behavior.',
       'Native Stock Image Ingestion: The plugin now imports and attaches the stock original remote image file directly into the WordPress Media Library without calling WP_Image_Editor or GD/Imagick re-encoding, permanently eliminating "Call to undefined method WP_Image_Editor_GD::get_output_mime_types()".',

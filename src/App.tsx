@@ -420,7 +420,7 @@ export default function App() {
               </h2>
             </div>
             <span className="text-[11px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 px-2 py-0.5 rounded font-mono">
-              includes/ Structure + Self-Healing
+              includes/ Architecture
             </span>
           </div>
 
@@ -428,10 +428,10 @@ export default function App() {
             <div className="bg-slate-900/60 border border-slate-700/40 rounded-lg p-3.5 space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="font-mono text-xs text-blue-400 font-semibold">social-digest.php</span>
-                <span className="text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-1.5 py-0.5 rounded">Bootstrap &amp; Auto-Provisioner</span>
+                <span className="text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-1.5 py-0.5 rounded">Core Bootstrap</span>
               </div>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Streamlined entrypoint (~500 lines) managing WordPress hooks, cron schedules, filters, asset enqueueing, and automated self-healing file restoration if <code>/includes/</code> is missing.
+                Streamlined entrypoint managing WordPress lifecycle hooks, cron schedules, filters, asset enqueueing, and core module loading.
               </p>
             </div>
 
