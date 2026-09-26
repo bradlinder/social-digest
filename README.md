@@ -91,14 +91,16 @@
 
 ```text
 social-digest/
-├── social-digest.php             # Main plugin bootstrap and orchestration file (v5.3.4)
-├── readme.txt                    # WordPress.org plugin standard readme
+├── social-digest.php             # Main plugin bootstrap, activation hooks & self-healing loader
+├── readme.txt                    # WordPress.org plugin standard readme & changelog
 ├── README.md                     # GitHub documentation and user guide
-├── roadmap.txt                   # Completed roadmap features and release log
+├── roadmap.txt                   # Roadmap priorities and release history
 ├── LICENSE                       # GNU General Public License v2.0
-└── assets/
-    └── js/
-        └── social-digest-editor.js # TinyMCE editor plugin for digest split markers
+└── includes/
+    ├── admin.php                 # Admin UI, workbench, tabs, settings & AJAX handlers
+    ├── api-clients.php           # Bluesky AT Protocol & Mastodon ActivityPub REST clients
+    ├── feed-builder.php          # Ingestion, WP-Cron runner, digest assembly & publishing
+    └── helpers.php               # Media sideloading, tag casing/splitting & logging
 ```
 
 ---

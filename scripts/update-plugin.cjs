@@ -20,8 +20,34 @@ const b64Admin = admin.toString('base64');
 let sd = fs.readFileSync('social-digest.php', 'utf8');
 
 // Update version in header and constant
-sd = sd.replace(/Version:\s*5\.7\.\d+/g, 'Version: 5.7.41');
-sd = sd.replace(/define\('SOCIAL_DIGEST_VERSION',\s*'5\.7\.\d+'\);/g, "define('SOCIAL_DIGEST_VERSION', '5.7.41');");
+sd = sd.replace(/Version:\s*5\.7\.\d+/g, 'Version: 5.7.42');
+sd = sd.replace(/define\('SOCIAL_DIGEST_VERSION',\s*'5\.7\.\d+'\);/g, "define('SOCIAL_DIGEST_VERSION', '5.7.42');");
+
+// Consolidate redundant admin_footer hooks if present
+const oldFooterHooks = `add_action('admin_footer', function() {
+    $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+    if ($screen && strpos($screen->id, 'social-digest') !== false) {
+        social_digest_render_smart_theme_script();
+    }
+});
+add_action('admin_footer', function() {
+    $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+    if ($screen && strpos($screen->id, 'social-digest') !== false) {
+        social_digest_render_smart_deep_links_script();
+    }
+});`;
+
+const newFooterHook = `add_action('admin_footer', function() {
+    $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+    if ($screen && strpos($screen->id, 'social-digest') !== false) {
+        social_digest_render_smart_theme_script();
+        social_digest_render_smart_deep_links_script();
+    }
+});`;
+
+if (sd.includes(oldFooterHooks)) {
+  sd = sd.replace(oldFooterHooks, newFooterHook);
+}
 
 // Find Section 4
 const sec4Index = sd.indexOf('// ==========================================\n// 4. CORE MODULE LOADERS');
@@ -96,19 +122,11 @@ if (file_exists($module_files['admin'])) {
     require_once $module_files['admin'];
 }
 
-// Safety check: if modules could neither be found nor written (read-only filesystem without /includes/)
+// Safety check: if modules could neither be found nor provisioned to disk (read-only filesystem without /includes/)
 if (!function_exists(__NAMESPACE__ . '\\\\social_workbench_state')) {
-    $embedded_modules = social_digest_get_embedded_modules();
-    foreach (['helpers', 'api-clients', 'feed-builder', 'admin'] as $mod_key) {
-        if (!empty($embedded_modules[$mod_key])) {
-            $code = $embedded_modules[$mod_key];
-            $code = preg_replace('/^<\\?php/i', '', $code);
-            eval($code);
-        }
-    }
     add_action('admin_notices', function() {
         if (!current_user_can('manage_options')) return;
-        echo '<div class="notice notice-warning is-dismissible"><p><strong>Social Digest:</strong> The <code>/includes/</code> folder was missing from the plugin directory. The plugin is running via its self-healing fallback. Please upload the full plugin package or grant write permissions to <code>' . esc_html(SOCIAL_DIGEST_PATH) . '</code>.</p></div>';
+        echo '<div class=\"notice notice-error is-dismissible\"><p><strong>Social Digest Error:</strong> The required <code>/includes/</code> folder is missing or cannot be created because the filesystem is read-only. Please upload the complete Social Digest plugin package to <code>' . esc_html(SOCIAL_DIGEST_PATH) . '</code> or grant write permissions to the plugin directory.</p></div>';
     });
 }
 
@@ -132,7 +150,7 @@ function social_digest_get_embedded_modules() {
 
 const updatedContent = beforeSec4 + newSec4;
 fs.writeFileSync('social-digest.php', updatedContent, 'utf8');
-console.log('social-digest.php written successfully. Size:', fs.statSync('social-digest.php').size);
+console.log('social-digest.php written successfully for v5.7.42. Size:', fs.statSync('social-digest.php').size);
 
 // Validate with php-parser
 const parser = new phpParser.Engine({

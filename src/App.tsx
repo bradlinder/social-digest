@@ -13,7 +13,6 @@ import helpersCode from '../includes/helpers.php?raw';
 import apiClientsCode from '../includes/api-clients.php?raw';
 import feedBuilderCode from '../includes/feed-builder.php?raw';
 import adminCode from '../includes/admin.php?raw';
-import editorJsCode from '../assets/js/social-digest-editor.js?raw';
 
 export default function App() {
   const [copiedZip, setCopiedZip] = useState(false);
@@ -30,7 +29,6 @@ export default function App() {
       // social-digest/
       //   ├── social-digest.php
       //   ├── readme.txt
-      //   ├── assets/js/social-digest-editor.js
       //   └── includes/
       //       ├── helpers.php
       //       ├── api-clients.php
@@ -47,11 +45,6 @@ export default function App() {
           includesFolder.file('api-clients.php', apiClientsCode);
           includesFolder.file('feed-builder.php', feedBuilderCode);
           includesFolder.file('admin.php', adminCode);
-        }
-
-        const jsFolder = pluginFolder.folder('assets')?.folder('js');
-        if (jsFolder) {
-          jsFolder.file('social-digest-editor.js', editorJsCode);
         }
       }
 

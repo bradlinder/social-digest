@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, media optimization (WebP/AVIF), local asset caching, and RSS-only syndication.
- * Version: 5.7.41
+ * Version: 5.7.42
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) exit;
 
 // Plugin constants
 if (!defined('SOCIAL_DIGEST_VERSION')) {
-    define('SOCIAL_DIGEST_VERSION', '5.7.41');
+    define('SOCIAL_DIGEST_VERSION', '5.7.42');
 }
 if (!defined('SOCIAL_DIGEST_FILE')) {
     define('SOCIAL_DIGEST_FILE', __FILE__);
@@ -672,11 +672,6 @@ add_action('admin_footer', function() {
     $screen = function_exists('get_current_screen') ? get_current_screen() : null;
     if ($screen && strpos($screen->id, 'social-digest') !== false) {
         social_digest_render_smart_theme_script();
-    }
-});
-add_action('admin_footer', function() {
-    $screen = function_exists('get_current_screen') ? get_current_screen() : null;
-    if ($screen && strpos($screen->id, 'social-digest') !== false) {
         social_digest_render_smart_deep_links_script();
     }
 });
@@ -746,19 +741,11 @@ if (file_exists($module_files['admin'])) {
     require_once $module_files['admin'];
 }
 
-// Safety check: if modules could neither be found nor written (read-only filesystem without /includes/)
+// Safety check: if modules could neither be found nor provisioned to disk (read-only filesystem without /includes/)
 if (!function_exists(__NAMESPACE__ . '\\social_workbench_state')) {
-    $embedded_modules = social_digest_get_embedded_modules();
-    foreach (['helpers', 'api-clients', 'feed-builder', 'admin'] as $mod_key) {
-        if (!empty($embedded_modules[$mod_key])) {
-            $code = $embedded_modules[$mod_key];
-            $code = preg_replace('/^<\?php/i', '', $code);
-            eval($code);
-        }
-    }
     add_action('admin_notices', function() {
         if (!current_user_can('manage_options')) return;
-        echo '<div class="notice notice-warning is-dismissible"><p><strong>Social Digest:</strong> The <code>/includes/</code> folder was missing from the plugin directory. The plugin is running via its self-healing fallback. Please upload the full plugin package or grant write permissions to <code>' . esc_html(SOCIAL_DIGEST_PATH) . '</code>.</p></div>';
+        echo '<div class="notice notice-error is-dismissible"><p><strong>Social Digest Error:</strong> The required <code>/includes/</code> folder is missing or cannot be created because the filesystem is read-only. Please upload the complete Social Digest plugin package to <code>' . esc_html(SOCIAL_DIGEST_PATH) . '</code> or grant write permissions to the plugin directory.</p></div>';
     });
 }
 

@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.41',
+  version: '5.7.42',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,24 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.40',
+  rollbackTarget: 'v5.7.41',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.42',
+    tag: 'v5.7.42',
+    isLatest: true,
+    highlights: [
+      'Security Hardening: Completely removed dynamic in-memory eval() execution from social-digest.php, replacing it with an informative admin notice if the server filesystem is read-only, ensuring 100% compliance with security scanners.',
+      'Dead Code Removal: Purged legacy orphaned asset file assets/js/social-digest-editor.js left over from the v5.7.28 split editor migration.',
+      'Hook Optimization: Consolidated redundant admin_footer actions in social-digest.php into a single unified callback to reduce execution overhead.'
+    ]
+  },
+  {
     version: '5.7.41',
     tag: 'v5.7.41',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'GitHub Release Packaging: Corrected .github/workflows/release.yml to include the /includes/ directory in release zip archives, resolving the issue where automated GitHub release zips were missing core modules and were only ~33KB.',
       'Hardened Self-Healing Core: Re-encoded embedded modular payloads with strict AST syntax and pre-computed MD5 signatures into social-digest.php, ensuring single-file updates cleanly self-provision /includes/ with zero runtime parse errors.'
