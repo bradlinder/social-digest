@@ -306,13 +306,20 @@ function social_fetch_workbench_candidates() {
                 }
             }
         }
+        if ($thumb_url === '' && !empty($item['html'])) {
+            if (preg_match('/<img[^>]+src=["\']([^"\']+)["\']/i', $item['html'], $img_match)) {
+                if (strpos($img_match[0], 'social-avatar') === false) {
+                    $thumb_url = esc_url_raw($img_match[1]);
+                }
+            }
+        }
         $candidates[] = [
             'key' => $key,
             'network' => ($item['network'] ?? '') === 'mastodon' ? 'Mastodon' : 'Bluesky',
             'timestamp' => (int)$item['timestamp'],
             'html' => $html,
             'text' => wp_trim_words(wp_strip_all_tags($item['text'] ?? ''), 55, '…'),
-            'full_text' => (string)($item['text'] ?? ''),
+            'full_text' => (string)($item['full_text'] ?? $item['text'] ?? ''),
             'url' => $url,
             'thumb_image' => $thumb_url,
             'extra_tags' => (array)($item['extra_tags'] ?? []),
@@ -343,7 +350,7 @@ function social_fetch_workbench_candidates() {
             if (preg_match_all('/#([\p{L}\p{N}_\-]+)/u', ($sel['full_text'] ?? '') . ' ' . ($sel['text'] ?? ''), $tm)) {
                 $featured_raw_tags = array_merge($featured_raw_tags, $tm[1]);
             }
-            $featured_post_tags = social_dedupe_cased_tags(array_filter($featured_raw_tags, fn($t) => mb_strlen($t) >= $min_tag_length));
+            $featured_post_tags = social_dedupe_cased_tags(array_filter($featured_raw_tags, function($t) { return mb_strlen($t) >= $min_tag_length; }));
         }
     }
 
@@ -367,7 +374,7 @@ function social_fetch_workbench_candidates() {
         if (preg_match_all('/#([\p{L}\p{N}_\-]+)/u', ($item['full_text'] ?? '') . ' ' . ($item['text'] ?? ''), $tm)) {
             $item_raw_tags = array_merge($item_raw_tags, $tm[1]);
         }
-        $valid_tags = social_dedupe_cased_tags(array_filter($item_raw_tags, fn($t) => mb_strlen($t) >= $min_tag_length));
+        $valid_tags = social_dedupe_cased_tags(array_filter($item_raw_tags, function($t) { return mb_strlen($t) >= $min_tag_length; }));
 
         // Include all hashtags from every post for WordPress tags
         foreach ($valid_tags as $vt) {
@@ -491,7 +498,7 @@ function social_sanitize_next_run($input) {
         $out['preview']['featured_image']   = esc_url_raw($old_candidates[$featured_sel]['thumb_image']);
     } else {
         $out['featured_image_override_key'] = 'auto';
-        $active_cands = array_values(array_filter($out['candidates'], fn($c) => empty($c['excluded'])));
+        $active_cands = array_values(array_filter($out['candidates'], function($c) { return empty($c['excluded']); }));
         $scope_cands = $active_cands;
         if (($opts['thumb_selection_scope'] ?? 'exclude_first') === 'exclude_first' && count($scope_cands) > 1) {
             $scope_cands = array_slice($scope_cands, 1);
@@ -774,36 +781,54 @@ function social_publish_workbench_run($state, $force_status = null) {
         $featured_url = trim((string)($state['preview']['featured_image'] ?? ''));
         $override_key = $state['featured_image_override_key'] ?? 'auto';
 
-        if (empty($featured_url) && $auto_thumb_enabled && $override_key !== 'none') {
-            $candidates = (array)($state['candidates'] ?? []);
-            $active_cands = array_values(array_filter($candidates, fn($c) => empty($c['excluded'])));
-            $ordered_cands = $active_cands;
-            if (($opts['thumb_selection_scope'] ?? 'exclude_first') === 'exclude_first' && count($ordered_cands) > 1) {
-                $ordered_cands = array_slice($ordered_cands, 1);
-            }
-            $thumb_pool = [];
-            foreach ($ordered_cands as $cand) {
+        $candidates = (array)($state['candidates'] ?? []);
+        $active_cands = array_values(array_filter($candidates, function($c) { return empty($c['excluded']); }));
+        $ordered_cands = $active_cands;
+        if (($opts['thumb_selection_scope'] ?? 'exclude_first') === 'exclude_first' && count($ordered_cands) > 1) {
+            $ordered_cands = array_slice($ordered_cands, 1);
+        }
+        $thumb_pool = [];
+        foreach ($ordered_cands as $cand) {
+            if (!empty($cand['thumb_image'])) $thumb_pool[] = $cand['thumb_image'];
+        }
+        if (empty($thumb_pool)) {
+            foreach ($active_cands as $cand) {
                 if (!empty($cand['thumb_image'])) $thumb_pool[] = $cand['thumb_image'];
             }
-            if (empty($thumb_pool)) {
-                foreach ($active_cands as $cand) {
-                    if (!empty($cand['thumb_image'])) $thumb_pool[] = $cand['thumb_image'];
-                }
-            }
-            if (!empty($thumb_pool)) {
-                $mode_thumb = $opts['thumb_selection_mode'] ?? 'random';
-                if ($mode_thumb === 'random') {
-                    $featured_url = $thumb_pool[array_rand($thumb_pool)];
-                } else {
-                    $featured_url = $thumb_pool[min(count($thumb_pool) - 1, max(0, (int)$mode_thumb - 1))];
+        }
+        // Fallback: search raw markup of active candidates if thumb_image was empty
+        if (empty($thumb_pool)) {
+            foreach ($active_cands as $cand) {
+                $cand_markup = ($cand['media_html'] ?? '') . ' ' . ($cand['html'] ?? '');
+                if (preg_match('/<img[^>]+src=["\']([^"\']+)["\']/i', $cand_markup, $im)) {
+                    if (strpos($im[0], 'social-avatar') === false) {
+                        $thumb_pool[] = esc_url_raw($im[1]);
+                    }
                 }
             }
         }
 
-        if (!empty($featured_url) && $override_key !== 'none') {
-            $attachment_id = social_sideload_image_by_mime($featured_url, $post_id, $title);
-            if ($attachment_id) {
-                set_post_thumbnail($post_id, $attachment_id);
+        if (empty($featured_url) && $auto_thumb_enabled && $override_key !== 'none' && !empty($thumb_pool)) {
+            $mode_thumb = $opts['thumb_selection_mode'] ?? 'random';
+            if ($mode_thumb === 'random') {
+                $featured_url = $thumb_pool[array_rand($thumb_pool)];
+            } else {
+                $featured_url = $thumb_pool[min(count($thumb_pool) - 1, max(0, (int)$mode_thumb - 1))];
+            }
+        }
+
+        if ($override_key !== 'none') {
+            $urls_to_try = [];
+            if (!empty($featured_url)) $urls_to_try[] = $featured_url;
+            foreach ($thumb_pool as $tp) {
+                if (!in_array($tp, $urls_to_try, true)) $urls_to_try[] = $tp;
+            }
+            foreach ($urls_to_try as $try_url) {
+                $attachment_id = social_sideload_image_by_mime($try_url, $post_id, $title);
+                if ($attachment_id) {
+                    set_post_thumbnail($post_id, $attachment_id);
+                    break;
+                }
             }
         }
 
@@ -821,8 +846,12 @@ function social_publish_workbench_run($state, $force_status = null) {
             }
         }
 
-        $new_bsky = max((int)($state['cutoffs']['bsky'] ?? 0), $max_bsky_ts, (int)get_option('bsky_last_digest_time', 0));
-        $new_masto = max((int)($state['cutoffs']['masto'] ?? 0), $max_masto_ts, (int)get_option('masto_last_digest_time', 0));
+        $old_state = social_workbench_state();
+        $state_bsky = (int)($state['cutoffs']['bsky'] ?? $old_state['cutoffs']['bsky'] ?? 0);
+        $state_masto = (int)($state['cutoffs']['masto'] ?? $old_state['cutoffs']['masto'] ?? 0);
+
+        $new_bsky = max($state_bsky, $max_bsky_ts, (int)get_option('bsky_last_digest_time', 0));
+        $new_masto = max($state_masto, $max_masto_ts, (int)get_option('masto_last_digest_time', 0));
 
         if ($new_bsky > 0) {
             update_option('bsky_last_digest_time', $new_bsky);
@@ -830,6 +859,9 @@ function social_publish_workbench_run($state, $force_status = null) {
         if ($new_masto > 0) {
             update_option('masto_last_digest_time', $new_masto);
         }
+
+        // Cleanly clear workbench state on successful creation to prevent stale re-curation
+        social_clear_workbench_state();
 
         // Purge W3 Total Cache and active page/object caches for the newly published digest
         if (function_exists(__NAMESPACE__ . '\\social_purge_site_caches')) {
@@ -855,7 +887,7 @@ function social_run_digest_import($is_dry_run = false) {
     if (empty($state_res['success'])) return $state_res;
     
     $state = $state_res['state'] ?? [];
-    $active_cands = array_filter((array)($state['candidates'] ?? []), fn($c) => empty($c['excluded']));
+    $active_cands = array_filter((array)($state['candidates'] ?? []), function($c) { return empty($c['excluded']); });
     if (empty($active_cands)) {
         // Advance cutoffs even if active queue is empty so fetched items are cleared from backlog
         $new_bsky = (int)($state['cutoffs']['bsky'] ?? 0);

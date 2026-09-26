@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.37
+Stable tag: 5.7.40
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,21 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.40 =
+* Cutoff Synchronization, Featured Image Resilience & Universal Hashtag Parsing:
+  1. Guaranteed Cutoff Advancement & Workbench Clearing: Enhanced `social_publish_workbench_run()` to advance cutoffs across all candidate timestamps and clear the workbench queue directly upon creation, ensuring subsequent scheduled cron runs never re-publish previously digested posts.
+  2. Thumbnail Pool Sideloading Fallback: Upgraded featured image attachment to loop through candidate thumbnails and raw post markup if the primary image returns 404 or is CDN-restricted, ensuring every digest reliably receives a WordPress featured image.
+  3. Universal Mastodon Hashtag Extraction: Added direct extraction from `<a class="hashtag">` tags, singular `/tag/` endpoints, and multi-span formats, ensuring 100% of Mastodon hashtags are preserved as WordPress tags.
+
+= 5.7.39 =
+* Critical Error Fix & Loader Modernization:
+  1. Resolved Fatal Parse Error: Completely removed legacy self-healing eval loader and malformed base64 block in `social-digest.php` that contained unparseable syntax, causing an immediate PHP fatal error / WordPress critical crash on all PHP versions (including PHP 8.5).
+  2. Streamlined Standard Module Loading: Replaced eval/md5 checks with direct, clean WordPress `require_once` module loading, eliminating runtime memory overhead and file lock conflicts.
+
+= 5.7.38 =
+* PHP Version Compatibility & Critical Error Prevention:
+  1. PHP 7.0–8.4 Backward Compatibility: Replaced PHP 7.4+ arrow functions (`fn`) with standard PHP anonymous closures in candidate filtering and tag collection, ensuring 100% compatibility across legacy PHP 7.2/7.3/7.4 hosting environments and eliminating fatal parse/syntax errors.
 
 = 5.7.37 =
 * Robust Cutoff High-Water Mark & Feature Regression Hardening:

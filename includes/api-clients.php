@@ -647,28 +647,38 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
 
         $masto_raw_tags = [];
 
-        // 1. Extract CamelCase hashtags from anchor tag URLs (e.g. href=".../tags/TripleScreenLaptop")
-        if (preg_match_all('/href=["\'][^"\']*\/tags\/([a-zA-Z0-9_\-]+)["\']/iu', $body_content, $href_matches)) {
+        // 1. Extract directly from hashtag anchor tags (covers single-span and multi-span formats like Mastodon 4.3+)
+        if (preg_match_all('/<a[^>]*class=["\'][^"\']*hashtag[^"\']*["\'][^>]*>(.*?)<\/a>/isu', $body_content, $anchor_matches)) {
+            foreach ($anchor_matches[1] as $a_inner) {
+                $tag_text = trim(ltrim(wp_strip_all_tags($a_inner), '#'));
+                if ($tag_text !== '') {
+                    $masto_raw_tags[] = $tag_text;
+                }
+            }
+        }
+
+        // 2. Extract CamelCase hashtags from anchor tag URLs (e.g. href=".../tags/TripleScreenLaptop" or ".../tag/F-Droid")
+        if (preg_match_all('/href=["\'][^"\']*\/tags?\/([a-zA-Z0-9_\-]+)["\'\/?#]/iu', $body_content, $href_matches)) {
             foreach ($href_matches[1] as $ht) {
                 $masto_raw_tags[] = $ht;
             }
         }
 
-        // 2. Extract CamelCase hashtags from formatted spans (e.g. #<span>TripleScreenLaptop</span>, #<span>F_Droid</span>, #<span>F-Droid</span>)
+        // 3. Extract CamelCase hashtags from formatted spans (e.g. #<span>TripleScreenLaptop</span>, #<span>F_Droid</span>, #<span>F-Droid</span>)
         if (preg_match_all('/#\s*<span>\s*([\p{L}\p{N}_\-]+)\s*<\/span>/iu', $body_content, $span_matches)) {
             foreach ($span_matches[1] as $st) {
                 $masto_raw_tags[] = $st;
             }
         }
 
-        // 3. Extract hashtags from stripped text
-        if (preg_match_all('/#([\p{L}\p{N}_\-]+)/u', $clean_text, $m_tags_matches)) {
+        // 4. Extract hashtags from post content
+        if (preg_match_all('/#([\p{L}\p{N}_\-]+)/u', $clean_text . ' ' . wp_strip_all_tags($body_content), $m_tags_matches)) {
             foreach ($m_tags_matches[1] as $mt) {
                 $masto_raw_tags[] = $mt;
             }
         }
 
-        // 4. Extract from Mastodon API metadata tags array
+        // 5. Extract from Mastodon API metadata tags array
         if (!empty($post_data['tags']) && is_array($post_data['tags'])) {
             foreach ($post_data['tags'] as $t) {
                 if (!empty($t['name'])) $masto_raw_tags[] = ltrim($t['name'], '#');

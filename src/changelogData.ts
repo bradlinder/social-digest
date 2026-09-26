@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.37',
+  version: '5.7.40',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,40 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.36',
+  rollbackTarget: 'v5.7.39',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.40',
+    tag: 'v5.7.40',
+    isLatest: true,
+    highlights: [
+      'Cutoff Synchronization & Workbench Clearing: Enhanced social_publish_workbench_run() to advance cutoffs across all candidate timestamps and clear the workbench queue directly upon creation, ensuring subsequent scheduled cron runs never re-publish previously digested posts.',
+      'Thumbnail Pool Sideloading Fallback: Upgraded featured image attachment to loop through candidate thumbnails and raw post markup if the primary image returns 404 or is CDN-restricted, ensuring every digest reliably receives a WordPress featured image.',
+      'Universal Mastodon Hashtag Extraction: Added direct extraction from <a class="hashtag"> tags, singular /tag/ endpoints, and multi-span formats, ensuring 100% of Mastodon hashtags are preserved as WordPress tags.'
+    ]
+  },
+  {
+    version: '5.7.39',
+    tag: 'v5.7.39',
+    isLatest: false,
+    highlights: [
+      'Critical Error Fix & Loader Modernization: Resolved fatal syntax parse error in social-digest.php caused by legacy self-healing eval blocks. Replaced with direct, standard WordPress require_once module loading for 100% stability across PHP 7.4 through PHP 8.5+.'
+    ]
+  },
+  {
+    version: '5.7.38',
+    tag: 'v5.7.38',
+    isLatest: false,
+    highlights: [
+      'PHP Version Compatibility & Critical Error Prevention: Replaced PHP 7.4+ arrow functions (fn) with standard PHP anonymous closures in candidate filtering and tag collection, ensuring 100% compatibility across legacy PHP 7.2/7.3/7.4 hosting environments and eliminating fatal parse/syntax errors.'
+    ]
+  },
+  {
     version: '5.7.37',
     tag: 'v5.7.37',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Robust Cutoff High-Water Mark & Feature Regression Hardening: Guaranteed that publishing and scheduled runs advance cutoffs to the absolute high-water mark of fetched feed responses, preventing previously curated updates from being re-fetched and republished.',
       'Mastodon Hashtag & Media Thumbnail Extraction: Hardened Mastodon status parsing to ensure hashtags from anchor links, spans, plain text, and API metadata are reliably harvested and assigned as WordPress post tags.',

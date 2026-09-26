@@ -174,7 +174,8 @@ function social_render_link_card_html($card_url, $card_title, $card_desc, $card_
 }
 
 function social_clean_body_text($raw_text, $has_card = false, $card_url = '', $links_map = []) {
-    if (empty($raw_text)) return '';
+    if (empty($raw_text) || !is_scalar($raw_text)) return '';
+    $raw_text = (string)$raw_text;
 
     // Strip hashtags
     $text = preg_replace('/#[\p{L}\p{N}_]+/u', '', $raw_text);
@@ -220,7 +221,8 @@ function social_clean_body_text($raw_text, $has_card = false, $card_url = '', $l
 }
 
 function social_clean_mastodon_html($html, $has_card = false, $card_url = '') {
-    if (empty($html)) return '';
+    if (empty($html) || !is_scalar($html)) return '';
+    $html = (string)$html;
 
     // Strip hashtag anchor elements
     $html = preg_replace('/<a[^>]*class=["\'][^"\']*hashtag[^"\']*["\'][^>]*>.*?<\/a>/isu', '', $html);
@@ -242,7 +244,8 @@ function social_clean_mastodon_html($html, $has_card = false, $card_url = '') {
 }
 
 function social_extract_first_line_or_sentence($text) {
-    if (empty($text)) return '';
+    if (empty($text) || !is_scalar($text)) return '';
+    $text = (string)$text;
     $t = wp_strip_all_tags($text);
     $t = preg_replace('/#[\p{L}\p{N}_]+/u', '', $t);
     $t = preg_replace('/\b(?:https?:\/\/|www\.)[^\s<"\'\)]+/i', '', $t);
@@ -393,6 +396,8 @@ function social_get_clean_text_length($text) {
 
 function social_sideload_image_by_mime($url, $post_id, $desc = '') {
     if (empty($url)) return false;
+    $url = html_entity_decode(trim((string)$url), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    if (!filter_var($url, FILTER_VALIDATE_URL)) return false;
 
     // Temporary memory elevation for GD/Imagick thumbnail processing
     if (function_exists('wp_raise_memory_limit')) {
@@ -487,9 +492,6 @@ function social_sideload_image_by_mime($url, $post_id, $desc = '') {
                     $upload['file'] = $saved['path'];
                     $mime_type = 'image/webp';
                 }
-            } else {
-                $editor->set_quality($webp_q);
-                $editor->save($upload['file']);
             }
         }
     }
@@ -770,7 +772,8 @@ function social_dedupe_cased_tags($tags) {
 }
 
 function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
-    $t = ltrim(trim($tag), '#');
+    if (!is_scalar($tag)) return '';
+    $t = ltrim(trim((string)$tag), '#');
     if ($t === '') return '';
 
     // Check optional custom overrides first (e.g. "rawtag=Formatted Name" or "MINISFORUM*")
