@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.35',
+  version: '5.7.37',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,34 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.34',
+  rollbackTarget: 'v5.7.36',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.37',
+    tag: 'v5.7.37',
+    isLatest: true,
+    highlights: [
+      'Robust Cutoff High-Water Mark & Feature Regression Hardening: Guaranteed that publishing and scheduled runs advance cutoffs to the absolute high-water mark of fetched feed responses, preventing previously curated updates from being re-fetched and republished.',
+      'Mastodon Hashtag & Media Thumbnail Extraction: Hardened Mastodon status parsing to ensure hashtags from anchor links, spans, plain text, and API metadata are reliably harvested and assigned as WordPress post tags.',
+      'Featured Image Resolution: Enhanced candidate thumbnail pools and dynamic fallback extraction to guarantee featured image attachment on all published digests.'
+    ]
+  },
+  {
+    version: '5.7.36',
+    tag: 'v5.7.36',
+    isLatest: false,
+    highlights: [
+      'Robust Cutoff Advancement & Duplicate Prevention: Fixed cutoff advancement upon manual post publication and ensured scheduled cron runs (social_run_digest_import()) correctly verify that new candidates exist before attempting publication, eliminating duplicate posting of previously curated updates.',
+      'Mastodon & Bluesky Full-Text Ingestion: Preserved raw unstripped post content (full_text) during API fetching, ensuring hashtag extraction successfully captures all hashtags (including underscore-formatted tags like #E_ink and #F_Droid) for WordPress tag assignment and post titles.',
+      'Underscore-to-Hyphen Tag Conversion & Casing: Enhanced social_split_camelcase_tag() and baseline vocabulary dictionary to robustly treat underscores as hyphens and format compound brand names (e.g. E-ink, F-Droid).'
+    ]
+  },
+  {
     version: '5.7.35',
     tag: 'v5.7.35',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Unconditional WordPress Tag Assignment: Fixed a core WordPress limitation where wp_insert_post() silently ignores tags_input during automated background WP-Cron execution. Directly applies wp_set_post_tags() and wp_set_object_terms() post-insertion.',
       'Auto-Thumb Option Fallback: Resolved auto_thumb default initialization so automated featured image selection is always active by default across unmigrated options records.',

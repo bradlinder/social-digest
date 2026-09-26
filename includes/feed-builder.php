@@ -807,21 +807,22 @@ function social_publish_workbench_run($state, $force_status = null) {
             }
         }
 
-        // Advance cutoff timestamps on successful publish or draft creation
-        $new_bsky = (int)($state['cutoffs']['bsky'] ?? 0);
-        $new_masto = (int)($state['cutoffs']['masto'] ?? 0);
+        // Advance cutoff timestamps on successful publish or draft creation (inspecting all candidates including excluded ones)
+        $max_bsky_ts = 0;
+        $max_masto_ts = 0;
 
-        if ($new_bsky <= 0 || $new_masto <= 0) {
-            foreach ((array)($state['candidates'] ?? []) as $cand) {
-                $cand_ts = (int)($cand['timestamp'] ?? 0);
-                $net = strtolower($cand['network'] ?? '');
-                if ($net === 'bluesky' && $cand_ts > $new_bsky) {
-                    $new_bsky = $cand_ts;
-                } elseif ($net === 'mastodon' && $cand_ts > $new_masto) {
-                    $new_masto = $cand_ts;
-                }
+        foreach ((array)($state['candidates'] ?? []) as $cand) {
+            $cand_ts = (int)($cand['timestamp'] ?? 0);
+            $net = strtolower($cand['network'] ?? '');
+            if ($net === 'bluesky' || $net === 'bsky') {
+                if ($cand_ts > $max_bsky_ts) $max_bsky_ts = $cand_ts;
+            } elseif ($net === 'mastodon') {
+                if ($cand_ts > $max_masto_ts) $max_masto_ts = $cand_ts;
             }
         }
+
+        $new_bsky = max((int)($state['cutoffs']['bsky'] ?? 0), $max_bsky_ts, (int)get_option('bsky_last_digest_time', 0));
+        $new_masto = max((int)($state['cutoffs']['masto'] ?? 0), $max_masto_ts, (int)get_option('masto_last_digest_time', 0));
 
         if ($new_bsky > 0) {
             update_option('bsky_last_digest_time', $new_bsky);
@@ -852,5 +853,16 @@ function social_publish_workbench_run($state, $force_status = null) {
 function social_run_digest_import($is_dry_run = false) {
     $state_res = social_fetch_workbench_candidates();
     if (empty($state_res['success'])) return $state_res;
-    return social_publish_workbench_run($state_res['state']);
+    
+    $state = $state_res['state'] ?? [];
+    $active_cands = array_filter((array)($state['candidates'] ?? []), fn($c) => empty($c['excluded']));
+    if (empty($active_cands)) {
+        // Advance cutoffs even if active queue is empty so fetched items are cleared from backlog
+        $new_bsky = (int)($state['cutoffs']['bsky'] ?? 0);
+        $new_masto = (int)($state['cutoffs']['masto'] ?? 0);
+        if ($new_bsky > 0) update_option('bsky_last_digest_time', $new_bsky);
+        if ($new_masto > 0) update_option('masto_last_digest_time', $new_masto);
+        return ['success' => false, 'message' => 'No new active posts found since the active cutoff timestamp. Cutoffs advanced and queue cleared.'];
+    }
+    return social_publish_workbench_run($state);
 }

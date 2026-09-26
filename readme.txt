@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.35
+Stable tag: 5.7.37
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,18 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.37 =
+* Robust Cutoff High-Water Mark & Feature Regression Hardening:
+  1. Cutoff High-Water Mark & Scheduled Run Cutoff Advancement: Guaranteed that publishing and scheduled runs advance cutoffs to the absolute high-water mark of fetched feed responses, preventing previously curated updates from being re-fetched and republished.
+  2. Mastodon Hashtag & Media Thumbnail Extraction: Hardened Mastodon status parsing to ensure hashtags from anchor links, spans, plain text, and API metadata are reliably harvested and assigned as WordPress post tags.
+  3. Featured Image Resolution: Enhanced candidate thumbnail pools and dynamic fallback extraction to guarantee featured image attachment on all published digests.
+
+= 5.7.36 =
+* Robust Cutoff Advancement, Hashtag Ingestion & Underscore-to-Hyphen Formatting:
+  1. Cutoff & Duplicate Prevention: Fixed cutoff advancement upon manual post publication and ensured scheduled cron runs (`social_run_digest_import()`) correctly verify that new candidates exist before attempting publication, eliminating duplicate posting of previously curated updates.
+  2. Mastodon & Bluesky Full-Text Ingestion: Preserved raw unstripped post content (`full_text`) during API fetching, ensuring hashtag extraction successfully captures all hashtags (including underscore-formatted tags like `#E_ink` and `#F_Droid`) for WordPress tag assignment and post titles.
+  3. Underscore-to-Hyphen Tag Conversion & Casing: Enhanced `social_split_camelcase_tag()` and baseline vocabulary dictionary to robustly treat underscores as hyphens and format compound brand names (e.g. `E-ink`, `F-Droid`).
 
 = 5.7.35 =
 * Taxonomy & Media Hardening: Guaranteed Post Tag Assignment & Featured Image Resolution:

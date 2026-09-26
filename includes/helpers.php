@@ -666,7 +666,7 @@ function social_get_site_vocabulary_dictionary() {
         'qualcomm'          => 'Qualcomm',
         'adreno'            => 'Adreno',
         'fdroid'            => 'F-Droid',
-        'eink'              => 'E-Ink',
+        'eink'              => 'E-ink',
         'uboot'             => 'U-Boot',
         'coreboot'          => 'Coreboot',
     ];
