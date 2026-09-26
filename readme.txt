@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.45
+Stable tag: 5.7.46
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,12 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.46 =
+* Character Entity Protection & Apostrophe Ingestion Fix:
+  1. Resolved Apostrophe Mangling (`&;re` / `&;s` / `&;t`): Fixed an issue where numeric HTML character entities (such as `&#39;`, `&#039;`, and `&#8217;` for apostrophes) were mistakenly matched by hashtag stripping regexes (`/#.../`) because of the leading `#` symbol. Added negative lookbehind `(?<![&\w])` and non-digit hashtag pattern validation across all cleaner and extraction functions.
+  2. Entity Pre-Decoding & Retroactive Repair: Added HTML entity pre-decoding on post bodies and automatic entity repair regexes (`(\w)&;(\w)` -> `$1'$2`) so any posts or candidate drafts with previously mangled contractions are seamlessly restored to clean apostrophes (`they're`, `it's`, `don't`).
+  3. Immediate Cutoff State Locking: Moved cutoff timestamp advancement and workbench state cleanup to execute immediately upon post/draft insertion in WordPress, ensuring cutoffs advance even if subsequent media sideloading tasks are delayed.
 
 = 5.7.45 =
 * Removal of Self-Healing Base64 Payloads & Clean Architecture Restitution:

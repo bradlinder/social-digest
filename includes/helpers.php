@@ -175,10 +175,11 @@ function social_render_link_card_html($card_url, $card_title, $card_desc, $card_
 
 function social_clean_body_text($raw_text, $has_card = false, $card_url = '', $links_map = []) {
     if (empty($raw_text) || !is_scalar($raw_text)) return '';
-    $raw_text = (string)$raw_text;
+    $raw_text = html_entity_decode((string)$raw_text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-    // Strip hashtags
-    $text = preg_replace('/#[\p{L}\p{N}_]+/u', '', $raw_text);
+    // Strip hashtags (protecting numeric entities like &#39;)
+    $text = preg_replace('/(?<![&\w])#(?!\d+;)(?:[\p{L}\p{N}_]*[\p{L}_][\p{L}\p{N}_\-]*)/u', '', $raw_text);
+    $text = preg_replace('/(\w)&;(\w)/', "$1'$2", $text);
 
     // If a preview card is present, strip trailing redundant URL (scheme or domain/path) that leads to the card
     if ($has_card) {
@@ -226,8 +227,11 @@ function social_clean_mastodon_html($html, $has_card = false, $card_url = '') {
 
     // Strip hashtag anchor elements
     $html = preg_replace('/<a[^>]*class=["\'][^"\']*hashtag[^"\']*["\'][^>]*>.*?<\/a>/isu', '', $html);
-    // Strip plain-text hashtags
-    $html = preg_replace('/#[\p{L}\p{N}_]+/u', '', $html);
+    // Strip plain-text hashtags (strictly requiring negative lookbehind for & and requiring non-digit characters to protect &#39; and &#8217;)
+    $html = preg_replace('/(?<![&\w])#(?!\d+;)(?:[\p{L}\p{N}_]*[\p{L}_][\p{L}\p{N}_\-]*)/u', '', $html);
+
+    // Repair any damaged entities (e.g. they&;re -> they're)
+    $html = preg_replace('/(\w)&;(\w)/', "$1'$2", $html);
 
     if ($has_card) {
         // Strip trailing anchor link if it's the last element before closing </p>
@@ -247,9 +251,10 @@ function social_extract_first_line_or_sentence($text) {
     if (empty($text) || !is_scalar($text)) return '';
     $text = (string)$text;
     $t = wp_strip_all_tags($text);
-    $t = preg_replace('/#[\p{L}\p{N}_]+/u', '', $t);
-    $t = preg_replace('/\b(?:https?:\/\/|www\.)[^\s<"\'\)]+/i', '', $t);
     $t = html_entity_decode($t, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $t = preg_replace('/(?<![&\w])#(?!\d+;)(?:[\p{L}\p{N}_]*[\p{L}_][\p{L}\p{N}_\-]*)/u', '', $t);
+    $t = preg_replace('/(\w)&;(\w)/', "$1'$2", $t);
+    $t = preg_replace('/\b(?:https?:\/\/|www\.)[^\s<"\'\)]+/i', '', $t);
 
     $lines = preg_split('/\r\n|\r|\n/', $t);
     $first_line = '';
@@ -390,8 +395,10 @@ function social_check_posts_match($p1, $p2) {
 
 function social_get_clean_text_length($text) {
     $t = preg_replace('/\bhttps?:\/\/\S+/i', '', wp_strip_all_tags($text));
-    $t = preg_replace('/#[\p{L}\p{N}_]+/u', '', $t);
-    return mb_strlen(trim(preg_replace('/\s+/', ' ', html_entity_decode($t, ENT_QUOTES | ENT_HTML5, 'UTF-8'))), 'UTF-8');
+    $t = html_entity_decode($t, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $t = preg_replace('/(?<![&\w])#(?!\d+;)(?:[\p{L}\p{N}_]*[\p{L}_][\p{L}\p{N}_\-]*)/u', '', $t);
+    $t = preg_replace('/(\w)&;(\w)/', "$1'$2", $t);
+    return mb_strlen(trim(preg_replace('/\s+/', ' ', $t)), 'UTF-8');
 }
 
 function social_sideload_image_by_mime($url, $post_id, $desc = '') {

@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.45',
+  version: '5.7.46',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,24 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.44',
+  rollbackTarget: 'v5.7.45',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.46',
+    tag: 'v5.7.46',
+    isLatest: true,
+    highlights: [
+      'Apostrophe Mangling Fix: Resolved an issue where numeric HTML entities (e.g. &#39; and &#8217;) were stripped into "&;re" / "&;s" / "&;t" by hashtag regexes that inadvertently matched the leading "#39". Added strict negative lookbehinds and non-digit hashtag pattern validation.',
+      'Apostrophe Entity Healing: Added pre-decoding on post bodies and retroactive entity repair routines so that any posts with broken contractions (e.g. "they&;re", "it&;s", "don&;t") are automatically restored to proper punctuation.',
+      'Immediate Cutoff Advancement: Moved cutoff advancement to lock immediately upon post creation, guaranteeing new cutoffs are persisted even if subsequent media sideloading takes time.'
+    ]
+  },
+  {
     version: '5.7.45',
     tag: 'v5.7.45',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Self-Healing Base64 Purge: Permanently removed ~345 KB of embedded base64 module payloads and auto-provisioning filesystem routines from social-digest.php, shrinking the main file by 91.3% (from 377.8 KB down to 32.0 KB).',
       'Compact Release Packages: The downloadable release zip archive is 52% smaller (from 160.6 KB down to 76.8 KB), ensuring fast installs and low hosting bandwidth.',

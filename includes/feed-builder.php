@@ -241,11 +241,11 @@ function social_fetch_workbench_candidates() {
                 }
                 if ($prefer_masto) { $winner = $secondary; $secondary = $bp; }
                 $winner_tags = (array)($winner['extra_tags'] ?? []);
-                if (preg_match_all('/#(\w+)/u', $winner['text'] ?? '', $wm)) {
+                if (preg_match_all('/(?<![&\w])#(?!\d+;)([\p{L}\p{N}_]*[\p{L}_][\p{L}\p{N}_\-]*)/u', $winner['text'] ?? '', $wm)) {
                     $winner_tags = array_merge($winner_tags, $wm[1]);
                 }
                 $secondary_tags = (array)($secondary['extra_tags'] ?? []);
-                if (preg_match_all('/#(\w+)/u', $secondary['text'] ?? '', $sm)) {
+                if (preg_match_all('/(?<![&\w])#(?!\d+;)([\p{L}\p{N}_]*[\p{L}_][\p{L}\p{N}_\-]*)/u', $secondary['text'] ?? '', $sm)) {
                     $secondary_tags = array_merge($secondary_tags, $sm[1]);
                 }
                 $winner['extra_tags'] = social_dedupe_cased_tags(array_merge($winner_tags, $secondary_tags));
@@ -347,7 +347,7 @@ function social_fetch_workbench_candidates() {
             $featured = esc_url_raw($sel['thumb_image']);
             $featured_sel_id = $sel['id'] ?? $sel['post_uri'] ?? null;
             $featured_raw_tags = (array)($sel['extra_tags'] ?? []);
-            if (preg_match_all('/#([\p{L}\p{N}_\-]+)/u', ($sel['full_text'] ?? '') . ' ' . ($sel['text'] ?? ''), $tm)) {
+            if (preg_match_all('/(?<![&\w])#(?!\d+;)([\p{L}\p{N}_]*[\p{L}_][\p{L}\p{N}_\-]*)/u', ($sel['full_text'] ?? '') . ' ' . ($sel['text'] ?? ''), $tm)) {
                 $featured_raw_tags = array_merge($featured_raw_tags, $tm[1]);
             }
             $featured_post_tags = social_dedupe_cased_tags(array_filter($featured_raw_tags, function($t) { return mb_strlen($t) >= $min_tag_length; }));
@@ -371,7 +371,7 @@ function social_fetch_workbench_candidates() {
 
     foreach ($eligible as $item) {
         $item_raw_tags = (array)($item['extra_tags'] ?? []);
-        if (preg_match_all('/#([\p{L}\p{N}_\-]+)/u', ($item['full_text'] ?? '') . ' ' . ($item['text'] ?? ''), $tm)) {
+        if (preg_match_all('/(?<![&\w])#(?!\d+;)([\p{L}\p{N}_]*[\p{L}_][\p{L}\p{N}_\-]*)/u', ($item['full_text'] ?? '') . ' ' . ($item['text'] ?? ''), $tm)) {
             $item_raw_tags = array_merge($item_raw_tags, $tm[1]);
         }
         $valid_tags = social_dedupe_cased_tags(array_filter($item_raw_tags, function($t) { return mb_strlen($t) >= $min_tag_length; }));
@@ -482,6 +482,9 @@ function social_sanitize_next_run($input) {
             $base['excluded']   = !empty($raw['excluded']);
             $base['pinned']     = ($key === $pinned_key && empty($base['excluded']));
             $base['commentary'] = sanitize_textarea_field($raw['commentary'] ?? '');
+            if (!empty($base['html'])) $base['html'] = preg_replace('/(\w)&;(\w)/', "$1'$2", $base['html']);
+            if (!empty($base['text'])) $base['text'] = preg_replace('/(\w)&;(\w)/', "$1'$2", $base['text']);
+            if (!empty($base['full_text'])) $base['full_text'] = preg_replace('/(\w)&;(\w)/', "$1'$2", $base['full_text']);
             $out['candidates'][] = $base;
         }
     } else {
@@ -532,7 +535,7 @@ function social_sanitize_next_run($input) {
     foreach ($out['candidates'] as $cand) {
         if (!empty($cand['excluded'])) continue;
         $c_tags = (array)($cand['extra_tags'] ?? []);
-        if (preg_match_all('/#([\p{L}\p{N}_\-]+)/u', ($cand['full_text'] ?? '') . ' ' . ($cand['text'] ?? ''), $cm)) {
+        if (preg_match_all('/(?<![&\w])#(?!\d+;)([\p{L}\p{N}_]*[\p{L}_][\p{L}\p{N}_\-]*)/u', ($cand['full_text'] ?? '') . ' ' . ($cand['text'] ?? ''), $cm)) {
             $c_tags = array_merge($c_tags, $cm[1]);
         }
         foreach ($c_tags as $ct) {
@@ -586,6 +589,7 @@ function social_build_workbench_content($state) {
         if (!empty($c['excluded'])) continue;
         $block = wp_kses_post((string)($c['html'] ?? ''));
         if ($block === '') continue;
+        $block = preg_replace('/(\w)&;(\w)/', "$1'$2", $block);
         $commentary = trim((string)($c['commentary'] ?? ''));
         if ($commentary !== '') {
             $block = '<div class="social-digest-editorial-commentary" style="margin:0 0 10px 0;padding:10px 12px;border-left:4px solid #f59e0b;background:#fffbeb;color:#92400e;">' . esc_html($commentary) . '</div>' . $block;
@@ -711,7 +715,7 @@ function social_publish_workbench_run($state, $force_status = null) {
             foreach ((array)($state['candidates'] ?? []) as $cand) {
                 if (!empty($cand['excluded'])) continue;
                 $c_tags = (array)($cand['extra_tags'] ?? []);
-                if (preg_match_all('/#([\p{L}\p{N}_\-]+)/u', ($cand['full_text'] ?? '') . ' ' . ($cand['text'] ?? ''), $cm)) {
+                if (preg_match_all('/(?<![&\w])#(?!\d+;)([\p{L}\p{N}_]*[\p{L}_][\p{L}\p{N}_\-]*)/u', ($cand['full_text'] ?? '') . ' ' . ($cand['text'] ?? ''), $cm)) {
                     $c_tags = array_merge($c_tags, $cm[1]);
                 }
                 foreach ($c_tags as $ct) {
@@ -765,6 +769,37 @@ function social_publish_workbench_run($state, $force_status = null) {
             wp_set_post_tags($post_id, $target_tags, false);
             wp_set_object_terms($post_id, $target_tags, 'post_tag', false);
         }
+
+        // Advance cutoff timestamps immediately upon successful post insertion (inspecting all candidates including excluded ones)
+        $max_bsky_ts = 0;
+        $max_masto_ts = 0;
+
+        foreach ((array)($state['candidates'] ?? []) as $cand) {
+            $cand_ts = (int)($cand['timestamp'] ?? 0);
+            $net = strtolower($cand['network'] ?? '');
+            if ($net === 'bluesky' || $net === 'bsky') {
+                if ($cand_ts > $max_bsky_ts) $max_bsky_ts = $cand_ts;
+            } elseif ($net === 'mastodon') {
+                if ($cand_ts > $max_masto_ts) $max_masto_ts = $cand_ts;
+            }
+        }
+
+        $old_state = social_workbench_state();
+        $state_bsky = (int)($state['cutoffs']['bsky'] ?? $old_state['cutoffs']['bsky'] ?? 0);
+        $state_masto = (int)($state['cutoffs']['masto'] ?? $old_state['cutoffs']['masto'] ?? 0);
+
+        $new_bsky = max($state_bsky, $max_bsky_ts, (int)get_option('bsky_last_digest_time', 0));
+        $new_masto = max($state_masto, $max_masto_ts, (int)get_option('masto_last_digest_time', 0));
+
+        if ($new_bsky > 0) {
+            update_option('bsky_last_digest_time', $new_bsky);
+        }
+        if ($new_masto > 0) {
+            update_option('masto_last_digest_time', $new_masto);
+        }
+
+        // Cleanly clear workbench state on successful creation to prevent stale re-curation
+        social_clear_workbench_state();
 
         // Sideload all embedded post media attachments into Media Library if enabled
         if (!empty($opts['sideload_all_media'])) {
@@ -835,37 +870,6 @@ function social_publish_workbench_run($state, $force_status = null) {
                 }
             }
         }
-
-        // Advance cutoff timestamps on successful publish or draft creation (inspecting all candidates including excluded ones)
-        $max_bsky_ts = 0;
-        $max_masto_ts = 0;
-
-        foreach ((array)($state['candidates'] ?? []) as $cand) {
-            $cand_ts = (int)($cand['timestamp'] ?? 0);
-            $net = strtolower($cand['network'] ?? '');
-            if ($net === 'bluesky' || $net === 'bsky') {
-                if ($cand_ts > $max_bsky_ts) $max_bsky_ts = $cand_ts;
-            } elseif ($net === 'mastodon') {
-                if ($cand_ts > $max_masto_ts) $max_masto_ts = $cand_ts;
-            }
-        }
-
-        $old_state = social_workbench_state();
-        $state_bsky = (int)($state['cutoffs']['bsky'] ?? $old_state['cutoffs']['bsky'] ?? 0);
-        $state_masto = (int)($state['cutoffs']['masto'] ?? $old_state['cutoffs']['masto'] ?? 0);
-
-        $new_bsky = max($state_bsky, $max_bsky_ts, (int)get_option('bsky_last_digest_time', 0));
-        $new_masto = max($state_masto, $max_masto_ts, (int)get_option('masto_last_digest_time', 0));
-
-        if ($new_bsky > 0) {
-            update_option('bsky_last_digest_time', $new_bsky);
-        }
-        if ($new_masto > 0) {
-            update_option('masto_last_digest_time', $new_masto);
-        }
-
-        // Cleanly clear workbench state on successful creation to prevent stale re-curation
-        social_clear_workbench_state();
 
         // Purge W3 Total Cache and active page/object caches for the newly published digest
         if (function_exists(__NAMESPACE__ . '\\social_purge_site_caches')) {

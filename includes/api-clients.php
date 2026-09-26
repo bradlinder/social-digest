@@ -394,7 +394,7 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
         $body_html = social_clean_body_text($text, $has_card, $primary_card_url, $links_map);
 
         $bsky_record_tags = (array)($post['record']['tags'] ?? []);
-        preg_match_all('/#([\p{L}\p{N}_\-]+)/u', $text, $bsky_text_tags);
+        preg_match_all('/(?<![&\w])#(?!\d+;)([\p{L}\p{N}_]*[\p{L}_][\p{L}\p{N}_\-]*)/u', $text, $bsky_text_tags);
         $bsky_extra_tags = social_dedupe_cased_tags(array_merge($bsky_text_tags[1] ?? [], $bsky_record_tags, $bsky_facet_tags));
 
         $item_data = [
@@ -489,7 +489,8 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
         }
 
         $body_content = $post_data['content'] ?? '';
-        $clean_text   = wp_strip_all_tags($body_content);
+        $clean_text   = html_entity_decode(wp_strip_all_tags($body_content), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $clean_text   = preg_replace('/(\w)&;(\w)/', "$1'$2", $clean_text);
         $clean_handle = $username;
         $author_acct  = !empty($post_data['account']['acct']) ? $post_data['account']['acct'] : ($post_data['account']['username'] ?? $username);
         $full_acct    = (strpos($author_acct, '@') === false && !empty($instance)) ? "{$author_acct}@{$instance}" : $author_acct;
@@ -672,7 +673,7 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
         }
 
         // 4. Extract hashtags from post content
-        if (preg_match_all('/#([\p{L}\p{N}_\-]+)/u', $clean_text . ' ' . wp_strip_all_tags($body_content), $m_tags_matches)) {
+        if (preg_match_all('/(?<![&\w])#(?!\d+;)([\p{L}\p{N}_]*[\p{L}_][\p{L}\p{N}_\-]*)/u', $clean_text . ' ' . wp_strip_all_tags($body_content), $m_tags_matches)) {
             foreach ($m_tags_matches[1] as $mt) {
                 $masto_raw_tags[] = $mt;
             }
@@ -688,13 +689,14 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
         // Deduplicate case-insensitively, strictly preferring CamelCase/uppercase casing over lowercase
         $masto_extra_tags = social_dedupe_cased_tags($masto_raw_tags);
 
-        $clean_text = trim(preg_replace('/#[\p{L}\p{N}_]+/u', '', $clean_text));
+        $clean_text = trim(preg_replace('/(?<![&\w])#(?!\d+;)(?:[\p{L}\p{N}_]*[\p{L}_][\p{L}\p{N}_\-]*)/u', '', $clean_text));
+        $clean_text = preg_replace('/(\w)&;(\w)/', "$1'$2", $clean_text);
 
         $item_data = [
             'network'        => 'mastodon',
             'timestamp'      => $created_at,
             'text'           => $clean_text,
-            'full_text'      => wp_strip_all_tags($body_content),
+            'full_text'      => preg_replace('/(\w)&;(\w)/', "$1'$2", html_entity_decode(wp_strip_all_tags($body_content), ENT_QUOTES | ENT_HTML5, 'UTF-8')),
             'body_html'      => $body_html,
             'author_name'    => $author_name,
             'author_handle'  => $full_acct,
