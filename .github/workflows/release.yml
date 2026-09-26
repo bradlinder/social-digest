@@ -86,6 +86,11 @@ jobs:
           [ -f README.md ] && cp README.md "$STAGING_DIR/"
           [ -f LICENSE ] && cp LICENSE "$STAGING_DIR/"
 
+          # Copy includes if present
+          if [ -d "includes" ]; then
+            cp -r includes "$STAGING_DIR/"
+          fi
+
           # Copy assets if present
           if [ -d "assets" ]; then
             cp -r assets "$STAGING_DIR/"

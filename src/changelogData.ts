@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.40',
+  version: '5.7.41',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,23 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.39',
+  rollbackTarget: 'v5.7.40',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.41',
+    tag: 'v5.7.41',
+    isLatest: true,
+    highlights: [
+      'GitHub Release Packaging: Corrected .github/workflows/release.yml to include the /includes/ directory in release zip archives, resolving the issue where automated GitHub release zips were missing core modules and were only ~33KB.',
+      'Hardened Self-Healing Core: Re-encoded embedded modular payloads with strict AST syntax and pre-computed MD5 signatures into social-digest.php, ensuring single-file updates cleanly self-provision /includes/ with zero runtime parse errors.'
+    ]
+  },
+  {
     version: '5.7.40',
     tag: 'v5.7.40',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Cutoff Synchronization & Workbench Clearing: Enhanced social_publish_workbench_run() to advance cutoffs across all candidate timestamps and clear the workbench queue directly upon creation, ensuring subsequent scheduled cron runs never re-publish previously digested posts.',
       'Thumbnail Pool Sideloading Fallback: Upgraded featured image attachment to loop through candidate thumbnails and raw post markup if the primary image returns 404 or is CDN-restricted, ensuring every digest reliably receives a WordPress featured image.',
