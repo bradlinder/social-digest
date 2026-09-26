@@ -20,8 +20,8 @@ const b64Admin = admin.toString('base64');
 let sd = fs.readFileSync('social-digest.php', 'utf8');
 
 // Update version in header and constant
-sd = sd.replace(/Version:\s*5\.7\.\d+/g, 'Version: 5.7.42');
-sd = sd.replace(/define\('SOCIAL_DIGEST_VERSION',\s*'5\.7\.\d+'\);/g, "define('SOCIAL_DIGEST_VERSION', '5.7.42');");
+sd = sd.replace(/Version:\s*5\.7\.\d+/g, 'Version: 5.7.44');
+sd = sd.replace(/define\('SOCIAL_DIGEST_VERSION',\s*'5\.7\.\d+'\);/g, "define('SOCIAL_DIGEST_VERSION', '5.7.44');");
 
 // Consolidate redundant admin_footer hooks if present
 const oldFooterHooks = `add_action('admin_footer', function() {

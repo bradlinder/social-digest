@@ -4,16 +4,27 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.42
+Stable tag: 5.7.44
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, interactive next-run workbench, dry-run preview, media optimization (WebP/AVIF with quality sliders), and local asset caching.
+Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, interactive next-run workbench, dry-run preview, stock media sideloading, and local asset caching.
 
 == Description ==
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.44 =
+* Native Stock Image Ingestion & Elimination of Image Compression Settings:
+  1. Removed Image Re-Compression & Quality Sliders: Completely removed the experimental WebP/AVIF format conversion options and compression quality sliders (`convert_modern_media`, `webp_quality`, and `avif_quality`), restoring clean, predictable stock media behavior.
+  2. Native Stock Image Sideloading: The plugin now imports and attaches the stock original remote image file directly into the WordPress Media Library without invoking `WP_Image_Editor` or GD/Imagick re-encoding, permanently eliminating `Call to undefined method WP_Image_Editor_GD::get_output_mime_types()` and image driver discrepancies.
+  3. Resilient Featured Image Sideloading: Wrapped intermediate attachment metadata generation and candidate thumbnail selection in defensive exception guards so digest publication always completes smoothly, even if third-party image plugins or server drivers encounter issues.
+
+= 5.7.43 =
+* Media Sideloading & Featured Image Resolution Hardening:
+  1. Resolved Fatal Image Editor Error: Replaced non-existent method call `get_output_mime_types()` on `WP_Image_Editor_GD` with official WordPress core APIs (`$editor->supports_mime_type()` and `wp_image_editor_supports()`).
+  2. Exception Safety & Fallback: Wrapped modern media conversions (WebP/AVIF) in a resilient `try/catch` block. If GD or Imagick encounters image driver limitations or unexpected formats, the plugin safely retains the original uploaded image file (JPEG/PNG) and attaches it as the featured image without interrupting digest publishing.
 
 = 5.7.42 =
 * Codebase Cleanup & Security Hardening:

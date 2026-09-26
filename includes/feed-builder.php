@@ -824,10 +824,14 @@ function social_publish_workbench_run($state, $force_status = null) {
                 if (!in_array($tp, $urls_to_try, true)) $urls_to_try[] = $tp;
             }
             foreach ($urls_to_try as $try_url) {
-                $attachment_id = social_sideload_image_by_mime($try_url, $post_id, $title);
-                if ($attachment_id) {
-                    set_post_thumbnail($post_id, $attachment_id);
-                    break;
+                try {
+                    $attachment_id = social_sideload_image_by_mime($try_url, $post_id, $title);
+                    if ($attachment_id) {
+                        set_post_thumbnail($post_id, $attachment_id);
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                    error_log('Social Digest featured image sideload error: ' . $e->getMessage());
                 }
             }
         }

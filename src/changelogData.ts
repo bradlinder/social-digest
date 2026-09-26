@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.42',
+  version: '5.7.44',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,33 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.41',
+  rollbackTarget: 'v5.7.43',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.44',
+    tag: 'v5.7.44',
+    isLatest: true,
+    highlights: [
+      'Eliminated Image Re-Compression & Quality Settings: Completely removed experimental WebP/AVIF format conversion and compression quality sliders (convert_modern_media, webp_quality, avif_quality), restoring predictable, stock asset behavior.',
+      'Native Stock Image Ingestion: The plugin now imports and attaches the stock original remote image file directly into the WordPress Media Library without calling WP_Image_Editor or GD/Imagick re-encoding, permanently eliminating "Call to undefined method WP_Image_Editor_GD::get_output_mime_types()".',
+      'Defensive Featured Image Sideloading: Wrapped attachment metadata generation and candidate thumbnail selection in resilient exception guards so digest publication never crashes on image driver anomalies.'
+    ]
+  },
+  {
+    version: '5.7.43',
+    tag: 'v5.7.43',
+    isLatest: false,
+    highlights: [
+      'Image Editor Fix: Resolved fatal error Call to undefined method WP_Image_Editor_GD::get_output_mime_types() by switching to standard WordPress core APIs ($editor->supports_mime_type() and wp_image_editor_supports()).',
+      'Exception Safety: Added try/catch safeguards around modern media conversions (WebP/AVIF) so image driver failures gracefully fall back to the original image format without crashing digest publication.'
+    ]
+  },
+  {
     version: '5.7.42',
     tag: 'v5.7.42',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Security Hardening: Completely removed dynamic in-memory eval() execution from social-digest.php, replacing it with an informative admin notice if the server filesystem is read-only, ensuring 100% compliance with security scanners.',
       'Dead Code Removal: Purged legacy orphaned asset file assets/js/social-digest-editor.js left over from the v5.7.28 split editor migration.',

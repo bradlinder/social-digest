@@ -460,42 +460,6 @@ function social_sideload_image_by_mime($url, $post_id, $desc = '') {
     $upload = wp_upload_bits($filename, null, $image_data);
     if (!empty($upload['error'])) return false;
 
-    $opts = get_option('social_digest_options', []);
-
-    if (!empty($opts['convert_modern_media'])) {
-        if (!function_exists('wp_get_image_editor')) {
-            require_once(ABSPATH . WPINC . '/class-wp-image-editor.php');
-            require_once(ABSPATH . WPINC . '/class-wp-image-editor-gd.php');
-            require_once(ABSPATH . WPINC . '/class-wp-image-editor-imagick.php');
-        }
-        $editor = wp_get_image_editor($upload['file']);
-        if (!is_wp_error($editor)) {
-            $mimes = $editor->get_output_mime_types();
-            $webp_q = max(60, min(100, (int)($opts['webp_quality'] ?? 82)));
-            $avif_q = max(60, min(100, (int)($opts['avif_quality'] ?? 80)));
-
-            if (!empty($mimes['image/avif']) && function_exists('imageavif')) {
-                $editor->set_quality($avif_q);
-                $new_file = preg_replace('/\.[^.]+$/', '.avif', $upload['file']);
-                $saved = $editor->save($new_file, 'image/avif');
-                if (!is_wp_error($saved)) {
-                    @unlink($upload['file']);
-                    $upload['file'] = $saved['path'];
-                    $mime_type = 'image/avif';
-                }
-            } elseif (!empty($mimes['image/webp']) && function_exists('imagewebp')) {
-                $editor->set_quality($webp_q);
-                $new_file = preg_replace('/\.[^.]+$/', '.webp', $upload['file']);
-                $saved = $editor->save($new_file, 'image/webp');
-                if (!is_wp_error($saved)) {
-                    @unlink($upload['file']);
-                    $upload['file'] = $saved['path'];
-                    $mime_type = 'image/webp';
-                }
-            }
-        }
-    }
-
     $attach_id = wp_insert_attachment([
         'post_mime_type' => $mime_type,
         'post_title'     => sanitize_file_name($desc ?: basename($upload['file'])),
@@ -503,18 +467,22 @@ function social_sideload_image_by_mime($url, $post_id, $desc = '') {
     ], $upload['file'], $post_id);
 
     if ($attach_id && !is_wp_error($attach_id)) {
-        // CPU & Memory Mitigation: Limit thumbnail resizing to essential standard sizes
-        $size_limiter = function($sizes) {
-            $allowed = ['thumbnail', 'medium', 'medium_large', 'large', 'post-thumbnail'];
-            return array_intersect_key((array)$sizes, array_flip($allowed));
-        };
-        add_filter('intermediate_image_sizes_advanced', $size_limiter, 99);
+        try {
+            // CPU & Memory Mitigation: Limit thumbnail resizing to essential standard sizes
+            $size_limiter = function($sizes) {
+                $allowed = ['thumbnail', 'medium', 'medium_large', 'large', 'post-thumbnail'];
+                return array_intersect_key((array)$sizes, array_flip($allowed));
+            };
+            add_filter('intermediate_image_sizes_advanced', $size_limiter, 99);
 
-        $metadata = wp_generate_attachment_metadata($attach_id, $upload['file']);
-        remove_filter('intermediate_image_sizes_advanced', $size_limiter, 99);
+            $metadata = wp_generate_attachment_metadata($attach_id, $upload['file']);
+            remove_filter('intermediate_image_sizes_advanced', $size_limiter, 99);
 
-        if (!empty($metadata) && !is_wp_error($metadata)) {
-            wp_update_attachment_metadata($attach_id, $metadata);
+            if (!empty($metadata) && !is_wp_error($metadata)) {
+                wp_update_attachment_metadata($attach_id, $metadata);
+            }
+        } catch (\Throwable $e) {
+            // If GD or intermediate thumbnail generation encounters an error, retain stock attachment
         }
         return $attach_id;
     }
