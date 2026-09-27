@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.49
+Stable tag: 5.7.50
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,11 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.50 =
+* Ingestion Fetch Order Implementation & Sequential Backlog Traversal:
+  1. Active Ingestion Ordering: Connected the "Ingestion Fetch Order" setting (`fetch_order`) into the candidate slicing engine in `feed-builder.php`. When set to "Oldest Posts First", candidate articles are sorted forward in chronological order prior to enforcing the maximum post limit (`max_posts`).
+  2. Bounded Backlog Progression: When ingesting oldest posts first, updated the recorded cutoffs to the maximum timestamp among the ingested batch rather than the newest API entry, allowing administrators with large post backlogs to process sequential digest editions forward in time without skipping unimported posts.
 
 = 5.7.49 =
 * Postbox Collapse Double-Toggle Fix, Orphaned Settings Cleanup & Media Caching Activation:

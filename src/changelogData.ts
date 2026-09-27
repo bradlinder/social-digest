@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.49',
+  version: '5.7.50',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,23 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.48',
+  rollbackTarget: 'v5.7.49',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.50',
+    tag: 'v5.7.50',
+    isLatest: true,
+    highlights: [
+      'Active Ingestion Sorting: Connected the "Ingestion Fetch Order" setting (fetch_order) into the candidate ingestion pipeline in feed-builder.php. Setting this to "Oldest Posts First" properly processes and slices candidates in chronological order up to max_posts.',
+      'Sequential Backlog Progression: Bounded cutoff advancement to the newest timestamp in the ingested batch when processing oldest-first, ensuring subsequent automated or manual runs process backlogged posts forward in time without skipping unimported updates.'
+    ]
+  },
+  {
     version: '5.7.49',
     tag: 'v5.7.49',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Postbox Collapse Double-Toggle Fix: Resolved an event bubbling bug where clicking the widget handlediv toggle arrow triggered both the button and parent postbox-header listeners, causing postboxes to immediately un-collapse. Isolated handlediv events with e.stopPropagation() and reinforced defensive closed visibility CSS.',
       'Local Asset Caching Activation: Wired the "Cache remote avatars & cards locally" setting into the publication pipeline so remote avatars and link preview card thumbnails are downloaded and saved to the WordPress Media Library.',

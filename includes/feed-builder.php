@@ -273,13 +273,35 @@ function social_fetch_workbench_candidates() {
     // Group multi-post threads into unified master cards if enabled before slicing count
     $eligible = social_collapse_thread_posts($eligible, $opts);
 
-    // Re-sort newest-first so max_posts slice and chronological thumbnail extraction are strictly accurate
-    usort($eligible, function($a, $b) { return (int)($b['timestamp'] ?? 0) <=> (int)($a['timestamp'] ?? 0); });
-    if (count($eligible) > $max_posts) $eligible = array_slice($eligible, 0, $max_posts);
+    // Ingestion Fetch Order: Sort eligible posts according to fetch_order setting before slicing max_posts
+    if ($fetch_order === 'oldest') {
+        usort($eligible, function($a, $b) { return (int)($a['timestamp'] ?? 0) <=> (int)($b['timestamp'] ?? 0); });
+    } else {
+        usort($eligible, function($a, $b) { return (int)($b['timestamp'] ?? 0) <=> (int)($a['timestamp'] ?? 0); });
+    }
+    if (count($eligible) > $max_posts) {
+        $eligible = array_slice($eligible, 0, $max_posts);
+    }
     if (!$eligible) return ['success' => false, 'message' => 'No eligible posts are available after filtering and deduplication.'];
+
+    // When ingesting oldest posts first, bound cutoffs to the newest timestamp in this ingested batch
+    // so subsequent runs can process backlogged posts in forward chronological sequence
+    if ($fetch_order === 'oldest' && count($eligible) > 0) {
+        $ingested_bsky_ts = $bsky_last;
+        $ingested_masto_ts = $masto_last;
+        foreach ($eligible as $ep) {
+            $ts = (int)($ep['timestamp'] ?? 0);
+            $net = $ep['network'] ?? '';
+            if ($net === 'bsky' && $ts > $ingested_bsky_ts) $ingested_bsky_ts = $ts;
+            if ($net === 'mastodon' && $ts > $ingested_masto_ts) $ingested_masto_ts = $ts;
+        }
+        $new_bsky = $ingested_bsky_ts;
+        $new_masto = $ingested_masto_ts;
+    }
 
     // Preserve chronological list (newest first) for thumbnail selection so 'exclude_first' always excludes the most recent post in time
     $chronological_posts = $eligible;
+    usort($chronological_posts, function($a, $b) { return (int)($b['timestamp'] ?? 0) <=> (int)($a['timestamp'] ?? 0); });
 
     // Apply display ordering preference (reverse chronological, chronological, or random)
     $display_order = $opts['display_order'] ?? 'reverse';
