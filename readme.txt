@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.48
+Stable tag: 5.7.49
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,13 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.49 =
+* Postbox Collapse Double-Toggle Fix, Orphaned Settings Cleanup & Media Caching Activation:
+  1. Postbox Toggle Arrow Event Isolation: Fixed an issue where clicking the handlediv arrow button failed to minimize/collapse postbox widgets because click events bubbled up to the widget header bar and triggered a second immediate toggle. Isolated the handlediv click event with `e.stopPropagation()` and added defensive CSS `:not(.postbox-header)` visibility rules.
+  2. Local Asset Caching & Responsive Srcset Activation: Wired the previously inactive "Cache remote avatars & cards locally" and "Generate standard responsive srcset sizes" settings into the publication and media sideloading pipeline. Remote avatars and link card preview thumbnails are now cached locally in the Media Library, and sideloaded images receive responsive srcset and sizes attributes.
+  3. Orphaned Settings Cleanup: Removed obsolete legacy settings (`enable_staging_queue` and `excerpt_fold_limit`) from options registration and sanitization.
+  4. Options Schema Harmonization: Added all active admin settings to the plugin's default options registry to guarantee robust initialization and defense against omitted values.
 
 = 5.7.48 =
 * Restored Admin Postbox Widget Expand, Collapse, and Drag-and-Drop Reordering:

@@ -76,10 +76,10 @@ add_action('admin_init', function() {
             'thumb_selection_mode'   => 'random',
             'cache_local_assets'     => 1,
             'generate_srcsets'       => 1,
-            'enable_staging_queue'   => 0,
+            'sideload_all_media'     => 0,
             'rss_only_mode'          => 0,
             'output_gutenberg_blocks'=> 1,
-            'excerpt_fold_limit'     => 400,
+            'dark_mode_mode'         => 'auto',
             'fetch_order'            => 'newest',
             'display_order'          => 'reverse',
             'post_status'            => 'publish',
@@ -91,6 +91,8 @@ add_action('admin_init', function() {
             'max_total_tags'         => 8,
             'min_tag_length'         => 3,
             'keep_threads'           => 1,
+            'collapse_threads'       => 1,
+            'mobile_deep_links'      => 1,
             'include_reposts'        => 0,
             'exclude_titles'         => 0,
             'exclude_self_syndicated'=> 1,
@@ -107,6 +109,11 @@ add_action('admin_init', function() {
             'excluded_words'         => '#ad, sponsored',
             'header_text'            => '<p>Here is what we shared across social channels today:</p>',
             'footer_text'            => '<hr><p>Follow us directly on social media for real-time updates!</p>',
+            'excerpt_first_lines'    => 0,
+            'excerpt_delimiter'      => 'slash',
+            'excerpt_custom_delimiter' => ' // ',
+            'excerpt_max_items'      => 0,
+            'excerpt_append_ellipsis'=> 0,
             'nosnippet_header'               => 1,
             'nosnippet_footer'               => 1,
             'allow_snippet_on_custom_header' => 0,
@@ -243,10 +250,8 @@ function social_sanitize_settings($input) {
     $allowed_dark_modes             = ['auto', 'light', 'dark'];
     $output['dark_mode_mode']       = in_array($input['dark_mode_mode'] ?? '', $allowed_dark_modes, true) ? $input['dark_mode_mode'] : 'auto';
 
-    $output['enable_staging_queue'] = !empty($input['enable_staging_queue']) ? 1 : 0;
     $output['rss_only_mode']        = !empty($input['rss_only_mode']) ? 1 : 0;
     $output['output_gutenberg_blocks'] = !empty($input['output_gutenberg_blocks']) ? 1 : 0;
-    $output['excerpt_fold_limit']   = max(0, absint($input['excerpt_fold_limit'] ?? 400));
 
     $output['fetch_order']     = in_array($input['fetch_order'] ?? '', ['newest', 'oldest']) ? $input['fetch_order'] : 'newest';
     $display_order_val         = $input['display_order'] ?? 'reverse';
@@ -405,7 +410,8 @@ function social_render_settings_page() {
         .postbox.closed .handlediv .toggle-indicator::before {
             content: "\f140";
         }
-        .postbox.closed .inside {
+        .postbox.closed .inside,
+        .postbox.closed > :not(.postbox-header) {
             display: none !important;
         }
         .postbox .inside { padding: 16px 20px; margin: 0; }
@@ -1522,18 +1528,7 @@ Click OK to Append, or Cancel to Replace existing overrides.')) {
             }
         } catch (e) {}
 
-        // Click handler to toggle expand / collapse on handlediv or header bar
-        $(document).on('click', '.postbox .handlediv, .postbox .postbox-header', function(e) {
-            // Ignore if clicking interactive form controls, links, or buttons (other than the handlediv toggle itself)
-            if ($(e.target).closest('input, select, textarea, a, .button').length && !$(e.target).closest('.handlediv').length) {
-                return;
-            }
-            var $box = $(this).closest('.postbox');
-            $box.toggleClass('closed');
-            var isClosed = $box.hasClass('closed');
-            $box.find('.handlediv').attr('aria-expanded', isClosed ? 'false' : 'true');
-
-            // Persist closed states to localStorage
+        function sdPersistClosedPostboxes() {
             try {
                 var closedList = [];
                 $('.postbox.closed').each(function() {
@@ -1541,6 +1536,29 @@ Click OK to Append, or Cancel to Replace existing overrides.')) {
                 });
                 localStorage.setItem(pageKey + '_closed', JSON.stringify(closedList));
             } catch (err) {}
+        }
+
+        // Click handler to toggle expand / collapse on handlediv toggle button
+        $(document).on('click', '.postbox .handlediv', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var $box = $(this).closest('.postbox');
+            $box.toggleClass('closed');
+            var isClosed = $box.hasClass('closed');
+            $(this).attr('aria-expanded', isClosed ? 'false' : 'true');
+            sdPersistClosedPostboxes();
+        });
+
+        // Click handler on header bar (excluding interactive controls and handlediv)
+        $(document).on('click', '.postbox .postbox-header', function(e) {
+            if ($(e.target).closest('.handlediv, input, select, textarea, a, .button, button').length) {
+                return;
+            }
+            var $box = $(this).closest('.postbox');
+            $box.toggleClass('closed');
+            var isClosed = $box.hasClass('closed');
+            $box.find('.handlediv').attr('aria-expanded', isClosed ? 'false' : 'true');
+            sdPersistClosedPostboxes();
         });
 
         // Initialize drag-and-drop sortable

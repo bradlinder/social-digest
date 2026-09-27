@@ -497,14 +497,17 @@ function social_sideload_image_by_mime($url, $post_id, $desc = '') {
 }
 
 /**
- * Sideloads all external images referenced in post HTML content directly into the WordPress Media Library.
+ * Sideloads external images referenced in post HTML content directly into the WordPress Media Library.
  * Replaces remote image src URLs with local attachment URLs to protect against link rot and server outages.
+ * Supports targeted caching of remote avatars & preview cards, and generates responsive srcset attributes.
  *
  * @param string $content HTML content containing potential remote image references.
  * @param int $post_id WordPress post ID to attach the media items to.
- * @return string Content with remote image URLs replaced with local attachment URLs.
+ * @param bool $only_avatars_and_cards When true, only sideloads/caches remote avatars and link preview cards.
+ * @param bool $generate_srcsets When true, attaches standard WordPress image classes and generates responsive srcset sizes.
+ * @return string Content with remote image URLs replaced with local attachment URLs and responsive markup.
  */
-function social_sideload_content_media($content, $post_id) {
+function social_sideload_content_media($content, $post_id, $only_avatars_and_cards = false, $generate_srcsets = true) {
     if (empty($content) || empty($post_id)) {
         return $content;
     }
@@ -515,10 +518,13 @@ function social_sideload_content_media($content, $post_id) {
     // Static cache for URLs already processed in this request to prevent duplicate downloads
     static $processed_media_urls = [];
 
-    // Find all img tags with src
-    if (preg_match_all('/<img[^>]+src=["\']([^"\']+)["\']/i', $content, $matches)) {
-        $urls = array_unique($matches[1]);
-        foreach ($urls as $img_url) {
+    // Match all <img> tags to inspect attributes and classes
+    if (preg_match_all('/<img[^>]+>/i', $content, $img_matches)) {
+        foreach ($img_matches[0] as $img_tag) {
+            if (!preg_match('/src=["\']([^"\']+)["\']/i', $img_tag, $src_m)) {
+                continue;
+            }
+            $img_url = $src_m[1];
             $img_url_clean = trim($img_url);
             $parsed_host = wp_parse_url($img_url_clean, PHP_URL_HOST);
 
@@ -527,27 +533,71 @@ function social_sideload_content_media($content, $post_id) {
                 continue;
             }
 
-            // Check if already sideloaded in this request
-            if (isset($processed_media_urls[$img_url_clean])) {
-                $local_url = $processed_media_urls[$img_url_clean];
-                if ($local_url) {
-                    $content = str_replace($img_url, $local_url, $content);
+            // If limited to caching avatars & preview cards, verify context
+            if ($only_avatars_and_cards) {
+                $is_avatar = (strpos($img_tag, 'social-avatar') !== false);
+                $is_card   = (strpos($img_tag, 'social-card-thumb') !== false || strpos($img_tag, 'social-link-card') !== false);
+                if (!$is_avatar && !$is_card) {
+                    continue;
                 }
-                continue;
             }
 
-            // Sideload the image
-            $attachment_id = social_sideload_image_by_mime($img_url_clean, $post_id, 'Digest media asset');
-            if ($attachment_id && !is_wp_error($attachment_id)) {
-                $local_url = wp_get_attachment_url($attachment_id);
-                if ($local_url) {
-                    $processed_media_urls[$img_url_clean] = $local_url;
-                    $content = str_replace($img_url, $local_url, $content);
+            $attachment_id = 0;
+            $local_url = '';
+
+            if (isset($processed_media_urls[$img_url_clean])) {
+                $cached_entry = $processed_media_urls[$img_url_clean];
+                if (is_array($cached_entry)) {
+                    $attachment_id = $cached_entry['id'];
+                    $local_url     = $cached_entry['url'];
                 }
             } else {
-                $processed_media_urls[$img_url_clean] = false;
+                $desc = (strpos($img_tag, 'social-avatar') !== false) ? 'Social Digest avatar' : 'Digest media asset';
+                $att_res = social_sideload_image_by_mime($img_url_clean, $post_id, $desc);
+                if ($att_res && !is_wp_error($att_res)) {
+                    $attachment_id = (int)$att_res;
+                    $local_url = wp_get_attachment_url($attachment_id);
+                    if ($local_url) {
+                        $processed_media_urls[$img_url_clean] = [
+                            'id'  => $attachment_id,
+                            'url' => $local_url,
+                        ];
+                    }
+                } else {
+                    $processed_media_urls[$img_url_clean] = false;
+                }
+            }
+
+            if ($local_url && $attachment_id) {
+                $replacement_tag = $img_tag;
+                // Replace remote src with local attachment URL
+                $replacement_tag = str_replace($img_url, $local_url, $replacement_tag);
+
+                // Add standard WordPress attachment class if not present
+                if (strpos($replacement_tag, 'wp-image-') === false) {
+                    if (preg_match('/class=["\']([^"\']*)["\']/i', $replacement_tag, $class_m)) {
+                        $new_class_attr = 'class="' . esc_attr(trim($class_m[1] . ' wp-image-' . $attachment_id)) . '"';
+                        $replacement_tag = str_replace($class_m[0], $new_class_attr, $replacement_tag);
+                    } else {
+                        $replacement_tag = str_replace('<img ', '<img class="wp-image-' . $attachment_id . '" ', $replacement_tag);
+                    }
+                }
+
+                // Add responsive srcset and sizes attributes if enabled
+                if ($generate_srcsets && function_exists('wp_image_add_srcset_and_sizes')) {
+                    $meta = wp_get_attachment_metadata($attachment_id);
+                    if (is_array($meta) && !empty($meta)) {
+                        $replacement_tag = wp_image_add_srcset_and_sizes($replacement_tag, $meta, $attachment_id);
+                    }
+                }
+
+                $content = str_replace($img_tag, $replacement_tag, $content);
             }
         }
+    }
+
+    if ($generate_srcsets && function_exists('wp_filter_content_tags')) {
+        $content = wp_filter_content_tags($content);
     }
 
     return $content;

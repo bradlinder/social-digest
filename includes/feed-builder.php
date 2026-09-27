@@ -830,13 +830,19 @@ function social_publish_workbench_run($state, $force_status = null) {
         // Cleanly clear workbench state on successful creation to prevent stale re-curation
         social_clear_workbench_state();
 
-        // Sideload all embedded post media attachments into Media Library if enabled
-        if (!empty($opts['sideload_all_media'])) {
-            $updated_content = social_sideload_content_media($built['content'], $post_id);
+        // Sideload post media attachments and/or cache local assets into Media Library
+        $sideload_all = !empty($opts['sideload_all_media']);
+        $cache_local  = !empty($opts['cache_local_assets']);
+        $gen_srcsets  = !isset($opts['generate_srcsets']) || !empty($opts['generate_srcsets']);
+
+        if ($sideload_all || $cache_local) {
+            $only_avatars_and_cards = !$sideload_all && $cache_local;
+            $updated_content = social_sideload_content_media($built['content'], $post_id, $only_avatars_and_cards, $gen_srcsets);
             if ($updated_content !== $built['content']) {
+                $built['content'] = $updated_content;
                 wp_update_post([
                     'ID'           => $post_id,
-                    'post_content' => $updated_content,
+                    'post_content' => $built['content'],
                 ]);
             }
         }

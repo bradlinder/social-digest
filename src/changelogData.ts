@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.48',
+  version: '5.7.49',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,25 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.47',
+  rollbackTarget: 'v5.7.48',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.49',
+    tag: 'v5.7.49',
+    isLatest: true,
+    highlights: [
+      'Postbox Collapse Double-Toggle Fix: Resolved an event bubbling bug where clicking the widget handlediv toggle arrow triggered both the button and parent postbox-header listeners, causing postboxes to immediately un-collapse. Isolated handlediv events with e.stopPropagation() and reinforced defensive closed visibility CSS.',
+      'Local Asset Caching Activation: Wired the "Cache remote avatars & cards locally" setting into the publication pipeline so remote avatars and link preview card thumbnails are downloaded and saved to the WordPress Media Library.',
+      'Responsive Srcset Integration: Wired the "Generate standard responsive srcset sizes" setting to assign standard attachment classes (wp-image-ID) and invoke native wp_image_add_srcset_and_sizes() / wp_filter_content_tags() on sideloaded assets.',
+      'Orphaned Settings Cleanup: Removed obsolete legacy configuration keys (enable_staging_queue and excerpt_fold_limit) from options registration and sanitization routines.'
+    ]
+  },
+  {
     version: '5.7.48',
     tag: 'v5.7.48',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Admin Postbox Collapse & Drag-and-Drop Restoration: Fixed an issue where postbox collapse toggles and drag-and-drop widget reordering stopped responding due to an admin hook suffix mismatch preventing jquery-ui-sortable and postbox scripts from loading on the Posts submenu.',
       'Explicit Dashicon Toggle Indicator Styles: Added explicit CSS styling for .postbox .handlediv and .toggle-indicator with Dashicons up/down glyphs and strict display:none rules for closed postbox panels.',
