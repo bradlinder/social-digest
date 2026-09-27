@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.47',
+  version: '5.7.48',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,25 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.46',
+  rollbackTarget: 'v5.7.47',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.48',
+    tag: 'v5.7.48',
+    isLatest: true,
+    highlights: [
+      'Admin Postbox Collapse & Drag-and-Drop Restoration: Fixed an issue where postbox collapse toggles and drag-and-drop widget reordering stopped responding due to an admin hook suffix mismatch preventing jquery-ui-sortable and postbox scripts from loading on the Posts submenu.',
+      'Explicit Dashicon Toggle Indicator Styles: Added explicit CSS styling for .postbox .handlediv and .toggle-indicator with Dashicons up/down glyphs and strict display:none rules for closed postbox panels.',
+      'Interactive Header Click Handlers: Added unified click handlers on both the toggle arrows and widget headers with form-element exclusion guards.',
+      'Widget State & Order Persistence: Collapsed/expanded widget states and custom drag-and-drop sort orders are now preserved in localStorage across page reloads.'
+    ]
+  },
+  {
     version: '5.7.47',
     tag: 'v5.7.47',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Temporary Header Search Snippet Toggle: Added an independent settings toggle under "Article Framing & Lead-In / Footer Templates" that allows custom lead-in headers entered on the Actions workbench for a specific digest to be visible to Google Search snippets (by omitting the data-nosnippet attribute).',
       'Strict Default Protection: When the toggle is off, or if no custom header text is entered on the workbench, standard default headers remain strictly protected from search snippets with data-nosnippet.',

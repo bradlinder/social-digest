@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.47
+Stable tag: 5.7.48
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,13 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.48 =
+* Restored Admin Postbox Widget Expand, Collapse, and Drag-and-Drop Reordering:
+  1. Script Enqueue Hook Resolution: Fixed an issue where `postbox` and `jquery-ui-sortable` scripts were only enqueued on `settings_page_social-digest-settings`, leaving them unqueued when visiting via the primary Posts submenu (`posts_page_social-digest-settings`) or the Admin Bar shortcut.
+  2. Toggle Indicator & Collapse Styles: Added explicit CSS rules for `.postbox .handlediv`, `.postbox .handlediv .toggle-indicator::before` (Dashicons up/down indicators), and `.postbox.closed .inside { display: none !important; }` so panels collapse cleanly.
+  3. Interactive Drag & Click Handlers: Added unified click handlers on both the toggle arrows and the widget header bars, with interactive exclusion guards and grabbing drag handles.
+  4. Local Storage State Persistence: Collapsed/expanded widget states and custom drag-and-drop sort orders are now remembered across page reloads.
 
 = 5.7.47 =
 * Granular Google Search Snippet Visibility Controls for Temporary Framing Overrides:

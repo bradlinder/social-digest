@@ -359,6 +359,10 @@ function social_render_settings_page() {
             align-items: center;
             justify-content: space-between;
             user-select: none;
+            cursor: pointer;
+        }
+        .postbox.closed .postbox-header {
+            border-bottom: none;
         }
         .postbox .hndle {
             margin: 0;
@@ -369,11 +373,46 @@ function social_render_settings_page() {
             flex-grow: 1;
         }
         .postbox .hndle:active { cursor: grabbing; }
+        .postbox .handlediv {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            margin: -4px -6px -4px 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            border-radius: 4px;
+            transition: color 0.15s ease, background 0.15s ease;
+        }
+        .postbox .handlediv:hover,
+        .postbox .handlediv:focus {
+            color: #0f172a;
+            background: #e2e8f0;
+            outline: none;
+        }
+        .postbox .handlediv .toggle-indicator::before {
+            content: "\f142";
+            display: inline-block;
+            font: normal 20px/1 dashicons;
+            speak: never;
+            -webkit-font-smoothing: antialiased;
+            text-decoration: inherit;
+        }
+        .postbox.closed .handlediv .toggle-indicator::before {
+            content: "\f140";
+        }
+        .postbox.closed .inside {
+            display: none !important;
+        }
         .postbox .inside { padding: 16px 20px; margin: 0; }
         .social-sortable-placeholder {
             border: 2px dashed #2271b1 !important;
             background: #f0f6fc !important;
-            min-height: 80px;
+            min-height: 50px;
             margin-bottom: 20px;
             border-radius: 6px;
         }
@@ -1094,8 +1133,10 @@ Click OK to Append, or Cancel to Replace existing overrides.')) {
             <form method="post">
                 <?php wp_nonce_field('sd53_workbench_action', 'sd53_nonce'); ?>
 
-                <!-- TOP QUICK ACTIONS WORKBENCH -->
-                <div class="postbox" id="social_wb_box_quick_actions" style="border-left: 5px solid #2271b1;">
+                <div class="meta-box-sortables ui-sortable" id="social_wb_main_sortable">
+
+                    <!-- TOP QUICK ACTIONS WORKBENCH -->
+                    <div class="postbox" id="social_wb_box_quick_actions" style="border-left: 5px solid #2271b1;">
                     <div class="postbox-header">
                         <h2 class="hndle">
                             <span class="dashicons dashicons-admin-generic" style="color:#2271b1; margin-right:4px;"></span>
@@ -1114,8 +1155,6 @@ Click OK to Append, or Cancel to Replace existing overrides.')) {
                         </div>
                     </div>
                 </div>
-
-                <div class="meta-box-sortables ui-sortable" id="social_wb_main_sortable">
                     
                     <!-- ARTICLES LIST & PINNING -->
                     <div class="postbox" id="social_wb_box_candidates" style="border-left: 5px solid #0284c7;">
@@ -1451,17 +1490,75 @@ Click OK to Append, or Cancel to Replace existing overrides.')) {
     }
 
     jQuery(document).ready(function($) {
-        if (typeof postboxes !== 'undefined') {
-            postboxes.add_postbox_toggles('settings_page_social-digest-settings');
-        }
+        var pageKey = 'sd_postbox_' + ($('#social_settings_sortable').length ? 'settings' : 'workbench');
+
+        // Restore saved closed/expanded states from localStorage
+        try {
+            var savedClosed = JSON.parse(localStorage.getItem(pageKey + '_closed') || '[]');
+            if (Array.isArray(savedClosed)) {
+                savedClosed.forEach(function(boxId) {
+                    var $b = $('#' + boxId);
+                    if ($b.length) {
+                        $b.addClass('closed');
+                        $b.find('.handlediv').attr('aria-expanded', 'false');
+                    }
+                });
+            }
+        } catch (e) {}
+
+        // Restore saved widget order from localStorage
+        try {
+            var savedOrder = JSON.parse(localStorage.getItem(pageKey + '_order') || '[]');
+            if (Array.isArray(savedOrder) && savedOrder.length) {
+                var $container = $('#social_settings_sortable, #social_wb_main_sortable').first();
+                if ($container.length) {
+                    savedOrder.forEach(function(boxId) {
+                        var $el = $('#' + boxId);
+                        if ($el.length && $el.parent().is($container)) {
+                            $container.append($el);
+                        }
+                    });
+                }
+            }
+        } catch (e) {}
+
+        // Click handler to toggle expand / collapse on handlediv or header bar
+        $(document).on('click', '.postbox .handlediv, .postbox .postbox-header', function(e) {
+            // Ignore if clicking interactive form controls, links, or buttons (other than the handlediv toggle itself)
+            if ($(e.target).closest('input, select, textarea, a, .button').length && !$(e.target).closest('.handlediv').length) {
+                return;
+            }
+            var $box = $(this).closest('.postbox');
+            $box.toggleClass('closed');
+            var isClosed = $box.hasClass('closed');
+            $box.find('.handlediv').attr('aria-expanded', isClosed ? 'false' : 'true');
+
+            // Persist closed states to localStorage
+            try {
+                var closedList = [];
+                $('.postbox.closed').each(function() {
+                    if (this.id) closedList.push(this.id);
+                });
+                localStorage.setItem(pageKey + '_closed', JSON.stringify(closedList));
+            } catch (err) {}
+        });
+
+        // Initialize drag-and-drop sortable
         if ($.fn.sortable) {
             $('#social_settings_sortable, #social_wb_main_sortable').sortable({
-                handle: '.hndle',
-                items: '.postbox',
+                handle: '.postbox-header',
+                items: '> .postbox',
+                cancel: '.handlediv, input, select, textarea, button, a',
                 placeholder: 'social-sortable-placeholder',
                 forcePlaceholderSize: true,
                 opacity: 0.8,
-                cursor: 'grabbing'
+                cursor: 'grabbing',
+                update: function() {
+                    try {
+                        var order = $(this).sortable('toArray');
+                        localStorage.setItem(pageKey + '_order', JSON.stringify(order));
+                    } catch (err) {}
+                }
             });
         }
 
