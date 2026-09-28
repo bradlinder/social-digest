@@ -971,7 +971,7 @@ function social_render_settings_page() {
                                                                 <button type="button" class="button button-small" onclick="sdSortOverrides('az')" title="Sort rules alphabetically A to Z">🔤 Sort A→Z</button>
                                                                 <button type="button" class="button button-small" onclick="sdSortOverrides('za')" title="Sort rules Z to A">🔤 Sort Z→A</button>
                                                                 <button type="button" class="button button-small" onclick="sdSortOverrides('reverse')" title="Reverse order of rules">🔄 Reverse Order</button>
-                                                                <button type="button" class="button button-small" onclick="sdDedupeOverrides()" title="Remove duplicate rules case-insensitively">✨ Deduplicate</button>
+                                                                <button type="button" class="button button-small" onclick="sdDedupeOverrides()" title="Remove duplicate rules case-sensitively">✨ Deduplicate</button>
                                                                 <button type="button" class="button button-small" onclick="sdClearOverrides()" title="Clear all custom rules from the box">🧹 Clear All</button>
                                                             </div>
                                                             <div style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;">
@@ -1194,10 +1194,10 @@ function social_render_settings_page() {
                                             cleanRules.push(trimmed);
                                             continue;
                                         }
-                                        var key = trimmed.toLowerCase().replace(/[\s_\-]/g, '');
+                                        var key = trimmed.replace(/[\s_\-]/g, '');
                                         if (trimmed.indexOf('=') !== -1) {
                                             var parts = trimmed.split('=');
-                                            key = parts[0].trim().replace(/^#/, '').toLowerCase().replace(/[\s_\-]/g, '');
+                                            key = parts[0].trim().replace(/^#/, '').replace(/[\s_\-]/g, '');
                                         }
                                         if (!seenKeys[key]) {
                                             seenKeys[key] = true;

@@ -892,7 +892,7 @@ function social_normalize_overrides_newlines($str) {
 }
 
 /**
- * Deduplicates custom tag title override rules case-insensitively,
+ * Deduplicates custom tag title override rules case-sensitively,
  * preserving comments and clean one-rule-per-line formatting.
  *
  * @param string $str Raw custom overrides string.
@@ -916,10 +916,10 @@ function social_dedupe_override_rules($str) {
             continue;
         }
 
-        $key = mb_strtolower(str_replace([' ', '_', '-'], '', $trimmed));
+        $key = str_replace([' ', '_', '-'], '', $trimmed);
         if (strpos($trimmed, '=') !== false) {
             list($k) = explode('=', $trimmed, 2);
-            $key = mb_strtolower(str_replace([' ', '_', '-'], '', ltrim(trim($k), '#')));
+            $key = str_replace([' ', '_', '-'], '', ltrim(trim($k), '#'));
         }
 
         if (!isset($seen_keys[$key])) {

@@ -8,6 +8,11 @@ Social Digest - Feature Roadmap & Release Status
 2. Automated Weekly Archive Digest View [Publishing]:
    - Dedicated weekly/monthly archive rollup view grouping published digests with summary metrics.
 
+0. Release v5.8.10 Case-Sensitive Tag Deduplication & Pure User-Managed Overrides (Completed in v5.8.10)
+-------------------------------------------------------------------------------------------------------
+[x] Case-Sensitive Deduplication (v5.8.10): Updated the deduplication engine (`social_dedupe_override_rules` in PHP and `sdDedupeLines` in admin JavaScript) to be strictly case-sensitive. This preserves distinct casing rules (e.g. differentiating between `XPS*` and `xps*` or specialized acronyms) while cleanly eliminating exact duplicate entries.
+[x] Pure User-Managed Override Rules (v5.8.10): Fully removed baseline injections and forced mergers so the Custom Tag Title Overrides box contains solely user-entered rules.
+
 0. Release v5.8.9 Line Break Normalization, Snapshot Corruption Auto-Repair & Wildcard Reference Clarification (Completed in v5.8.9)
 -------------------------------------------------------------------------------------------------------------------------------------
 [x] Automatic Line Break Normalization & Repair (v5.8.9): Resolved an issue where escaped carriage return / newline delimiters (`\r\n`) in snapshots or form submissions could degrade into literal `rn` text strings. Added automatic self-healing newline reconstruction (`social_normalize_overrides_newlines` and `sdCleanOverrideString`) across both PHP and client JavaScript to seamlessly repair corrupted backups and restore clean, one-rule-per-line formatting.

@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.9
+Stable tag: 5.8.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,11 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.10 =
+* Case-Sensitive Tag Deduplication & Pure User-Managed Override Rules:
+  1. Case-Sensitive Deduplication: Updated the deduplication engine (`social_dedupe_override_rules` in PHP and `sdDedupeLines` in admin JavaScript) to be strictly case-sensitive. This allows administrators to preserve distinct casing rules (e.g. differentiating between `XPS*` and `xps*` or specialized acronyms) while cleanly eliminating exact duplicate entries.
+  2. Complete Elimination of Baseline Injections: Fully removed hardcoded baseline list injections and forced mergers so the Custom Tag Title Overrides box contains solely user-entered rules.
 
 = 5.8.9 =
 * Line Break Normalization, Snapshot Corruption Auto-Repair & Wildcard Reference Clarification:

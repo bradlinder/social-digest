@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.8.9',
+  version: '5.8.10',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,23 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.8.8',
+  rollbackTarget: 'v5.8.9',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.8.10',
+    tag: 'v5.8.10',
+    isLatest: true,
+    highlights: [
+      'Case-Sensitive Tag Deduplication: Updated the deduplication engine (social_dedupe_override_rules in PHP and sdDedupeLines in JavaScript) to be strictly case-sensitive. This allows administrators to preserve distinct casing rules (e.g. differentiating between XPS* and xps* or specialized acronyms) while cleanly eliminating exact duplicate entries.',
+      'Pure User-Managed Override Rules: Fully removed baseline injections and forced mergers so the Custom Tag Title Overrides box contains solely user-entered rules.'
+    ]
+  },
+  {
     version: '5.8.9',
     tag: 'v5.8.9',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Automatic Line Break Normalization & Repair: Resolved an issue where escaped carriage return / newline delimiters (\\r\\n) in snapshots or form submissions could degrade into literal "rn" text strings. Added automatic self-healing newline reconstruction across both PHP and client JavaScript to seamlessly repair corrupted backups and restore clean, one-rule-per-line formatting.',
       'Duplicate Rule Filtering: Automatically deduplicates repeated adjacent rules during baseline merging.',
