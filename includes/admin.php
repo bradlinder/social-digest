@@ -543,13 +543,19 @@ function social_render_settings_page() {
         <?php settings_errors('sd53'); ?>
 
         <?php if ($active_tab === 'settings'): ?>
-            <div style="background:#fff; border:1px solid #c3c4c7; padding:8px 12px; border-radius:4px; margin-bottom:15px; font-size:12px; color:#50575e; display:flex; align-items:center; gap:6px;">
-                <span class="dashicons dashicons-move" style="color:#2271b1;"></span>
-                <span>Drag widget headers or click toggle arrows to expand, collapse, and reorder.</span>
-            </div>
-
             <form method="post" action="options.php">
                 <?php settings_fields('social_digest_group'); ?>
+
+                <div style="background:#fff; border:1px solid #c3c4c7; padding:10px 14px; border-radius:4px; margin-bottom:15px; font-size:12px; color:#50575e; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span class="dashicons dashicons-move" style="color:#2271b1;"></span>
+                        <span>Drag widget headers or click toggle arrows to expand, collapse, and reorder.</span>
+                    </div>
+                    <div>
+                        <?php submit_button('Save Settings', 'primary', 'submit_top', false); ?>
+                    </div>
+                </div>
+
                 <div id="poststuff">
                     <div id="post-body" class="metabox-holder columns-1">
                         <div id="postbox-container-1" class="postbox-container">
@@ -1619,7 +1625,14 @@ function social_render_settings_page() {
 
                                 document.addEventListener('DOMContentLoaded', sdUpdateLineCount);
                                 </script>
-                                <?php submit_button('Save Settings'); ?>
+                            </div><!-- #social_settings_sortable -->
+                        </div><!-- #postbox-container-1 -->
+                    </div><!-- #post-body -->
+                </div><!-- #poststuff -->
+
+                <div style="margin-top: 20px; margin-bottom: 25px;">
+                    <?php submit_button('Save Settings', 'primary large', 'submit_bottom'); ?>
+                </div>
             </form>
 
         <?php elseif ($active_tab === 'workbench'): ?>

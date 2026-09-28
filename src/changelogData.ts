@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.8.10',
+  version: '5.8.11',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,23 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.8.9',
+  rollbackTarget: 'v5.8.10',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.8.11',
+    tag: 'v5.8.11',
+    isLatest: true,
+    highlights: [
+      'Dual Save Settings Buttons: Added a matching primary "Save Settings" button directly to the top bar of the Settings tab alongside the drag-and-drop indicator, allowing instant saves from both the top and bottom of the page without scrolling.',
+      'Poststuff Container DOM Repair: Properly closed WordPress #poststuff and .metabox-holder wrapper elements before rendering the bottom submit button to ensure consistent visibility across all viewport heights.'
+    ]
+  },
+  {
     version: '5.8.10',
     tag: 'v5.8.10',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Case-Sensitive Tag Deduplication: Updated the deduplication engine (social_dedupe_override_rules in PHP and sdDedupeLines in JavaScript) to be strictly case-sensitive. This allows administrators to preserve distinct casing rules (e.g. differentiating between XPS* and xps* or specialized acronyms) while cleanly eliminating exact duplicate entries.',
       'Pure User-Managed Override Rules: Fully removed baseline injections and forced mergers so the Custom Tag Title Overrides box contains solely user-entered rules.'
