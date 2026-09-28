@@ -104,6 +104,7 @@ add_action('admin_init', function() {
             'title_tag_max_count'          => 3,
             'title_tag_selection_strategy' => 'first',
             'title_tag_custom_overrides'   => social_get_default_tag_overrides_string(),
+            'overrides_snapshot'           => [],
             'same_day_suffix_tpl'    => ' (Part {part})',
             'excluded_words'         => '#ad, sponsored',
             'header_text'            => '<p>Here is what we shared across social channels today:</p>',
@@ -215,6 +216,44 @@ add_action('admin_init', function() {
     }
 });
 
+// AJAX handler for saving on-site backup snapshot of tag override rules
+add_action('wp_ajax_sd_save_snapshot', function() {
+    check_ajax_referer('sd_snapshot_action', 'nonce');
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(['message' => 'Unauthorized']);
+    }
+
+    $raw_content = isset($_POST['content']) ? (string)$_POST['content'] : '';
+    $clean_content = sanitize_textarea_field($raw_content);
+
+    $lines = array_filter(array_map('trim', explode("\n", $clean_content)), function($l) {
+        return $l !== '' && strpos($l, '#') !== 0;
+    });
+    $count = count($lines);
+    $time = time();
+    $tz = wp_timezone();
+    $time_str = wp_date('Y-m-d H:i:s T', $time, $tz);
+
+    $snapshot = [
+        'content'  => $clean_content,
+        'time'     => $time,
+        'time_str' => $time_str,
+        'count'    => $count,
+    ];
+
+    $opts = get_option('social_digest_options', []);
+    if (!is_array($opts)) {
+        $opts = [];
+    }
+    $opts['overrides_snapshot'] = $snapshot;
+    update_option('social_digest_options', $opts);
+
+    wp_send_json_success([
+        'message'  => "On-site backup snapshot saved to database! ({$count} active rules on {$time_str})",
+        'snapshot' => $snapshot,
+    ]);
+});
+
 function social_sanitize_settings($input) {
     $output = [];
     $output['network_mode']       = in_array($input['network_mode'] ?? '', ['bsky', 'mastodon', 'both']) ? $input['network_mode'] : 'both';
@@ -292,6 +331,22 @@ function social_sanitize_settings($input) {
     $output['title_tag_selection_strategy'] = in_array($input['title_tag_selection_strategy'] ?? '', $allowed_strategies, true) ? $input['title_tag_selection_strategy'] : 'first';
 
     $output['title_tag_custom_overrides']= sanitize_textarea_field($input['title_tag_custom_overrides'] ?? '');
+
+    if (isset($input['overrides_snapshot'])) {
+        $decoded = json_decode(stripslashes((string)$input['overrides_snapshot']), true);
+        if (is_array($decoded) && isset($decoded['content'])) {
+            $output['overrides_snapshot'] = [
+                'content'   => sanitize_textarea_field($decoded['content']),
+                'time'      => absint($decoded['time'] ?? time()),
+                'time_str'  => sanitize_text_field($decoded['time_str'] ?? ''),
+                'count'     => absint($decoded['count'] ?? 0),
+            ];
+        } else {
+            $output['overrides_snapshot'] = $opts['overrides_snapshot'] ?? [];
+        }
+    } else {
+        $output['overrides_snapshot'] = $opts['overrides_snapshot'] ?? [];
+    }
 
     if (isset($input['same_day_suffix_tpl'])) {
         $output['same_day_suffix_tpl'] = sanitize_text_field($input['same_day_suffix_tpl']);
@@ -911,13 +966,22 @@ function social_render_settings_page() {
                                                                 <button type="button" class="button button-small" onclick="sdSortOverrides('reverse')" title="Reverse order of rules (useful for recency / swapping newest to top)">🔄 Reverse Order</button>
                                                                 <button type="button" class="button button-small" onclick="sdResetOverrides()" title="Restore the built-in baseline terms">↺ Reset Baseline</button>
                                                             </div>
-                                                            <div style="display: flex; gap: 4px;">
+                                                            <div style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;">
+                                                                <?php 
+                                                                $snap = $opts['overrides_snapshot'] ?? []; 
+                                                                $has_snap = !empty($snap['content']); 
+                                                                ?>
+                                                                <button type="button" class="button button-small" onclick="sdSaveSnapshot()" title="Save an instant on-site backup snapshot of your current rules to the WordPress database">💾 Backup Snapshot</button>
+                                                                <button type="button" class="button button-small" id="sd_restore_snapshot_btn" onclick="sdRestoreSnapshot()" <?php echo !$has_snap ? 'disabled style="opacity: 0.6;"' : ''; ?> title="<?php echo $has_snap ? esc_attr('Restore on-site backup snapshot saved on ' . ($snap['time_str'] ?? '') . ' (' . ($snap['count'] ?? 0) . ' rules)') : 'No on-site snapshot saved yet'; ?>">↺ Restore Snapshot</button>
+                                                                <span id="sd_snapshot_indicator" style="font-size: 11px; color: #64748b;"><?php if ($has_snap && !empty($snap['time_str'])): ?>(Saved: <?php echo esc_html($snap['time_str']); ?> &bull; <?php echo esc_html($snap['count'] ?? 0); ?> rules)<?php endif; ?></span>
+                                                                <span style="color:#cbd5e1; margin:0 2px;">|</span>
                                                                 <button type="button" class="button button-small" onclick="sdExportCustomOverrides()" title="Export all rules to a .txt backup file">📥 Export (.txt)</button>
                                                                 <button type="button" class="button button-small" onclick="document.getElementById('sd_import_overrides_file').click()" title="Import rules from a .txt or .csv file">📤 Import (.txt)</button>
                                                                 <input type="file" id="sd_import_overrides_file" accept=".txt,.csv" style="display:none;" onchange="sdImportCustomOverrides(this)">
                                                             </div>
                                                         </div>
 
+                                                        <input type="hidden" id="sd_overrides_snapshot_field" name="social_digest_options[overrides_snapshot]" value="<?php echo esc_attr(json_encode($opts['overrides_snapshot'] ?? [])); ?>">
                                                         <div id="sd_import_status" style="display:none; margin-bottom: 6px; padding: 6px 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; font-size: 11px; color: #166534; font-weight: 500;"></div>
 
                                                         <!-- Overrides Textarea -->
@@ -1096,6 +1160,8 @@ function social_render_settings_page() {
                                 var sdSearchMatches = [];
                                 var sdCurrentMatchIdx = -1;
                                 var sdDefaultBaselineText = <?php echo json_encode(social_get_default_tag_overrides_string()); ?>;
+                                var sdSnapshot = <?php echo json_encode($opts['overrides_snapshot'] ?? null); ?>;
+                                var sdSnapshotNonce = <?php echo json_encode(wp_create_nonce('sd_snapshot_action')); ?>;
 
                                 function sdUpdateLineCount() {
                                     var textarea = document.getElementById('sd_title_tag_custom_overrides');
@@ -1203,6 +1269,148 @@ function social_render_settings_page() {
                                         try {
                                             textarea.dispatchEvent(new Event('change', { bubbles: true }));
                                         } catch (e) {}
+                                    }
+                                }
+
+                                function sdSaveSnapshot() {
+                                    var textarea = document.getElementById('sd_title_tag_custom_overrides');
+                                    if (!textarea) return;
+                                    var content = textarea.value.trim();
+
+                                    var lines = content.split('\n').filter(function(l) { return l.trim().length > 0 && l.trim().charAt(0) !== '#'; });
+                                    var ruleCount = lines.length;
+
+                                    if (!content && !confirm("Your tag overrides box is currently empty. Do you want to save an empty backup snapshot?")) {
+                                        return;
+                                    }
+
+                                    var now = new Date();
+                                    var timeStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                    var snapshotObj = {
+                                        content: textarea.value,
+                                        time: Math.floor(now.getTime() / 1000),
+                                        time_str: timeStr,
+                                        count: ruleCount
+                                    };
+
+                                    // Stash in local memory and hidden form field for persistence
+                                    sdSnapshot = snapshotObj;
+                                    var hiddenField = document.getElementById('sd_overrides_snapshot_field');
+                                    if (hiddenField) {
+                                        hiddenField.value = JSON.stringify(snapshotObj);
+                                    }
+                                    try {
+                                        localStorage.setItem('sd_overrides_snapshot', JSON.stringify(snapshotObj));
+                                    } catch(e) {}
+
+                                    // Update Restore Snapshot button
+                                    var restoreBtn = document.getElementById('sd_restore_snapshot_btn');
+                                    if (restoreBtn) {
+                                        restoreBtn.disabled = false;
+                                        restoreBtn.style.opacity = '1';
+                                        restoreBtn.title = 'Restore on-site backup snapshot saved on ' + timeStr + ' (' + ruleCount + ' rules)';
+                                    }
+
+                                    var indicator = document.getElementById('sd_snapshot_indicator');
+                                    if (indicator) {
+                                        indicator.innerHTML = '(Saved: ' + timeStr + ' &bull; ' + ruleCount + ' rules)';
+                                    }
+
+                                    var statusEl = document.getElementById('sd_import_status');
+                                    if (statusEl) {
+                                        statusEl.textContent = '⏳ Saving backup snapshot to on-site database...';
+                                        statusEl.style.display = 'block';
+                                        statusEl.style.background = '#eff6ff';
+                                        statusEl.style.borderColor = '#bfdbfe';
+                                        statusEl.style.color = '#1e40af';
+                                    }
+
+                                    // Persist to server via AJAX immediately
+                                    var formData = new FormData();
+                                    formData.append('action', 'sd_save_snapshot');
+                                    formData.append('nonce', sdSnapshotNonce);
+                                    formData.append('content', textarea.value);
+
+                                    fetch(typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php', {
+                                        method: 'POST',
+                                        body: formData
+                                    }).then(function(res) {
+                                        return res.json();
+                                    }).then(function(data) {
+                                        if (data && data.success) {
+                                            if (data.data && data.data.snapshot) {
+                                                sdSnapshot = data.data.snapshot;
+                                                if (hiddenField) hiddenField.value = JSON.stringify(sdSnapshot);
+                                                if (indicator) {
+                                                    indicator.innerHTML = '(Saved: ' + (sdSnapshot.time_str || timeStr) + ' &bull; ' + (sdSnapshot.count || ruleCount) + ' rules)';
+                                                }
+                                            }
+                                            if (statusEl) {
+                                                statusEl.textContent = '✓ On-site backup snapshot saved! (' + ruleCount + ' rules saved at ' + timeStr + ')';
+                                                statusEl.style.display = 'block';
+                                                statusEl.style.background = '#f0fdf4';
+                                                statusEl.style.borderColor = '#bbf7d0';
+                                                statusEl.style.color = '#166534';
+                                                setTimeout(function() { statusEl.style.display = 'none'; }, 6000);
+                                            }
+                                        } else {
+                                            throw new Error(data && data.data && data.data.message ? data.data.message : 'Save error');
+                                        }
+                                    }).catch(function() {
+                                        if (statusEl) {
+                                            statusEl.textContent = '✓ Snapshot saved locally (' + ruleCount + ' rules)! Click "Save Settings" below to persist permanently.';
+                                            statusEl.style.display = 'block';
+                                            statusEl.style.background = '#fefce8';
+                                            statusEl.style.borderColor = '#fef08a';
+                                            statusEl.style.color = '#854d0e';
+                                            setTimeout(function() { statusEl.style.display = 'none'; }, 7000);
+                                        }
+                                    });
+                                }
+
+                                function sdRestoreSnapshot() {
+                                    var snapshot = sdSnapshot;
+                                    if (!snapshot || typeof snapshot.content === 'undefined') {
+                                        try {
+                                            var local = localStorage.getItem('sd_overrides_snapshot');
+                                            if (local) snapshot = JSON.parse(local);
+                                        } catch(e) {}
+                                    }
+
+                                    if (!snapshot || typeof snapshot.content === 'undefined' || snapshot.content === null) {
+                                        alert('No on-site backup snapshot found. Click "💾 Backup Snapshot" first to save your current rules.');
+                                        return;
+                                    }
+
+                                    var dateStr = snapshot.time_str || 'previously saved backup';
+                                    var ruleCount = typeof snapshot.count !== 'undefined' ? snapshot.count : 'existing';
+                                    var msg = "Restore on-site backup snapshot from " + dateStr + " (" + ruleCount + " rules)?\n\n" +
+                                              "This will replace the current contents of your Custom Tag Title Overrides box.";
+
+                                    if (!confirm(msg)) {
+                                        return;
+                                    }
+
+                                    var textarea = document.getElementById('sd_title_tag_custom_overrides');
+                                    if (textarea) {
+                                        textarea.value = snapshot.content;
+                                        sdUpdateLineCount();
+                                        try {
+                                            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                                            textarea.dispatchEvent(new Event('change', { bubbles: true }));
+                                        } catch(e) {}
+
+                                        var statusEl = document.getElementById('sd_import_status');
+                                        if (statusEl) {
+                                            statusEl.textContent = '✓ Restored snapshot from ' + dateStr + ' (' + ruleCount + ' rules)! Click "Save Settings" below to apply changes.';
+                                            statusEl.style.display = 'block';
+                                            statusEl.style.background = '#f0fdf4';
+                                            statusEl.style.borderColor = '#bbf7d0';
+                                            statusEl.style.color = '#166534';
+                                            setTimeout(function() { statusEl.style.display = 'none'; }, 7000);
+                                        } else {
+                                            alert('Snapshot restored (' + ruleCount + ' rules)! Click "Save Settings" below to apply.');
+                                        }
                                     }
                                 }
 

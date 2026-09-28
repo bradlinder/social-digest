@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.8.4',
+  version: '5.8.5',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,25 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.8.3',
+  rollbackTarget: 'v5.8.4',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.8.5',
+    tag: 'v5.8.5',
+    isLatest: true,
+    highlights: [
+      'On-Site Tag Overrides Backup & Restore Snapshot Tool: Added dedicated "Backup Snapshot" and "Restore Snapshot" buttons directly beside the Export and Import buttons in the Custom Tag Title Overrides tool.',
+      'Instant AJAX & Local Fallback Persistence: Captures snapshot content, timestamp, and active rule count, immediately saving to the WordPress options table (`social_digest_options[\'overrides_snapshot\']`) via authenticated AJAX (`wp_ajax_sd_save_snapshot`) with graceful local staging fallback.',
+      'Safe One-Click Restore: Restores the exact rules snapshot with confirmation dialog showing date and rule count, repopulating the textarea and triggering reactive input/change events.',
+      'Live Status & Indicator Feedback: Displays dynamic visual feedback banners upon save and restore, accompanied by an inline status indicator showing the timestamp and rule count of the latest backup.'
+    ]
+  },
+  {
     version: '5.8.4',
     tag: 'v5.8.4',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Retired Dynamic Vocabulary Database Scraper: Removed automated post title and taxonomy database scanning to eliminate self-referential automated headline loops, database queries, and background memory spikes.',
       'Fully Visible & Editable Built-In Baseline Terms: All 28+ built-in tech brand terms (Chromebook, Coreboot, Dell XPS, Dimensity, Elite Mini PC, F-Droid, MediaTek, Nintendo Switch, Raspberry Pi, Steam Deck, etc.) are now pre-populated directly into the Custom Tag Title Overrides box where they are completely visible, editable, and customizable by publishers.',

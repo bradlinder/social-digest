@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.4
+Stable tag: 5.8.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,13 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.5 =
+* On-Site Tag Overrides Backup & Restore Snapshot Tool:
+  1. Instant On-Site Backup Snapshots: Added a dedicated "Backup Snapshot" button positioned directly beside the Export and Import actions in the Custom Tag Title Overrides tool. Captures an immediate, on-site backup of all active rules, active rule counts, and timestamp.
+  2. Direct Database & Local Fallback Persistence: Snapshots are committed immediately to the WordPress database (`social_digest_options['overrides_snapshot']`) via an administrative AJAX endpoint (`wp_ajax_sd_save_snapshot`) with nonce verification and capability protection, with local staging fallback on standard settings save.
+  3. One-Click Safe Restore: Added a "Restore Snapshot" button that displays the exact backup timestamp and rule count in its tooltip, prompts for user confirmation, replaces the textarea contents, updates line counts, and triggers reactive change events.
+  4. Dynamic Status & Indicator Display: Displays live visual confirmations when snapshots are captured or restored, alongside an inline indicator showing the last saved backup time and rule count.
 
 = 5.8.4 =
 * Streamlined Tag Overrides Engine, Built-In Baseline Visibility, Search & Sorting:

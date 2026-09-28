@@ -8,6 +8,25 @@ Social Digest - Feature Roadmap & Release Status
 2. Automated Weekly Archive Digest View [Publishing]:
    - Dedicated weekly/monthly archive rollup view grouping published digests with summary metrics.
 
+0. Release v5.8.5 On-Site Tag Overrides Backup & Restore Snapshot Tool (Completed in v5.8.5)
+-------------------------------------------------------------------------------------------
+[x] On-Site Backup & Restore Buttons (v5.8.5): Added dedicated "💾 Backup Snapshot" and "↺ Restore Snapshot" buttons alongside the Export/Import controls.
+[x] Immediate Database & Fallback Persistence (v5.8.5): Backups are saved instantly to the WordPress options table (`social_digest_options['overrides_snapshot']`) via an administrative AJAX endpoint (`wp_ajax_sd_save_snapshot`) with capability and nonce validation, with graceful form staging and localStorage fallbacks.
+[x] Safe One-Click Restore Workflow (v5.8.5): Restore button displays the exact backup timestamp and active rule count, prompts for confirmation, repopulates the textarea, updates line counts, and triggers reactive change events.
+[x] Real-Time Status & Feedback Indicators (v5.8.5): Shows dynamic status feedback banners upon snapshot creation or restoration, along with an inline backup timestamp indicator.
+
+0. Release v5.8.4 Streamlined Tag Overrides Engine, Built-In Baseline Visibility, Search & Sorting (Completed in v5.8.4)
+-----------------------------------------------------------------------------------------------------------------------
+[x] Retired Dynamic Vocabulary Database Scraper (v5.8.4): Removed automated post title and taxonomy database scanning to eliminate self-referential automated headline loops, database queries, and background memory spikes.
+[x] Fully Visible & Editable Built-In Baseline Terms (v5.8.4): Pre-populated all built-in tech brand terms directly into the Custom Tag Title Overrides box.
+[x] Real-Time Search & Match Navigation (v5.8.4): Added a lightweight search bar above the tag overrides textarea with live match highlighting, auto-scroll, and Enter/Next match navigation.
+[x] Alphabetical & Recency Sorting (v5.8.4): Added one-click sort actions ("Sort A→Z", "Sort Z→A", "Reverse Order") and a "Reset Baseline" action.
+
+0. Release v5.8.3 Tag Overrides Export/Import Restoration, Vocabulary Export & Syntax Guide (Completed in v5.8.3)
+-----------------------------------------------------------------------------------------------------------------
+[x] Restored Export & Import Functionality (v5.8.3): Resolved JavaScript syntax errors caused by unescaped multiline confirm dialogs, restoring reliable .txt export and import.
+[x] Comprehensive Override Syntax Guide (v5.8.3): Added a clear formatting reference guide directly beneath the Custom Tag Title Overrides box.
+
 0. Release v5.7.33 Single-Letter Prefix CamelCase & Hyphenated Brand Support (Completed in v5.7.33)
 --------------------------------------------------------------------------------------------------
 [x] Single-Letter Prefix CamelCase Splitting (v5.7.33): Added `\b([A-Z])([A-Z][a-z]+)` to accurately split single-capital prefixes (e.g., `#FDroid` -> `F Droid`, `#GSuite` -> `G Suite`) without affecting uppercase acronyms (`AI`, `PC`).
