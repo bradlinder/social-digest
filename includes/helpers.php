@@ -401,7 +401,7 @@ function social_get_clean_text_length($text) {
     return mb_strlen(trim(preg_replace('/\s+/', ' ', $t)), 'UTF-8');
 }
 
-function social_sideload_image_by_mime($url, $post_id, $desc = '') {
+function social_sideload_image_by_mime($url, $post_id, $desc = '', $slug = '') {
     if (empty($url)) return false;
     $url = html_entity_decode(trim((string)$url), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     if (!filter_var($url, FILTER_VALIDATE_URL)) return false;
@@ -463,15 +463,47 @@ function social_sideload_image_by_mime($url, $post_id, $desc = '') {
         $mime_type = 'image/avif';
     }
 
-    $filename = 'digest-thumb-' . $post_id . '-' . wp_generate_password(6, false) . $ext;
+    // Determine clean, descriptive base file name slug
+    $base_slug = '';
+    if (!empty($slug)) {
+        $base_slug = sanitize_title_with_dashes($slug);
+    }
+    if (empty($base_slug) && !empty($desc)) {
+        $clean_desc_check = strtolower(trim((string)$desc));
+        if (!in_array($clean_desc_check, ['digest media asset', 'social digest avatar', 'mastodon image', 'bluesky image'], true)) {
+            $base_slug = sanitize_title_with_dashes($desc);
+        }
+    }
+
+    if (!empty($base_slug)) {
+        $base_slug = trim(substr($base_slug, 0, 50), '-');
+        $filename  = $base_slug . $ext;
+        if (function_exists('wp_upload_dir')) {
+            $upload_dir  = wp_upload_dir();
+            $target_file = ($upload_dir['path'] ?? '') . '/' . $filename;
+            if (file_exists($target_file) && function_exists('wp_unique_filename')) {
+                $filename = wp_unique_filename($upload_dir['path'], $filename);
+            }
+        }
+    } else {
+        $filename = 'digest-thumb-' . $post_id . '-' . wp_generate_password(6, false) . $ext;
+    }
+
     $upload = wp_upload_bits($filename, null, $image_data);
     if (!empty($upload['error'])) return false;
 
+    // Use human-readable title for attachment post_title in WordPress Media Library
+    $clean_title = !empty($desc) ? wp_strip_all_tags($desc) : sanitize_file_name(basename($upload['file']));
+
     $attach_id = wp_insert_attachment([
         'post_mime_type' => $mime_type,
-        'post_title'     => sanitize_file_name($desc ?: basename($upload['file'])),
+        'post_title'     => $clean_title,
         'post_status'    => 'inherit'
     ], $upload['file'], $post_id);
+
+    if ($attach_id && !is_wp_error($attach_id) && !empty($desc)) {
+        update_post_meta($attach_id, '_wp_attachment_image_alt', $clean_title);
+    }
 
     if ($attach_id && !is_wp_error($attach_id)) {
         try {
@@ -497,6 +529,149 @@ function social_sideload_image_by_mime($url, $post_id, $desc = '') {
 }
 
 /**
+ * Extracts contextual image descriptors (human-readable title and filename slug)
+ * from digest post markup based on post hashtags, author names, or preview cards.
+ *
+ * @param string $content Digest HTML content containing post cards.
+ * @return array Map of image URLs to array ['desc' => string, 'slug' => string]
+ */
+function social_extract_media_descriptors_from_content($content) {
+    if (empty($content) || !is_string($content)) {
+        return [];
+    }
+
+    $descriptors = [];
+    $custom_overrides = '';
+    $opts = get_option('social_digest_options', []);
+    if (!empty($opts['tag_custom_overrides'])) {
+        $custom_overrides = (string)$opts['tag_custom_overrides'];
+    }
+
+    // Split content by social-post card boundaries
+    $cards = preg_split('/(?=<div[^>]*class=["\'][^"\']*\bsocial-post\b)/i', $content);
+
+    foreach ($cards as $card) {
+        if (strpos($card, 'social-post') === false) {
+            continue;
+        }
+
+        // 1. Author Name and Handle
+        $author_name = '';
+        $author_handle = '';
+        if (preg_match('/class=["\'][^"\']*social-author-name[^"\']*["\'][^>]*>([^<]+)<\/div>/i', $card, $am)) {
+            $author_name = trim(wp_strip_all_tags($am[1]));
+        } elseif (preg_match('/class=["\'][^"\']*social-avatar[^"\']*["\'][^>]+alt=["\']([^"\']+)["\']/i', $card, $am)) {
+            $author_name = trim(wp_strip_all_tags($am[1]));
+        }
+
+        if (preg_match('/class=["\'][^"\']*social-identity[^"\']*["\'][^>]*>.*?@([a-zA-Z0-9_.-]+)/is', $card, $hm)) {
+            $author_handle = trim($hm[1]);
+        }
+
+        // 2. Extract Hashtags from Card
+        $card_tags = [];
+        if (preg_match_all('/<a[^>]*class=["\'][^"\']*hashtag[^"\']*["\'][^>]*>(?:#|#?<span>)?(.*?)(?:<\/span>)?<\/a>/isu', $card, $anchor_matches)) {
+            foreach ($anchor_matches[1] as $raw_tag) {
+                $clean_t = trim(wp_strip_all_tags(ltrim($raw_tag, '#')));
+                if ($clean_t !== '' && !is_numeric($clean_t)) {
+                    $card_tags[] = $clean_t;
+                }
+            }
+        }
+        if (empty($card_tags) && preg_match_all('/(?<![&\w])#([a-zA-Z0-9_\x{0080}-\x{FFFF}]+)/u', $card, $hash_matches)) {
+            foreach ($hash_matches[1] as $raw_tag) {
+                $clean_t = trim(ltrim($raw_tag, '#'));
+                if ($clean_t !== '' && !is_numeric($clean_t)) {
+                    $card_tags[] = $clean_t;
+                }
+            }
+        }
+
+        $primary_tag = !empty($card_tags[0]) ? $card_tags[0] : '';
+        $formatted_tag = '';
+        if ($primary_tag !== '') {
+            $formatted_tag = social_split_camelcase_tag($primary_tag, $custom_overrides);
+        }
+
+        // 3. Inspect all <img> tags in this card
+        if (preg_match_all('/<img[^>]+>/i', $card, $img_matches)) {
+            $media_tags = [];
+            foreach ($img_matches[0] as $img_tag) {
+                if (strpos($img_tag, 'social-avatar') === false && 
+                    strpos($img_tag, 'social-card-thumb') === false && 
+                    strpos($img_tag, 'social-link-card') === false) {
+                    $media_tags[] = $img_tag;
+                }
+            }
+            $total_media = count($media_tags);
+            $media_idx = 0;
+
+            foreach ($img_matches[0] as $img_tag) {
+                if (!preg_match('/src=["\']([^"\']+)["\']/i', $img_tag, $src_m)) {
+                    continue;
+                }
+                $src_url = trim($src_m[1]);
+                if (empty($src_url) || isset($descriptors[$src_url])) {
+                    continue;
+                }
+
+                $alt_val = '';
+                if (preg_match('/alt=["\']([^"\']*)["\']/i', $img_tag, $alt_m)) {
+                    $alt_val = trim($alt_m[1]);
+                }
+
+                if (strpos($img_tag, 'social-avatar') !== false) {
+                    $avatar_user = $author_name ?: ($author_handle ?: 'Social Digest');
+                    $descriptors[$src_url] = [
+                        'desc' => $avatar_user . ' (Avatar)',
+                        'slug' => 'avatar-' . sanitize_title_with_dashes($author_handle ?: ($author_name ?: 'user')),
+                    ];
+                } elseif (strpos($img_tag, 'social-card-thumb') !== false || strpos($img_tag, 'social-link-card') !== false) {
+                    $preview_title = $alt_val ?: 'Link Preview';
+                    $descriptors[$src_url] = [
+                        'desc' => $preview_title . ' (Preview)',
+                        'slug' => 'preview-' . sanitize_title_with_dashes($preview_title),
+                    ];
+                } else {
+                    $media_idx++;
+                    $desc_label = '';
+                    $base_slug  = '';
+
+                    if ($formatted_tag !== '') {
+                        $desc_label = ($total_media > 1) ? "{$formatted_tag} ({$media_idx})" : $formatted_tag;
+                        $base_slug  = sanitize_title_with_dashes($formatted_tag);
+                        if ($total_media > 1) {
+                            $base_slug .= "-{$media_idx}";
+                        }
+                    } elseif ($alt_val !== '' && !in_array(strtolower($alt_val), ['mastodon image', 'bluesky image', 'digest media asset', 'social digest avatar'], true)) {
+                        $clean_alt = wp_strip_all_tags($alt_val);
+                        $desc_label = ($total_media > 1) ? "{$clean_alt} ({$media_idx})" : $clean_alt;
+                        $base_slug  = sanitize_title_with_dashes($clean_alt);
+                        if ($total_media > 1) {
+                            $base_slug .= "-{$media_idx}";
+                        }
+                    } else {
+                        $post_owner = $author_name ?: ($author_handle ?: 'digest');
+                        $desc_label = ($total_media > 1) ? "Update from {$post_owner} ({$media_idx})" : "Update from {$post_owner}";
+                        $base_slug  = sanitize_title_with_dashes($post_owner) . "-media";
+                        if ($total_media > 1) {
+                            $base_slug .= "-{$media_idx}";
+                        }
+                    }
+
+                    $descriptors[$src_url] = [
+                        'desc' => $desc_label,
+                        'slug' => $base_slug,
+                    ];
+                }
+            }
+        }
+    }
+
+    return $descriptors;
+}
+
+/**
  * Sideloads external images referenced in post HTML content directly into the WordPress Media Library.
  * Replaces remote image src URLs with local attachment URLs to protect against link rot and server outages.
  * Supports targeted caching of remote avatars & preview cards, and generates responsive srcset attributes.
@@ -517,6 +692,9 @@ function social_sideload_content_media($content, $post_id, $only_avatars_and_car
 
     // Static cache for URLs already processed in this request to prevent duplicate downloads
     static $processed_media_urls = [];
+
+    // Extract contextual media descriptors (hashtags, author handles, preview card titles)
+    $media_descriptors = social_extract_media_descriptors_from_content($content);
 
     // Match all <img> tags to inspect attributes and classes
     if (preg_match_all('/<img[^>]+>/i', $content, $img_matches)) {
@@ -552,8 +730,16 @@ function social_sideload_content_media($content, $post_id, $only_avatars_and_car
                     $local_url     = $cached_entry['url'];
                 }
             } else {
-                $desc = (strpos($img_tag, 'social-avatar') !== false) ? 'Social Digest avatar' : 'Digest media asset';
-                $att_res = social_sideload_image_by_mime($img_url_clean, $post_id, $desc);
+                $descriptor = $media_descriptors[$img_url_clean] ?? null;
+                if ($descriptor) {
+                    $desc = $descriptor['desc'];
+                    $slug = $descriptor['slug'];
+                } else {
+                    $desc = (strpos($img_tag, 'social-avatar') !== false) ? 'Social Digest avatar' : 'Digest media asset';
+                    $slug = '';
+                }
+
+                $att_res = social_sideload_image_by_mime($img_url_clean, $post_id, $desc, $slug);
                 if ($att_res && !is_wp_error($att_res)) {
                     $attachment_id = (int)$att_res;
                     $local_url = wp_get_attachment_url($attachment_id);

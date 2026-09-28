@@ -714,8 +714,12 @@ function social_publish_workbench_run($state, $force_status = null) {
             $wpdb->esc_like($base_title) . '%', $today . '%'
         ));
         if ($count_today > 0) {
-            $suffix = $opts['same_day_suffix_tpl'] ?? ' (Part {part})';
-            $title = $base_title . str_replace('{part}', (string)($count_today + 1), $suffix);
+            $suffix_tpl = trim((string)($opts['same_day_suffix_tpl'] ?? ' (Part {part})'));
+            if ($suffix_tpl !== '') {
+                $part_num = (string)($count_today + 1);
+                $rendered_suffix = str_replace(['{part}', '{count}', '{number}'], $part_num, $suffix_tpl);
+                $title = $base_title . ' ' . ltrim($rendered_suffix);
+            }
         }
 
         $author_id = absint($opts['post_author'] ?? get_current_user_id());
@@ -797,7 +801,7 @@ function social_publish_workbench_run($state, $force_status = null) {
             'post_title'   => $title,
             'post_content' => $built['content'],
             'post_excerpt' => $post_excerpt,
-            'post_status'  => $status_to_use,
+            'post_status'  => ($status_to_use === 'publish') ? 'draft' : $status_to_use,
             'post_author'  => $author_id,
             'post_type'    => 'post',
             'tags_input'   => $target_tags,
@@ -862,10 +866,12 @@ function social_publish_workbench_run($state, $force_status = null) {
             $updated_content = social_sideload_content_media($built['content'], $post_id, $only_avatars_and_cards, $gen_srcsets);
             if ($updated_content !== $built['content']) {
                 $built['content'] = $updated_content;
-                wp_update_post([
-                    'ID'           => $post_id,
-                    'post_content' => $built['content'],
-                ]);
+                if ($status_to_use !== 'publish') {
+                    wp_update_post([
+                        'ID'           => $post_id,
+                        'post_content' => $built['content'],
+                    ]);
+                }
             }
         }
 
@@ -917,7 +923,9 @@ function social_publish_workbench_run($state, $force_status = null) {
             }
             foreach ($urls_to_try as $try_url) {
                 try {
-                    $attachment_id = social_sideload_image_by_mime($try_url, $post_id, $title);
+                    $feat_desc = $title . ' - Featured Image';
+                    $feat_slug = 'featured-' . sanitize_title_with_dashes($title);
+                    $attachment_id = social_sideload_image_by_mime($try_url, $post_id, $feat_desc, $feat_slug);
                     if ($attachment_id) {
                         set_post_thumbnail($post_id, $attachment_id);
                         break;
@@ -926,6 +934,16 @@ function social_publish_workbench_run($state, $force_status = null) {
                     error_log('Social Digest featured image sideload error: ' . $e->getMessage());
                 }
             }
+        }
+
+        // Transition from draft to publish ONLY after all media assets and the featured image are fully attached!
+        // This guarantees that feed readers and RSS subscribers receive a complete post with featured image and local media on the initial publish event.
+        if ($status_to_use === 'publish') {
+            wp_update_post([
+                'ID'           => $post_id,
+                'post_status'  => 'publish',
+                'post_content' => $built['content'],
+            ]);
         }
 
         // Purge W3 Total Cache and active page/object caches for the newly published digest

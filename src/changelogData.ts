@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.50',
+  version: '5.7.52',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,33 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.49',
+  rollbackTarget: 'v5.7.51',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.52',
+    tag: 'v5.7.52',
+    isLatest: true,
+    highlights: [
+      'Descriptive Media Naming & Labels: Replaced generic "Digest media asset" labels and random hash file names with contextual titles and slugs derived from post hashtags, author names, or preview cards (e.g. onyx-boox-picco-1.jpeg, pine-64.png, f-droid.png).',
+      'Pre-Publication Asset Attachment Order: Staged post creation as draft during media sideloading and featured image attachment, transitioning to published status only after all assets and responsive srcsets are complete so feed readers and RSS subscribers receive complete articles with thumbnails on the very first publish notification.'
+    ]
+  },
+  {
+    version: '5.7.51',
+    tag: 'v5.7.51',
+    isLatest: false,
+    highlights: [
+      'Optional Same-Day Suffix Disabling: Leaving the Same-Day Suffix template setting blank now cleanly disables same-day title suffixes, allowing multiple digests published on the same day to retain their original base headline.',
+      'Template Variable Support: Supported {part}, {count}, and {number} placeholders with spacing protection when a custom suffix format is provided.',
+      'Descriptive Settings Guidance: Updated admin settings copy to clearly explain that leaving the field blank disables suffixes, with helpful formatting examples.'
+    ]
+  },
+  {
     version: '5.7.50',
     tag: 'v5.7.50',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Active Ingestion Sorting: Connected the "Ingestion Fetch Order" setting (fetch_order) into the candidate ingestion pipeline in feed-builder.php. Setting this to "Oldest Posts First" properly processes and slices candidates in chronological order up to max_posts.',
       'Sequential Backlog Progression: Bounded cutoff advancement to the newest timestamp in the ingested batch when processing oldest-first, ensuring subsequent automated or manual runs process backlogged posts forward in time without skipping unimported updates.'

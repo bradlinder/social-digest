@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.50
+Stable tag: 5.7.52
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,17 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.52 =
+* Descriptive Media Naming & Pre-Publication Asset Attachment Order:
+  1. Contextual Media Labels & File Names: Replaced generic "Digest media asset" attachment labels and random hash file names with descriptive titles and filenames derived from post hashtags, author names, or link preview cards. Sideloaded media files now use human-readable slugs (e.g. `onyx-boox-picco-1.jpeg`, `pine-64.png`, `f-droid.png`, `avatar-bradlinder.png`) and clean Media Library labels (e.g. `Onyx BOOX Picco (1)`).
+  2. Pre-Publication Featured Image & Media Attachment: Fixed an issue where digest posts were published to WordPress prior to sideloading media and attaching featured images. Posts are now initially staged as drafts while content media and featured images are sideloaded and attached, transitioning to published status only after all assets and responsive srcsets are complete. This guarantees feed readers, RSS subscribers, and syndication webhooks receive fully formed articles with their thumbnails on the very first publish notification.
+
+= 5.7.51 =
+* Optional Same-Day Suffix Disabling & Descriptive Language:
+  1. Blank Disabling Behavior: Ensured that leaving the Same-Day Suffix setting (`same_day_suffix_tpl`) blank or empty completely disables same-day title suffixes, allowing multiple digests published on the same calendar day to retain their original base titles without automatic numbering.
+  2. Enhanced Variable Support & Spacing: Supported `{part}`, `{count}`, and `{number}` placeholders with clean spacing preservation.
+  3. Descriptive Admin Copy: Updated the settings description in the admin UI to clearly indicate that leaving the field blank disables the suffix, and documented the available template variables and formatting examples.
 
 = 5.7.50 =
 * Ingestion Fetch Order Implementation & Sequential Backlog Traversal:

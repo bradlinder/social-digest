@@ -296,7 +296,11 @@ function social_sanitize_settings($input) {
     $output['vocabulary_post_scan_limit']= in_array($raw_limit, [50, 100, 150, 300, 500, 1000, -1], true) ? $raw_limit : 150;
     $output['title_tag_custom_overrides']= sanitize_textarea_field($input['title_tag_custom_overrides'] ?? '');
 
-    $output['same_day_suffix_tpl'] = sanitize_text_field($input['same_day_suffix_tpl'] ?? ' (Part {part})');
+    if (isset($input['same_day_suffix_tpl'])) {
+        $output['same_day_suffix_tpl'] = sanitize_text_field($input['same_day_suffix_tpl']);
+    } else {
+        $output['same_day_suffix_tpl'] = $opts['same_day_suffix_tpl'] ?? ' (Part {part})';
+    }
     $output['excluded_words']      = sanitize_textarea_field($input['excluded_words'] ?? '');
 
     if (isset($input['header_text'])) {
@@ -796,8 +800,11 @@ function social_render_settings_page() {
                                             <tr>
                                                 <th>Same-Day Suffix</th>
                                                 <td>
-                                                    <input name="social_digest_options[same_day_suffix_tpl]" type="text" value="<?php echo esc_attr($opts['same_day_suffix_tpl'] ?? ' (Part {part})'); ?>" class="regular-text" style="width: 220px;" placeholder=" (Part {part})" />
-                                                    <p class="description">Appended to post titles if multiple digests are published on the same calendar day. Use <code>{part}</code> for part number.</p>
+                                                    <input name="social_digest_options[same_day_suffix_tpl]" type="text" value="<?php echo esc_attr($opts['same_day_suffix_tpl'] ?? ' (Part {part})'); ?>" class="regular-text" style="width: 260px;" placeholder="Leave blank for no suffix" />
+                                                    <p class="description">
+                                                        Optional. Appended to the post title if multiple digests are published on the same calendar day (e.g., <code> (Part {part})</code>, <code> - Edition {part}</code>, or <code> #{part}</code>).<br />
+                                                        <strong>Leave blank to disable:</strong> When left empty, same-day digests will retain the base title without adding a part suffix. Available variables: <code>{part}</code> or <code>{count}</code> for the part number.
+                                                    </p>
                                                 </td>
                                             </tr>
                                             <tr>
