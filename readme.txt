@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.8
+Stable tag: 5.8.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,12 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.9 =
+* Line Break Normalization, Snapshot Corruption Auto-Repair & Wildcard Reference Clarification:
+  1. Automatic Line Break Normalization & Repair: Resolved an issue where escaped carriage return / newline delimiters (`\r\n`) in snapshots or form submissions could degrade into literal `rn` text strings. Added automatic self-healing newline reconstruction (`social_normalize_overrides_newlines` and `sdCleanOverrideString`) across both PHP and client JavaScript to seamlessly repair corrupted backups and restore clean, one-rule-per-line formatting.
+  2. Duplicate Rule Filtering: Automatically deduplicates repeated adjacent rules during baseline merging.
+  3. Wildcard Notation Reference: Documented the purpose of the asterisk (`*`) wildcard prefix (e.g. `MINISFORUM*`, `XPS*`) which enables automatic model-number splitting for uppercase acronyms and brand families.
 
 = 5.8.8 =
 * Zero-Hidden-Rules Architecture, User Customizations Preservation & Snapshot Resilience:

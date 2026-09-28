@@ -103,7 +103,7 @@ add_action('admin_init', function() {
             'title_tag_delimiter'          => 'oxford',
             'title_tag_max_count'          => 3,
             'title_tag_selection_strategy' => 'first',
-            'title_tag_custom_overrides'   => social_get_default_tag_overrides_string(),
+            'title_tag_custom_overrides'   => '',
             'overrides_snapshot'           => [],
             'same_day_suffix_tpl'    => ' (Part {part})',
             'excluded_words'         => '#ad, sponsored',
@@ -121,28 +121,6 @@ add_action('admin_init', function() {
             'wipe_data_on_uninstall'         => 1
         ]
     ]);
-
-    // Ensure built-in baseline terms are populated if custom overrides option is empty or missing,
-    // and migrate existing installations so that baseline terms are fully visible and editable.
-    if (!get_option('social_digest_baseline_migrated_v588')) {
-        $stored_opts = get_option('social_digest_options', []);
-        if (is_array($stored_opts)) {
-            $existing_val = $stored_opts['title_tag_custom_overrides'] ?? '';
-            if (trim((string)$existing_val) === '') {
-                $stored_opts['title_tag_custom_overrides'] = social_get_default_tag_overrides_string();
-            } else {
-                $stored_opts['title_tag_custom_overrides'] = social_get_merged_tag_overrides($existing_val);
-            }
-            update_option('social_digest_options', $stored_opts);
-        }
-        update_option('social_digest_baseline_migrated_v588', 1);
-    }
-
-    $stored_opts = get_option('social_digest_options', []);
-    if (is_array($stored_opts) && (!isset($stored_opts['title_tag_custom_overrides']) || trim((string)$stored_opts['title_tag_custom_overrides']) === '')) {
-        $stored_opts['title_tag_custom_overrides'] = social_get_default_tag_overrides_string();
-        update_option('social_digest_options', $stored_opts);
-    }
 
     // Workbench Form Handlers
     if (!current_user_can('manage_options')) return;
@@ -357,7 +335,8 @@ function social_sanitize_settings($input) {
     $allowed_strategies = ['first', 'popularity', 'random'];
     $output['title_tag_selection_strategy'] = in_array($input['title_tag_selection_strategy'] ?? '', $allowed_strategies, true) ? $input['title_tag_selection_strategy'] : 'first';
 
-    $output['title_tag_custom_overrides']= sanitize_textarea_field($input['title_tag_custom_overrides'] ?? '');
+    $raw_overrides = $input['title_tag_custom_overrides'] ?? '';
+    $output['title_tag_custom_overrides'] = sanitize_textarea_field(social_dedupe_override_rules($raw_overrides));
 
     if (isset($input['overrides_snapshot'])) {
         $decoded = json_decode(stripslashes((string)$input['overrides_snapshot']), true);
@@ -991,8 +970,9 @@ function social_render_settings_page() {
                                                             <div style="display: flex; gap: 4px; flex-wrap: wrap;">
                                                                 <button type="button" class="button button-small" onclick="sdSortOverrides('az')" title="Sort rules alphabetically A to Z">🔤 Sort A→Z</button>
                                                                 <button type="button" class="button button-small" onclick="sdSortOverrides('za')" title="Sort rules Z to A">🔤 Sort Z→A</button>
-                                                                <button type="button" class="button button-small" onclick="sdSortOverrides('reverse')" title="Reverse order of rules (useful for recency / swapping newest to top)">🔄 Reverse Order</button>
-                                                                <button type="button" class="button button-small" onclick="sdResetOverrides()" title="Restore the built-in baseline terms">↺ Reset Baseline</button>
+                                                                <button type="button" class="button button-small" onclick="sdSortOverrides('reverse')" title="Reverse order of rules">🔄 Reverse Order</button>
+                                                                <button type="button" class="button button-small" onclick="sdDedupeOverrides()" title="Remove duplicate rules case-insensitively">✨ Deduplicate</button>
+                                                                <button type="button" class="button button-small" onclick="sdClearOverrides()" title="Clear all custom rules from the box">🧹 Clear All</button>
                                                             </div>
                                                             <div style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;">
                                                                 <?php 
@@ -1018,26 +998,22 @@ function social_render_settings_page() {
                                                         <!-- Overrides Textarea -->
                                                         <?php
                                                         $raw_overrides = $opts['title_tag_custom_overrides'] ?? '';
-                                                        if (trim((string)$raw_overrides) === '') {
-                                                            $current_overrides = social_get_default_tag_overrides_string();
-                                                        } else {
-                                                            $current_overrides = social_get_merged_tag_overrides($raw_overrides);
-                                                        }
+                                                        $current_overrides = social_dedupe_override_rules($raw_overrides);
                                                         ?>
                                                         <textarea id="sd_title_tag_custom_overrides" name="social_digest_options[title_tag_custom_overrides]" rows="14" class="large-text" style="font-family: monospace; font-size: 12px; line-height: 1.5; padding: 8px 10px;" oninput="sdUpdateLineCount()" placeholder="SnapdragonX=Snapdragon X&#10;MINISFORUM*&#10;GEEKOM*&#10;NVIDIA*&#10;MediaTek=MediaTek&#10;FDroid=F-Droid"><?php echo esc_textarea($current_overrides); ?></textarea>
                                                         
                                                         <div style="margin-top: 8px; font-size: 11px; line-height: 1.5; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px;">
-                                                            <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">Tag Override Rules &amp; Built-In Baseline:</div>
-                                                            <p style="margin: 0 0 6px 0;">All built-in technology terms are pre-populated above, fully visible and editable. You can freely edit, add, or delete any rule.</p>
+                                                            <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">Custom Tag Override Rules:</div>
+                                                            <p style="margin: 0 0 6px 0;">Customize how specific hashtags format in your digest titles and taxonomy tags. Leave empty to use standard formatting.</p>
                                                             <ul style="margin: 0 0 6px 18px; list-style-type: disc;">
-                                                                <li><strong>Social Tag Shorthand: Single underscore (<code>_</code>) creates a space (e.g. <code>#AI_PC</code> &rarr; <strong>AI PC</strong>); double underscore (<code>__</code>) creates a hyphen (e.g. <code>#Wi__Fi</code> &rarr; <strong>Wi-Fi</strong>)</li>
-                                                                <li><strong>Formatting:</strong> Enter rules <strong>one per line</strong> (recommended) or separated by commas. Leading <code>#</code> symbols are stripped automatically. Comments beginning with <code>#</code> are preserved.</li>
+                                                                <li><strong>Social Tag Shorthand:</strong> Single underscore (<code>_</code>) creates a space (e.g. <code>#AI_PC</code> &rarr; <strong>AI PC</strong>); double underscore (<code>__</code>) creates a hyphen (e.g. <code>#Wi__Fi</code> &rarr; <strong>Wi-Fi</strong>).</li>
+                                                                <li><strong>Formatting:</strong> Enter rules <strong>one per line</strong>. Leading <code>#</code> symbols are stripped automatically. Comments beginning with <code>#</code> are preserved.</li>
                                                                 <li><strong>Exact Mapping (<code>tag=Formatted Title</code>):</strong> Explicitly renames a hashtag to your desired title casing (e.g. <code>SnapdragonX=Snapdragon X</code>, <code>FDroid=F-Droid</code>).</li>
                                                                 <li><strong>Wildcard Prefixes (<code>PREFIX*</code>):</strong> Preserves uppercase brand prefixes while splitting trailing model numbers (e.g. <code>MINISFORUM*</code> formats <code>#MINISFORUMS5</code> to <strong>MINISFORUM S5</strong>).</li>
-                                                                <li><strong>Exact Brand Casing (<code>BRAND*</code> or <code>BrandName</code>):</strong> Preserves specific casing for acronyms and compound names (e.g. <code>XPS*</code>, <code>NVIDIA*</code>, <code>MediaTek</code>, <code>Chromebook</code>).</li>
+                                                                <li><strong>Exact Brand Casing (<code>BRAND*</code> or <code>BrandName</code>):</strong> Preserves specific casing for acronyms and compound names (e.g. <code>XPS*</code>, <code>NVIDIA*</code>, <code>MediaTek</code>).</li>
                                                             </ul>
                                                             <div style="color: #64748b; font-size: 10.5px; border-top: 1px dashed #cbd5e1; padding-top: 6px; margin-top: 4px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px;">
-                                                                <span><em>Use <strong>🔤 Sort A→Z</strong> to keep terms alphabetized, or <strong>🔄 Reverse Order</strong> to view by recency.</em></span>
+                                                                <span><em>Use <strong>🔤 Sort A→Z</strong> to keep terms alphabetized, or <strong>✨ Deduplicate</strong> to clean duplicates.</em></span>
                                                                 <span><em>Use <strong>📥 Export / 📤 Import</strong> to save backups or sync between sites.</em></span>
                                                             </div>
                                                         </div>
@@ -1194,9 +1170,42 @@ function social_render_settings_page() {
                                 <script>
                                 var sdSearchMatches = [];
                                 var sdCurrentMatchIdx = -1;
-                                var sdDefaultBaselineText = <?php echo json_encode(social_get_default_tag_overrides_string()); ?>;
                                 var sdSnapshot = <?php echo json_encode(!empty($snap['content']) ? $snap : null); ?>;
                                 var sdSnapshotNonce = <?php echo json_encode(wp_create_nonce('sd_snapshot_action')); ?>;
+
+                                function sdCleanOverrideString(str) {
+                                    if (!str || typeof str !== 'string') return '';
+                                    var s = str.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                                    if (s.indexOf('\n') === -1 && s.indexOf('rn') !== -1) {
+                                        s = s.replace(/([a-zA-Z0-9*=\-_#])rn([a-zA-Z0-9*=\-_#])/g, '$1\n$2');
+                                        s = s.replace(/rnrnrn|rnrn|rn/g, '\n');
+                                    }
+                                    s = s.replace(/\\r\\n|\\n|\\r/g, '\n');
+                                    return s;
+                                }
+
+                                function sdDedupeLines(lines) {
+                                    var cleanRules = [];
+                                    var seenKeys = {};
+                                    for (var i = 0; i < lines.length; i++) {
+                                        var trimmed = lines[i].trim();
+                                        if (!trimmed) continue;
+                                        if (trimmed.charAt(0) === '#') {
+                                            cleanRules.push(trimmed);
+                                            continue;
+                                        }
+                                        var key = trimmed.toLowerCase().replace(/[\s_\-]/g, '');
+                                        if (trimmed.indexOf('=') !== -1) {
+                                            var parts = trimmed.split('=');
+                                            key = parts[0].trim().replace(/^#/, '').toLowerCase().replace(/[\s_\-]/g, '');
+                                        }
+                                        if (!seenKeys[key]) {
+                                            seenKeys[key] = true;
+                                            cleanRules.push(trimmed);
+                                        }
+                                    }
+                                    return cleanRules;
+                                }
 
                                 function sdUpdateLineCount() {
                                     var textarea = document.getElementById('sd_title_tag_custom_overrides');
@@ -1206,11 +1215,19 @@ function social_render_settings_page() {
                                     countEl.textContent = '(' + lines.length + ' active rules)';
                                 }
 
-                                // Auto-initialize line count and recover local snapshot if server record is empty
+                                // Auto-initialize line count, auto-repair any rn artifacts, and recover local snapshot if server record is empty
                                 (function sdInitOverridesState() {
                                     if (document.readyState === 'loading') {
                                         document.addEventListener('DOMContentLoaded', sdInitOverridesState);
                                         return;
+                                    }
+
+                                    var textarea = document.getElementById('sd_title_tag_custom_overrides');
+                                    if (textarea && textarea.value) {
+                                        var cleaned = sdCleanOverrideString(textarea.value);
+                                        if (cleaned !== textarea.value) {
+                                            textarea.value = cleaned;
+                                        }
                                     }
                                     sdUpdateLineCount();
 
@@ -1220,6 +1237,7 @@ function social_render_settings_page() {
                                             if (local) {
                                                 var parsedLocal = JSON.parse(local);
                                                 if (parsedLocal && parsedLocal.content) {
+                                                    parsedLocal.content = sdCleanOverrideString(parsedLocal.content);
                                                     sdSnapshot = parsedLocal;
                                                     var restoreBtn = document.getElementById('sd_restore_snapshot_btn');
                                                     if (restoreBtn) {
@@ -1285,7 +1303,6 @@ function social_render_settings_page() {
                                     textarea.focus();
                                     textarea.setSelectionRange(match.start, match.end);
 
-                                    // Scroll textarea to the line of match
                                     var linesBefore = textarea.value.substring(0, match.start).split('\n').length;
                                     var lineHeight = 18;
                                     textarea.scrollTop = Math.max(0, (linesBefore - 4) * lineHeight);
@@ -1294,19 +1311,21 @@ function social_render_settings_page() {
                                 function sdSortOverrides(direction) {
                                     var textarea = document.getElementById('sd_title_tag_custom_overrides');
                                     if (!textarea) return;
-                                    var text = textarea.value;
+                                    var text = sdCleanOverrideString(textarea.value);
                                     var lines = text.split(/\r?\n/);
                                     
                                     var comments = [];
-                                    var rules = [];
+                                    var rawRules = [];
                                     for (var i = 0; i < lines.length; i++) {
                                         var trimmed = lines[i].trim();
-                                        if (trimmed.charAt(0) === '#' && rules.length === 0) {
+                                        if (trimmed.charAt(0) === '#' && rawRules.length === 0) {
                                             comments.push(lines[i]);
                                         } else if (trimmed.length > 0) {
-                                            rules.push(lines[i]);
+                                            rawRules.push(lines[i]);
                                         }
                                     }
+
+                                    var rules = sdDedupeLines(rawRules);
 
                                     if (direction === 'az') {
                                         rules.sort(function(a, b) {
@@ -1325,20 +1344,49 @@ function social_render_settings_page() {
                                     sdUpdateLineCount();
                                     try {
                                         textarea.dispatchEvent(new Event('change', { bubbles: true }));
+                                        textarea.dispatchEvent(new Event('input', { bubbles: true }));
                                     } catch (e) {}
                                 }
 
-                                function sdResetOverrides() {
-                                    if (!confirm("Reset tag overrides to the built-in baseline rules?\n\nThis will replace any custom rules currently in the box with the default list.")) {
+                                function sdDedupeOverrides() {
+                                    var textarea = document.getElementById('sd_title_tag_custom_overrides');
+                                    if (!textarea) return;
+                                    var text = sdCleanOverrideString(textarea.value);
+                                    var lines = text.split('\n');
+                                    var originalCount = lines.filter(function(l) { return l.trim().length > 0 && l.trim().charAt(0) !== '#'; }).length;
+                                    var deduped = sdDedupeLines(lines);
+                                    var newCount = deduped.filter(function(l) { return l.trim().length > 0 && l.trim().charAt(0) !== '#'; }).length;
+                                    textarea.value = deduped.join('\n');
+                                    sdUpdateLineCount();
+                                    try {
+                                        textarea.dispatchEvent(new Event('change', { bubbles: true }));
+                                        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                                    } catch(e) {}
+
+                                    var diff = originalCount - newCount;
+                                    var statusEl = document.getElementById('sd_import_status');
+                                    if (statusEl) {
+                                        statusEl.textContent = diff > 0 ? '✨ Deduplicated! Removed ' + diff + ' duplicate rule(s).' : '✨ No duplicates found (' + newCount + ' unique rules).';
+                                        statusEl.style.display = 'block';
+                                        statusEl.style.background = '#f0fdf4';
+                                        statusEl.style.borderColor = '#bbf7d0';
+                                        statusEl.style.color = '#166534';
+                                        setTimeout(function() { statusEl.style.display = 'none'; }, 5000);
+                                    }
+                                }
+
+                                function sdClearOverrides() {
+                                    if (!confirm("Clear all custom tag override rules from the box?")) {
                                         return;
                                     }
                                     var textarea = document.getElementById('sd_title_tag_custom_overrides');
                                     if (textarea) {
-                                        textarea.value = sdDefaultBaselineText;
+                                        textarea.value = '';
                                         sdUpdateLineCount();
                                         try {
                                             textarea.dispatchEvent(new Event('change', { bubbles: true }));
-                                        } catch (e) {}
+                                            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                                        } catch(e) {}
                                     }
                                 }
 
@@ -1463,10 +1511,12 @@ function social_render_settings_page() {
 
                                     var textarea = document.getElementById('sd_title_tag_custom_overrides');
                                     if (textarea) {
-                                        textarea.value = snapshot.content;
+                                        var cleanContent = sdCleanOverrideString(snapshot.content);
+                                        textarea.value = cleanContent;
                                         sdUpdateLineCount();
                                         var hiddenField = document.getElementById('sd_overrides_snapshot_field');
                                         if (hiddenField) {
+                                            snapshot.content = cleanContent;
                                             hiddenField.value = JSON.stringify(snapshot);
                                         }
                                         try {
@@ -1513,32 +1563,35 @@ function social_render_settings_page() {
                                     var file = input.files[0];
                                     var reader = new FileReader();
                                     reader.onload = function(e) {
-                                        var rawText = e.target.result || '';
+                                        var rawText = sdCleanOverrideString(e.target.result || '');
                                         var lines = rawText.split(/\r?\n/).filter(function(line) {
                                             var trimmed = line.trim();
                                             return trimmed.length > 0 && trimmed.charAt(0) !== '#';
                                         });
-                                        var importedText = lines.join('\n');
 
                                         var textarea = document.getElementById('sd_title_tag_custom_overrides');
                                         if (!textarea) return;
 
-                                        var currentText = textarea.value.trim();
+                                        var currentText = sdCleanOverrideString(textarea.value.trim());
+                                        var finalLines = [];
+
                                         if (currentText !== '') {
                                             var shouldAppend = confirm(
-                                                "Do you want to append the imported overrides to your existing list?\n\n" +
-                                                "Click OK to Append to existing rules.\n" +
-                                                "Click Cancel to Replace existing rules."
+                                                "Do you want to combine the imported overrides with your existing list?\n\n" +
+                                                "• Click OK to Combine & Deduplicate with your existing rules.\n" +
+                                                "• Click Cancel to Overwrite and replace existing rules."
                                             );
                                             if (shouldAppend) {
-                                                textarea.value = currentText + '\n' + importedText;
+                                                var currentLines = currentText.split(/\r?\n/);
+                                                finalLines = sdDedupeLines(currentLines.concat(lines));
                                             } else {
-                                                textarea.value = importedText;
+                                                finalLines = sdDedupeLines(lines);
                                             }
                                         } else {
-                                            textarea.value = importedText;
+                                            finalLines = sdDedupeLines(lines);
                                         }
 
+                                        textarea.value = finalLines.join('\n');
                                         sdUpdateLineCount();
 
                                         try {
@@ -1548,13 +1601,16 @@ function social_render_settings_page() {
 
                                         var statusEl = document.getElementById('sd_import_status');
                                         if (statusEl) {
-                                            statusEl.textContent = '✓ Successfully imported ' + lines.length + ' rules! Click "Save Settings" below to apply.';
+                                            statusEl.textContent = '✓ Successfully imported ' + finalLines.length + ' active rules! Click "Save Settings" below to apply.';
                                             statusEl.style.display = 'block';
+                                            statusEl.style.background = '#f0fdf4';
+                                            statusEl.style.borderColor = '#bbf7d0';
+                                            statusEl.style.color = '#166534';
                                             setTimeout(function() {
                                                 statusEl.style.display = 'none';
                                             }, 7000);
                                         } else {
-                                            alert('Import successful (' + lines.length + ' rules loaded)! Click "Save Settings" at the bottom of the page to apply.');
+                                            alert('Import successful (' + finalLines.length + ' rules loaded)! Click "Save Settings" at the bottom of the page to apply.');
                                         }
                                     };
                                     reader.readAsText(file);

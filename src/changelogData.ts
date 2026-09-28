@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.8.8',
+  version: '5.8.9',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,24 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.8.7',
+  rollbackTarget: 'v5.8.8',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.8.9',
+    tag: 'v5.8.9',
+    isLatest: true,
+    highlights: [
+      'Automatic Line Break Normalization & Repair: Resolved an issue where escaped carriage return / newline delimiters (\\r\\n) in snapshots or form submissions could degrade into literal "rn" text strings. Added automatic self-healing newline reconstruction across both PHP and client JavaScript to seamlessly repair corrupted backups and restore clean, one-rule-per-line formatting.',
+      'Duplicate Rule Filtering: Automatically deduplicates repeated adjacent rules during baseline merging.',
+      'Wildcard Notation Reference: Documented the purpose of the asterisk (*) wildcard prefix (e.g. MINISFORUM*, XPS*) which enables automatic model-number splitting for uppercase acronyms and brand families.'
+    ]
+  },
+  {
     version: '5.8.8',
     tag: 'v5.8.8',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Zero-Hidden-Rules Architecture: Fully exposes all 33 built-in brand rules (Adreno, Chromebook, Coreboot, Dell XPS, Dimensity, E-ink, Elite Mini PC, F-Droid, MediaTek, Nintendo Switch, Raspberry Pi, Samsung Galaxy Tab, Snapdragon X, Steam Deck, ThinkBook, U-Boot, XPS, etc.) directly in the Custom Tag Title Overrides box with zero terms hidden in internal fallbacks.',
       'Absolute Preservation of User Customizations: Custom tag title overrides entered by administrators are never removed, overwritten, or cleared during version upgrades or settings saves. Existing custom rules are prioritized and cleanly merged with baseline rules during migration.',

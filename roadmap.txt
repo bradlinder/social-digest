@@ -8,6 +8,12 @@ Social Digest - Feature Roadmap & Release Status
 2. Automated Weekly Archive Digest View [Publishing]:
    - Dedicated weekly/monthly archive rollup view grouping published digests with summary metrics.
 
+0. Release v5.8.9 Line Break Normalization, Snapshot Corruption Auto-Repair & Wildcard Reference Clarification (Completed in v5.8.9)
+-------------------------------------------------------------------------------------------------------------------------------------
+[x] Automatic Line Break Normalization & Repair (v5.8.9): Resolved an issue where escaped carriage return / newline delimiters (`\r\n`) in snapshots or form submissions could degrade into literal `rn` text strings. Added automatic self-healing newline reconstruction (`social_normalize_overrides_newlines` and `sdCleanOverrideString`) across both PHP and client JavaScript to seamlessly repair corrupted backups and restore clean, one-rule-per-line formatting.
+[x] Duplicate Rule Filtering (v5.8.9): Automatically deduplicates repeated adjacent rules during baseline merging.
+[x] Wildcard Notation Reference (v5.8.9): Documented the purpose of the asterisk (`*`) wildcard prefix (e.g. `MINISFORUM*`, `XPS*`) which enables automatic model-number splitting for uppercase acronyms and brand families.
+
 0. Release v5.8.8 Zero-Hidden-Rules Architecture, User Customizations Preservation & Snapshot Resilience (Completed in v5.8.8)
 ---------------------------------------------------------------------------------------------------------------------------------
 [x] Zero-Hidden-Rules Architecture (v5.8.8): Fully exposed all 33 built-in technology brand rules (Chromebook, Coreboot, Dell XPS, Dimensity, Elite Mini PC, F-Droid, MediaTek, Nintendo Switch, Raspberry Pi, Steam Deck, etc.) directly in the Custom Tag Title Overrides box. Zero terms are hidden in internal fallbacks.

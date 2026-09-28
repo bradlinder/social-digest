@@ -868,147 +868,67 @@ function social_get_cached_tag_weights() {
 }
 
 /**
- * Returns the built-in baseline tag title override rules as an editable string.
- * Pre-populated into Custom Tag Title Overrides and completely visible and editable by administrators.
+ * Normalizes line endings in tag override strings and repairs any corrupted 'rn' newline artifacts.
  *
- * @return string Default baseline rules, one per line.
+ * @param string $str Raw tag overrides string.
+ * @return string Cleaned string with standard \n line breaks.
  */
-function social_get_default_tag_overrides_string() {
-    return implode("\n", [
-        'Adreno',
-        'Chromebook',
-        'Coreboot',
-        'DellXPS=Dell XPS',
-        'Dimensity',
-        'EInk=E-ink',
-        'EliteMiniPC*=Elite Mini PC',
-        'FDroid=F-Droid',
-        'GalaxyTab*=Galaxy Tab',
-        'GEEKOM*',
-        'Googlebook',
-        'MediaTek=MediaTek',
-        'MinimalPhone=Minimal Phone',
-        'MINISFORUM*',
-        'MiniPC*=Mini PC',
-        'NintendoSwitch=Nintendo Switch',
-        'NVIDIA*',
-        'OpenClaw',
-        'PocketBook',
-        'Qualcomm',
-        'RaspberryPi=Raspberry Pi',
-        'SamsungGalaxyTab*=Samsung Galaxy Tab',
-        'SamsungGalaxy*=Samsung Galaxy',
-        'SnapdragonX*=Snapdragon X',
-        'Snapdragon*=Snapdragon',
-        'SteamDeck=Steam Deck',
-        'SteamFrame=Steam Frame',
-        'SteamOS=SteamOS',
-        'ThinkBookPlusGen*=ThinkBook Plus Gen',
-        'ThinkBookPlus*=ThinkBook Plus',
-        'ThinkBook*',
-        'UBoot=U-Boot',
-        'XPS*',
-    ]);
+function social_normalize_overrides_newlines($str) {
+    if (!is_string($str) || $str === '') return '';
+    
+    // Convert standard Windows and Mac line breaks
+    $str = str_replace(["\r\n", "\r"], "\n", $str);
+    
+    // Repair corrupted strings where \r\n was stripped to literal 'rn'
+    if (strpos($str, "\n") === false && strpos($str, 'rn') !== false) {
+        $str = preg_replace('/(?<=[a-zA-Z0-9*=\-_#])rn(?=[a-zA-Z0-9*=\-_#])/u', "\n", $str);
+        $str = str_replace(['rnrnrn', 'rnrn', 'rn'], "\n", $str);
+    }
+    
+    // Handle literal escaped newline text
+    $str = str_replace(['\\r\\n', '\\n', '\\r'], "\n", $str);
+    
+    return $str;
 }
 
 /**
- * Merges existing custom overrides with the built-in baseline rules.
- * Never removes or alters any custom rule entered by the administrator.
+ * Deduplicates custom tag title override rules case-insensitively,
+ * preserving comments and clean one-rule-per-line formatting.
  *
- * @param string $custom_str Existing custom overrides string.
- * @return string Merged rules with user rules prioritized at top.
+ * @param string $str Raw custom overrides string.
+ * @return string Deduplicated overrides string.
  */
-function social_get_merged_tag_overrides($custom_str) {
-    if (empty($custom_str) || trim((string)$custom_str) === '') {
-        return social_get_default_tag_overrides_string();
+function social_dedupe_override_rules($str) {
+    $str = social_normalize_overrides_newlines($str);
+    if (empty($str) || trim((string)$str) === '') {
+        return '';
     }
 
-    $lines = preg_split('/[\r\n]+/', trim((string)$custom_str));
-    $existing_keys = [];
+    $lines = preg_split('/[\r\n]+/', trim((string)$str));
+    $clean_lines = [];
+    $seen_keys = [];
+
     foreach ($lines as $line) {
         $trimmed = trim($line);
-        if ($trimmed === '' || strpos($trimmed, '#') === 0) continue;
+        if ($trimmed === '') continue;
+        if (strpos($trimmed, '#') === 0) {
+            $clean_lines[] = $trimmed;
+            continue;
+        }
+
+        $key = mb_strtolower(str_replace([' ', '_', '-'], '', $trimmed));
         if (strpos($trimmed, '=') !== false) {
             list($k) = explode('=', $trimmed, 2);
-            $existing_keys[mb_strtolower(ltrim(trim($k), '#'))] = true;
-        } else {
-            $existing_keys[mb_strtolower(ltrim($trimmed, '#'))] = true;
+            $key = mb_strtolower(str_replace([' ', '_', '-'], '', ltrim(trim($k), '#')));
+        }
+
+        if (!isset($seen_keys[$key])) {
+            $seen_keys[$key] = true;
+            $clean_lines[] = $trimmed;
         }
     }
 
-    $default_lines = preg_split('/[\r\n]+/', social_get_default_tag_overrides_string());
-    $missing_defaults = [];
-    foreach ($default_lines as $d_line) {
-        $trimmed = trim($d_line);
-        if ($trimmed === '' || strpos($trimmed, '#') === 0) continue;
-        $d_key = '';
-        if (strpos($trimmed, '=') !== false) {
-            list($k) = explode('=', $trimmed, 2);
-            $d_key = mb_strtolower(ltrim(trim($k), '#'));
-        } else {
-            $d_key = mb_strtolower(ltrim($trimmed, '#'));
-        }
-        if (!isset($existing_keys[$d_key])) {
-            $missing_defaults[] = $trimmed;
-        }
-    }
-
-    if (empty($missing_defaults)) {
-        return trim((string)$custom_str);
-    }
-
-    return rtrim((string)$custom_str) . "\n\n# Built-In Baseline Terms\n" . implode("\n", $missing_defaults);
-}
-
-/**
- * Returns static dictionary map of built-in baseline terms for fallback compatibility.
- * Zero database queries or background archive scanning.
- *
- * @return array Normalized key to formatted brand name map.
- */
-function social_get_site_vocabulary_dictionary() {
-    return [
-        'samsunggalaxytab'  => 'Samsung Galaxy Tab',
-        'samsunggalaxy'     => 'Samsung Galaxy',
-        'snapdragonx2'      => 'Snapdragon X2',
-        'snapdragonx1'      => 'Snapdragon X1',
-        'snapdragonx'       => 'Snapdragon X',
-        'snapdragon'        => 'Snapdragon',
-        'mediatek'          => 'MediaTek',
-        'dellxps'           => 'Dell XPS',
-        'xps'               => 'XPS',
-        'googlebook'        => 'Googlebook',
-        'chromebook'        => 'Chromebook',
-        'pocketbook'        => 'PocketBook',
-        'eliteminipc'       => 'Elite Mini PC',
-        'minipc'            => 'Mini PC',
-        'minipcs'           => 'Mini PCs',
-        'thinkbookplusgen'  => 'ThinkBook Plus Gen',
-        'thinkbookplus'     => 'ThinkBook Plus',
-        'thinkbook'         => 'ThinkBook',
-        'minimalphone'      => 'Minimal Phone',
-        'steamframe'        => 'Steam Frame',
-        'steamdeck'         => 'Steam Deck',
-        'steamos'           => 'SteamOS',
-        'nintendoswitch'    => 'Nintendo Switch',
-        'raspberrypi'       => 'Raspberry Pi',
-        'openclaw'          => 'OpenClaw',
-        'dimensity'         => 'Dimensity',
-        'qualcomm'          => 'Qualcomm',
-        'adreno'            => 'Adreno',
-        'fdroid'            => 'F-Droid',
-        'eink'              => 'E-ink',
-        'uboot'             => 'U-Boot',
-        'coreboot'          => 'Coreboot',
-    ];
-}
-
-/**
- * Flush the site vocabulary cache (retained for backward compatibility).
- */
-function social_flush_site_vocabulary_cache() {
-    delete_transient('social_digest_site_vocab_cache');
-    return social_get_site_vocabulary_dictionary();
+    return implode("\n", $clean_lines);
 }
 
 /**
@@ -1043,13 +963,10 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
     $t = ltrim(trim((string)$tag), '#');
     if ($t === '') return '';
 
-    // Check custom overrides (e.g. "rawtag=Formatted Name", "MINISFORUM*", or baseline terms)
+    // Check user's custom overrides (e.g. "rawtag=Formatted Name", "MINISFORUM*")
     if (empty($custom_overrides_str)) {
         $opts = get_option('social_digest_options', []);
         $custom_overrides_str = $opts['title_tag_custom_overrides'] ?? '';
-        if (empty($custom_overrides_str)) {
-            $custom_overrides_str = social_get_default_tag_overrides_string();
-        }
     }
 
     if (!empty($custom_overrides_str)) {
