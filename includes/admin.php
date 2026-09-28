@@ -92,6 +92,7 @@ add_action('admin_init', function() {
             'min_tag_length'         => 3,
             'keep_threads'           => 1,
             'collapse_threads'       => 1,
+            'thread_default_state'   => 'collapsed',
             'mobile_deep_links'      => 1,
             'include_reposts'        => 0,
             'exclude_titles'         => 0,
@@ -272,6 +273,8 @@ function social_sanitize_settings($input) {
 
     $output['keep_threads']        = !empty($input['keep_threads']) ? 1 : 0;
     $output['collapse_threads']    = !empty($input['collapse_threads']) ? 1 : 0;
+    $allowed_thread_states         = ['collapsed', 'expanded'];
+    $output['thread_default_state']= in_array($input['thread_default_state'] ?? '', $allowed_thread_states, true) ? $input['thread_default_state'] : 'collapsed';
     $output['mobile_deep_links']   = !empty($input['mobile_deep_links']) ? 1 : 0;
     $output['include_reposts']     = !empty($input['include_reposts']) ? 1 : 0;
     $output['exclude_titles']      = !empty($input['exclude_titles']) ? 1 : 0;
@@ -623,6 +626,14 @@ function social_render_settings_page() {
                                                     <label><input type="checkbox" name="social_digest_options[exclude_titles]" value="1" <?php checked($opts['exclude_titles'] ?? 0, 1); ?> /> Exclude posts matching existing WordPress headlines</label><br>
                                                     <label><input type="checkbox" name="social_digest_options[keep_threads]" value="1" <?php checked($opts['keep_threads'] ?? 1, 1); ?> /> Include self-replies / threads</label><br>
                                                      <label><input type="checkbox" name="social_digest_options[collapse_threads]" value="1" <?php checked(!isset($opts['collapse_threads']) || !empty($opts['collapse_threads'])); ?> /> Collapse multi-post author threads into single unified cards</label><br>
+                                                     <div style="margin: 6px 0 8px 24px;">
+                                                         <label style="font-weight:600; font-size:12px; margin-right:6px;">Default Thread State:</label>
+                                                         <select name="social_digest_options[thread_default_state]" id="social_thread_default_state">
+                                                             <option value="collapsed" <?php selected($opts['thread_default_state'] ?? 'collapsed', 'collapsed'); ?>>Collapsed (readers click to expand follow-up posts)</option>
+                                                             <option value="expanded" <?php selected($opts['thread_default_state'] ?? '', 'expanded'); ?>>Expanded (follow-up posts visible by default)</option>
+                                                         </select>
+                                                         <p class="description" style="margin:2px 0 0 0; font-size:11px;">Controls whether unified thread cards render with follow-up replies initially expanded or collapsed within the post.</p>
+                                                     </div>
                                                      <label><input type="checkbox" name="social_digest_options[mobile_deep_links]" value="1" <?php checked(!isset($opts['mobile_deep_links']) || !empty($opts['mobile_deep_links'])); ?> /> Enable smart mobile app deep-linking (opens native Bluesky or Mastodon app if installed; falls back to browser without extra buttons)</label>
                                                 </td>
                                             </tr>

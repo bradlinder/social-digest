@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.52
+Stable tag: 5.7.53
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,12 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.7.53 =
+* Configurable Default State for Unified Thread Cards:
+  1. Default Thread Card State Option: Added an admin setting under Feed Rules (`thread_default_state`) allowing publishers to choose whether unified multi-post author thread cards render collapsed or expanded by default.
+  2. Native HTML5 `<details open>` Markup: When set to "Expanded by default", thread cards render with the native HTML5 `open` attribute so all follow-up replies are immediately visible on page load while retaining the interactive `<summary>` toggle for readers to collapse. When set to "Collapsed by default", follow-up replies remain neatly tucked behind the clickable "🧵 View full thread" toggle.
+  3. Dynamic Summary Labels: Automatically adjusts the summary heading between "🧵 Full thread" when expanded and "🧵 View full thread" when collapsed, with the total follow-up post count clearly displayed.
 
 = 5.7.52 =
 * Descriptive Media Naming & Pre-Publication Asset Attachment Order:

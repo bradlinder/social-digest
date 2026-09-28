@@ -77,9 +77,14 @@ function social_collapse_thread_posts($eligible, $opts) {
             $child_posts = $threads[$p_idx];
             $child_count = count($child_posts);
 
-            $thread_html = '<details class="social-thread-collapse" data-nosnippet style="margin-top:14px; border-top:1px dashed #cbd5e1; padding-top:10px;">';
+            $thread_state = $opts['thread_default_state'] ?? 'collapsed';
+            $is_expanded  = ($thread_state === 'expanded');
+            $open_attr    = $is_expanded ? ' open' : '';
+            $summary_label= $is_expanded ? 'Full thread' : 'View full thread';
+
+            $thread_html = '<details class="social-thread-collapse" data-nosnippet' . $open_attr . ' style="margin-top:14px; border-top:1px dashed #cbd5e1; padding-top:10px;">';
             $thread_html .= '<summary style="cursor:pointer; font-weight:700; font-size:13px; color:#0284c7; outline:none; display:inline-flex; align-items:center; gap:6px; user-select:none;">';
-            $thread_html .= '<span>🧵 View full thread (' . $child_count . ' follow-up post' . ($child_count > 1 ? 's' : '') . ')</span>';
+            $thread_html .= '<span>🧵 ' . $summary_label . ' (' . $child_count . ' follow-up post' . ($child_count > 1 ? 's' : '') . ')</span>';
             $thread_html .= '</summary>';
             $thread_html .= '<div class="social-thread-replies" style="margin-top:10px; padding-left:12px; border-left:3px solid #0284c7; display:flex; flex-direction:column; gap:12px;">';
 

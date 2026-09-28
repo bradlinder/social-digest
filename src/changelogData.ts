@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.52',
+  version: '5.7.53',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,24 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.51',
+  rollbackTarget: 'v5.7.52',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.7.53',
+    tag: 'v5.7.53',
+    isLatest: true,
+    highlights: [
+      'Configurable Thread Card Default State: Added an admin setting under Feed Rules (Default Thread State) enabling publishers to choose whether unified multi-post author thread cards render collapsed or expanded by default.',
+      'Native HTML5 <details open> Integration: When expanded by default, thread cards render with the open attribute so replies are immediately visible while retaining the interactive toggle for readers to collapse.',
+      'Context-Aware Summary Headings: Dynamically toggles summary text between "🧵 Full thread" when expanded and "🧵 View full thread" when collapsed with follow-up post counts.'
+    ]
+  },
+  {
     version: '5.7.52',
     tag: 'v5.7.52',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Descriptive Media Naming & Labels: Replaced generic "Digest media asset" labels and random hash file names with contextual titles and slugs derived from post hashtags, author names, or preview cards (e.g. onyx-boox-picco-1.jpeg, pine-64.png, f-droid.png).',
       'Pre-Publication Asset Attachment Order: Staged post creation as draft during media sideloading and featured image attachment, transitioning to published status only after all assets and responsive srcsets are complete so feed readers and RSS subscribers receive complete articles with thumbnails on the very first publish notification.'
