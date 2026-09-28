@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.1
+Stable tag: 5.8.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,12 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.2 =
+* Master Avatar Deduplication, Unattached Parenting & Duplicate Cleanup Tool:
+  1. Persistent Master Avatar Deduplication: Ingested author avatars are downloaded and cached once into the WordPress Media Library, then reused across all future digest editions. A persistent account-keyed cache (`social_digest_avatar_cache`) verifies existing attachment validity and remote image URLs, completely eliminating redundant duplicate avatar downloads.
+  2. Unattached Media Attachment Architecture: Configured sideloaded avatar attachments with `post_parent = 0` (unattached). Because avatars represent global author identities rather than single-edition content, unattached parenting ensures that deleting, trashing, or drafting individual digest posts will never delete, break, or orphan shared author avatars.
+  3. Media Library Duplicate Avatar Cleanup Tool: Added an administrative maintenance tool under Settings > Media Optimization > Avatar Storage & Hygiene. Scans the Media Library for legacy duplicate avatar attachments, identifies the latest version as the unattached master, updates all published digest post references in the database to the master URL, and permanently deletes redundant duplicate files and attachments from disk.
 
 = 5.8.1 =
 * Gallery Image Lightbox & Responsive Lightbox Integration:

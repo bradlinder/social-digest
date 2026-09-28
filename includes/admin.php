@@ -133,6 +133,11 @@ add_action('admin_init', function() {
         add_settings_error('sd53', 'fetch', $result['message'], !empty($result['success']) ? 'updated' : 'error');
     }
 
+    if (isset($_POST['sd53_cleanup_avatars']) && check_admin_referer('sd53_cleanup_avatars_action', 'sd53_cleanup_nonce')) {
+        $result = social_cleanup_duplicate_avatars();
+        add_settings_error('sd53', 'cleanup_avatars', $result['message'], !empty($result['success']) ? 'updated' : 'notice');
+    }
+
     if (isset($_POST['sd53_save']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
         social_save_workbench_state(social_sanitize_next_run($_POST));
         add_settings_error('sd53', 'save', 'Next-run editorial changes saved.', 'updated');
@@ -695,6 +700,24 @@ function social_render_settings_page() {
                                                         <option value="none" <?php selected($opts['gallery_click_action'] ?? '', 'none'); ?>>None (display only, unlinked)</option>
                                                     </select>
                                                     <p class="description">Controls what happens when readers click an embedded gallery or update image. When set to <strong>Lightbox</strong>, images open seamlessly in your site's active lightbox plugin (such as Responsive Lightbox) with a lightweight zero-dependency on-page fallback viewer if no lightbox plugin is present.</p>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Avatar Storage &amp; Hygiene</th>
+                                                <td>
+                                                    <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px;">
+                                                        <span class="dashicons dashicons-id" style="color:#0284c7; font-size:18px; width:18px; height:18px;"></span>
+                                                        <span><strong>Persistent Master Avatar Deduplication:</strong> Active (Avatars are stored once as unattached master assets and reused across all editions).</span>
+                                                    </div>
+                                                    <p class="description" style="margin-bottom:12px;">When updates from the same account are ingested, Social Digest automatically reuses the existing cached avatar from the Media Library rather than creating duplicates. Avatars are maintained as unattached assets so deleting individual digest posts will never break shared author images.</p>
+                                                    
+                                                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 14px; display:inline-flex; align-items:center; gap:12px;">
+                                                        <?php wp_nonce_field('sd53_cleanup_avatars_action', 'sd53_cleanup_nonce'); ?>
+                                                        <button type="submit" name="sd53_cleanup_avatars" value="1" formaction="<?php echo esc_url(admin_url('edit.php?page=social-digest-settings&tab=settings')); ?>" class="button button-secondary" onclick="return confirm('Scan and purge duplicate avatar files from the Media Library? Any digest posts referencing duplicate avatar URLs will be automatically updated to reference the retained master avatar.');">
+                                                            <span class="dashicons dashicons-trash" style="vertical-align:text-top; font-size:16px; width:16px; height:16px; margin-right:4px;"></span> Clean Up Duplicate Avatars
+                                                        </button>
+                                                        <span style="font-size:12px; color:#64748b;">Deletes older duplicate avatar files from disk and consolidates digests to one master unattached avatar.</span>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         </table>

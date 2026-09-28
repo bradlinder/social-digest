@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.8.1',
+  version: '5.8.2',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,24 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.8',
+  rollbackTarget: 'v5.8.1',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.8.2',
+    tag: 'v5.8.2',
+    isLatest: true,
+    highlights: [
+      'Master Avatar Deduplication & Persistent Caching: Downloads and caches ingested author avatars once in the WordPress Media Library, reusing them across all editions via persistent cache (social_digest_avatar_cache) and eliminating redundant duplicate downloads.',
+      'Unattached Media Attachment Architecture: Configures avatar attachments with post_parent = 0 (unattached) to represent global author assets, permanently protecting them from accidental deletion or breakage if individual digest editions are deleted or moved to trash.',
+      'Media Library Duplicate Avatar Cleanup Tool: Added an administrative tool under Settings > Media Optimization > Avatar Storage & Hygiene. Scans the Media Library, promotes the latest avatar to the unattached master, updates all digest post links in the database to the master URL, and permanently deletes duplicate attachments and files from disk.'
+    ]
+  },
+  {
     version: '5.8.1',
     tag: 'v5.8.1',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'On-Site Gallery Lightbox Integration: Embedded gallery and update images now open in an on-site lightbox modal, allowing visitors to view high-resolution photos without leaving the page.',
       'Native Responsive Lightbox Compatibility: Automatically integrates with Responsive Lightbox by dFactory (and WordPress core/third-party lightboxes) using shared data-rel grouping attributes for multi-image swipe and arrow navigation.',

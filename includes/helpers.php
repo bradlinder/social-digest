@@ -493,11 +493,15 @@ function social_sideload_image_by_mime($url, $post_id, $desc = '', $slug = '') {
     // Use human-readable title for attachment post_title in WordPress Media Library
     $clean_title = !empty($desc) ? wp_strip_all_tags($desc) : sanitize_file_name(basename($upload['file']));
 
+    // Avatars are shared site-wide brand assets: set post_parent to 0 (Unattached)
+    // so they are permanently protected from post trashing, deletions, and draft restrictions.
+    $attach_parent = (strpos($desc, 'Avatar') !== false || strpos($slug, 'avatar-') === 0 || empty($post_id)) ? 0 : $post_id;
+
     $attach_id = wp_insert_attachment([
         'post_mime_type' => $mime_type,
         'post_title'     => $clean_title,
         'post_status'    => 'inherit'
-    ], $upload['file'], $post_id);
+    ], $upload['file'], $attach_parent);
 
     if ($attach_id && !is_wp_error($attach_id) && !empty($desc)) {
         update_post_meta($attach_id, '_wp_attachment_image_alt', $clean_title);
@@ -721,34 +725,75 @@ function social_sideload_content_media($content, $post_id, $only_avatars_and_car
             $attachment_id = 0;
             $local_url = '';
 
-            if (isset($processed_media_urls[$img_url_clean])) {
-                $cached_entry = $processed_media_urls[$img_url_clean];
-                if (is_array($cached_entry)) {
-                    $attachment_id = $cached_entry['id'];
-                    $local_url     = $cached_entry['url'];
-                }
+            $is_avatar = (strpos($img_tag, 'social-avatar') !== false);
+            $descriptor = $media_descriptors[$img_url_clean] ?? null;
+            if ($descriptor) {
+                $desc = $descriptor['desc'];
+                $slug = $descriptor['slug'];
             } else {
-                $descriptor = $media_descriptors[$img_url_clean] ?? null;
-                if ($descriptor) {
-                    $desc = $descriptor['desc'];
-                    $slug = $descriptor['slug'];
-                } else {
-                    $desc = (strpos($img_tag, 'social-avatar') !== false) ? 'Social Digest avatar' : 'Digest media asset';
-                    $slug = '';
-                }
+                $desc = $is_avatar ? 'Social Digest avatar' : 'Digest media asset';
+                $slug = '';
+            }
 
-                $att_res = social_sideload_image_by_mime($img_url_clean, $post_id, $desc, $slug);
-                if ($att_res && !is_wp_error($att_res)) {
-                    $attachment_id = (int)$att_res;
-                    $local_url = wp_get_attachment_url($attachment_id);
-                    if ($local_url) {
-                        $processed_media_urls[$img_url_clean] = [
-                            'id'  => $attachment_id,
-                            'url' => $local_url,
-                        ];
+            // Check persistent avatar cache if this image is an account avatar
+            $avatar_cache = get_option('social_digest_avatar_cache', []);
+            if (!is_array($avatar_cache)) {
+                $avatar_cache = [];
+            }
+            $avatar_key = $is_avatar ? (!empty($slug) ? $slug : ('avatar-' . md5($img_url_clean))) : '';
+
+            if ($is_avatar && !empty($avatar_key) && isset($avatar_cache[$avatar_key])) {
+                $cached = $avatar_cache[$avatar_key];
+                $cached_id = absint($cached['attachment_id'] ?? 0);
+                if ($cached_id && get_post_status($cached_id)) {
+                    $cached_url = wp_get_attachment_url($cached_id);
+                    if ($cached_url) {
+                        $cached_remote = $cached['remote_url'] ?? '';
+                        // If remote URL is unchanged, reuse existing master avatar with 0 downloads and 0 duplicates
+                        if (empty($cached_remote) || $cached_remote === $img_url_clean) {
+                            $attachment_id = $cached_id;
+                            $local_url     = $cached_url;
+                            $processed_media_urls[$img_url_clean] = [
+                                'id'  => $attachment_id,
+                                'url' => $local_url,
+                            ];
+                        }
+                    }
+                }
+            }
+
+            if (!$attachment_id) {
+                if (isset($processed_media_urls[$img_url_clean])) {
+                    $cached_entry = $processed_media_urls[$img_url_clean];
+                    if (is_array($cached_entry)) {
+                        $attachment_id = $cached_entry['id'];
+                        $local_url     = $cached_entry['url'];
                     }
                 } else {
-                    $processed_media_urls[$img_url_clean] = false;
+                    $target_parent = $is_avatar ? 0 : $post_id;
+                    $att_res = social_sideload_image_by_mime($img_url_clean, $target_parent, $desc, $slug);
+                    if ($att_res && !is_wp_error($att_res)) {
+                        $attachment_id = (int)$att_res;
+                        $local_url = wp_get_attachment_url($attachment_id);
+                        if ($local_url) {
+                            $processed_media_urls[$img_url_clean] = [
+                                'id'  => $attachment_id,
+                                'url' => $local_url,
+                            ];
+                            // Update persistent master avatar cache
+                            if ($is_avatar && !empty($avatar_key)) {
+                                $avatar_cache[$avatar_key] = [
+                                    'attachment_id' => $attachment_id,
+                                    'local_url'     => $local_url,
+                                    'remote_url'    => $img_url_clean,
+                                    'updated'       => time(),
+                                ];
+                                update_option('social_digest_avatar_cache', $avatar_cache);
+                            }
+                        }
+                    } else {
+                        $processed_media_urls[$img_url_clean] = false;
+                    }
                 }
             }
 
@@ -1604,4 +1649,149 @@ function social_purge_site_caches($post_id = 0) {
     if (function_exists('sg_cachepress_purge_cache')) {
         sg_cachepress_purge_cache();
     }
+}
+
+/**
+ * Scans the WordPress Media Library for duplicate Social Digest avatar attachments.
+ * Retains one master unattached avatar per account, updates any digest posts pointing
+ * to duplicate avatar URLs, and permanently prunes duplicate attachments and files from disk.
+ *
+ * @return array ['success' => bool, 'message' => string, 'cleaned_count' => int]
+ */
+function social_cleanup_duplicate_avatars() {
+    if (!current_user_can('manage_options')) {
+        return ['success' => false, 'message' => 'Permission denied.'];
+    }
+
+    // Query all potential avatar attachments created by Social Digest
+    $slug_query = get_posts([
+        'post_type'      => 'attachment',
+        'post_status'    => 'inherit',
+        'posts_per_page' => 300,
+        's'              => 'avatar-',
+    ]);
+
+    $title_query = get_posts([
+        'post_type'      => 'attachment',
+        'post_status'    => 'inherit',
+        'posts_per_page' => 300,
+        's'              => '(Avatar)',
+    ]);
+
+    $all_avatars = [];
+    foreach (array_merge((array)$slug_query, (array)$title_query) as $att) {
+        if (!empty($att->ID)) {
+            $all_avatars[$att->ID] = $att;
+        }
+    }
+
+    if (empty($all_avatars)) {
+        return [
+            'success'       => true,
+            'message'       => 'No duplicate avatar attachments found in Media Library.',
+            'cleaned_count' => 0
+        ];
+    }
+
+    // Group avatars by account identity / base slug
+    // e.g. "avatar-liliputing-bsky-social-2" -> base "avatar-liliputing-bsky-social"
+    $grouped = [];
+    foreach ($all_avatars as $id => $att) {
+        $file_path = function_exists('get_attached_file') ? get_attached_file($id) : '';
+        $filename  = basename($file_path ?: ($att->guid ?? ''));
+        $name_no_ext = preg_replace('/\.[a-zA-Z0-9]+$/', '', $filename);
+        $base_key = preg_replace('/-\d+$/', '', $name_no_ext);
+        if (empty($base_key) || $base_key === 'avatar') {
+            $base_key = sanitize_title_with_dashes($att->post_title);
+            $base_key = preg_replace('/-\d+$/', '', $base_key);
+        }
+        $grouped[$base_key][] = $att;
+    }
+
+    $avatar_cache = get_option('social_digest_avatar_cache', []);
+    if (!is_array($avatar_cache)) {
+        $avatar_cache = [];
+    }
+
+    $total_cleaned = 0;
+
+    foreach ($grouped as $base_key => $group_list) {
+        if (empty($group_list)) continue;
+
+        // If only 1 avatar exists for this identity, ensure post_parent is 0 (unattached)
+        if (count($group_list) === 1) {
+            $single_att = $group_list[0];
+            if ($single_att->post_parent != 0) {
+                wp_update_post([
+                    'ID'          => $single_att->ID,
+                    'post_parent' => 0,
+                ]);
+            }
+            $avatar_cache[$base_key] = [
+                'attachment_id' => $single_att->ID,
+                'local_url'     => wp_get_attachment_url($single_att->ID),
+                'updated'       => time(),
+            ];
+            continue;
+        }
+
+        // Sort descending by ID to keep the newest attachment as master
+        usort($group_list, function($a, $b) {
+            return ($b->ID - $a->ID);
+        });
+
+        // The master avatar to retain
+        $master_att = array_shift($group_list);
+        if ($master_att->post_parent != 0) {
+            wp_update_post([
+                'ID'          => $master_att->ID,
+                'post_parent' => 0,
+            ]);
+        }
+
+        $master_url = wp_get_attachment_url($master_att->ID);
+        $avatar_cache[$base_key] = [
+            'attachment_id' => $master_att->ID,
+            'local_url'     => $master_url,
+            'updated'       => time(),
+        ];
+
+        // Process duplicates
+        foreach ($group_list as $dup_att) {
+            $dup_url = wp_get_attachment_url($dup_att->ID);
+
+            // If any posts referenced the duplicate URL, replace it with the master URL
+            if ($dup_url && $master_url && $dup_url !== $master_url) {
+                global $wpdb;
+                if (!empty($wpdb) && !empty($wpdb->posts)) {
+                    $wpdb->query($wpdb->prepare(
+                        "UPDATE {$wpdb->posts} SET post_content = REPLACE(post_content, %s, %s) WHERE post_content LIKE %s",
+                        $dup_url,
+                        $master_url,
+                        '%' . $wpdb->esc_like($dup_url) . '%'
+                    ));
+                }
+            }
+
+            // Permanently delete duplicate attachment and its files from disk
+            wp_delete_attachment($dup_att->ID, true);
+            $total_cleaned++;
+        }
+    }
+
+    update_option('social_digest_avatar_cache', $avatar_cache);
+
+    if ($total_cleaned > 0) {
+        return [
+            'success'       => true,
+            'message'       => sprintf('Cleaned up %d duplicate avatar attachment(s) from the Media Library. Master avatars are now unattached and permanently deduplicated.', $total_cleaned),
+            'cleaned_count' => $total_cleaned,
+        ];
+    }
+
+    return [
+        'success'       => true,
+        'message'       => 'Avatar storage is healthy. All active avatars are deduplicated and saved as unattached master assets.',
+        'cleaned_count' => 0,
+    ];
 }
