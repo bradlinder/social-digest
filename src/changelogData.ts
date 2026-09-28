@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.8.6',
+  version: '5.8.7',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,24 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.8.5',
+  rollbackTarget: 'v5.8.6',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.8.7',
+    tag: 'v5.8.7',
+    isLatest: true,
+    highlights: [
+      'Resolved Baseline Rules Display on Existing Installs: Fixed an option presence condition where sites with a previously empty overrides setting in the database failed to display the 28 baseline terms.',
+      'Guaranteed Baseline Auto-Population: When the overrides setting is empty, the textarea automatically pre-populates all 28 built-in technology brand rules (Chromebook, Coreboot, Dell XPS, Dimensity, Elite Mini PC, F-Droid, MediaTek, Nintendo Switch, Raspberry Pi, Steam Deck, etc.) making them immediately visible, searchable, sortable, and editable.',
+      'Automatic Database Upgrade Migration: Added an automatic migration during admin_init that populates empty override options directly into the WordPress database options table.'
+    ]
+  },
+  {
     version: '5.8.6',
     tag: 'v5.8.6',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Single Underscore as Space: Hashtags with single underscores are now automatically interpreted as spaces in digest titles, taxonomy tags, and slugs (e.g. #AI_PC -> "AI PC", #Mini_PC -> "Mini PC") without needing manual override rules.',
       'Double Underscore as Hyphen: Consecutive underscores are parsed as hyphens (e.g. #Wi__Fi -> "Wi-Fi", #F__Droid -> "F-Droid") to support punctuation across social networks where hyphens break hashtags.',

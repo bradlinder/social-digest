@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.6
+Stable tag: 5.8.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,12 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.7 =
+* Automatic Built-In Baseline Terms Population & Existing Install Migration:
+  1. Resolved Baseline Rules Display on Existing Installs: Fixed an option presence condition in the administrative settings view where sites with an existing, previously empty `title_tag_custom_overrides` database setting failed to render the default rules.
+  2. Automatic Auto-Population: If the custom overrides setting is empty, the textarea now automatically pre-populates all 28 built-in technology brand rules (Chromebook, Coreboot, Dell XPS, Dimensity, Elite Mini PC, F-Droid, MediaTek, Nintendo Switch, Raspberry Pi, Steam Deck, etc.) making them immediately visible, searchable, sortable, and editable.
+  3. Automatic Database Upgrade Migration: Added an automatic migration during `admin_init` that populates previously empty override options directly into the WordPress options table.
 
 = 5.8.6 =
 * Social Hashtag Underscore & Hyphen Shorthand Convention:

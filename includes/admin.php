@@ -122,6 +122,13 @@ add_action('admin_init', function() {
         ]
     ]);
 
+    // Ensure built-in baseline terms are populated if custom overrides option is empty or missing
+    $stored_opts = get_option('social_digest_options', []);
+    if (is_array($stored_opts) && (!isset($stored_opts['title_tag_custom_overrides']) || trim((string)$stored_opts['title_tag_custom_overrides']) === '')) {
+        $stored_opts['title_tag_custom_overrides'] = social_get_default_tag_overrides_string();
+        update_option('social_digest_options', $stored_opts);
+    }
+
     // Workbench Form Handlers
     if (!current_user_can('manage_options')) return;
     if (empty($_GET['page']) || $_GET['page'] !== 'social-digest-settings') return;
@@ -986,8 +993,8 @@ function social_render_settings_page() {
 
                                                         <!-- Overrides Textarea -->
                                                         <?php
-                                                        $current_overrides = $opts['title_tag_custom_overrides'] ?? '';
-                                                        if ($current_overrides === '' && !isset($opts['title_tag_custom_overrides'])) {
+                                                        $current_overrides = trim((string)($opts['title_tag_custom_overrides'] ?? ''));
+                                                        if ($current_overrides === '') {
                                                             $current_overrides = social_get_default_tag_overrides_string();
                                                         }
                                                         ?>
@@ -997,6 +1004,7 @@ function social_render_settings_page() {
                                                             <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">Tag Override Rules &amp; Built-In Baseline:</div>
                                                             <p style="margin: 0 0 6px 0;">All built-in technology terms are pre-populated above, fully visible and editable. You can freely edit, add, or delete any rule.</p>
                                                             <ul style="margin: 0 0 6px 18px; list-style-type: disc;">
+                                                                <li><strong>Social Tag Shorthand: Single underscore (<code>_</code>) creates a space (e.g. <code>#AI_PC</code> &rarr; <strong>AI PC</strong>); double underscore (<code>__</code>) creates a hyphen (e.g. <code>#Wi__Fi</code> &rarr; <strong>Wi-Fi</strong></li>
                                                                 <li><strong>Formatting:</strong> Enter rules <strong>one per line</strong> (recommended) or separated by commas. Leading <code>#</code> symbols are stripped automatically. Comments beginning with <code>#</code> are preserved.</li>
                                                                 <li><strong>Exact Mapping (<code>tag=Formatted Title</code>):</strong> Explicitly renames a hashtag to your desired title casing (e.g. <code>SnapdragonX=Snapdragon X</code>, <code>FDroid=F-Droid</code>).</li>
                                                                 <li><strong>Wildcard Prefixes (<code>PREFIX*</code>):</strong> Preserves uppercase brand prefixes while splitting trailing model numbers (e.g. <code>MINISFORUM*</code> formats <code>#MINISFORUMS5</code> to <strong>MINISFORUM S5</strong>).</li>
