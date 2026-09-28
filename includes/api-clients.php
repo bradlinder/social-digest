@@ -126,7 +126,7 @@ function social_render_native_card($item, $opts = []) {
         }
         $card_pos = strpos($media_content, 'social-link-card');
         if ($first_embed_pos !== false && $card_pos !== false && $card_pos > $first_embed_pos) {
-            if (preg_match('/(<div class="social-link-card"[^>]*>.*?<\/div>\s*<\/div>)/s', $media_content, $m)) {
+            if (preg_match('/(<(?:div|a)\s+class="social-link-card"[^>]*>.*?<\/(?:div|a)>)/s', $media_content, $m)) {
                 $card_snippet = $m[1];
                 $gallery_snippet = trim(str_replace($card_snippet, '', $media_content));
                 $media_content = $card_snippet . $gallery_snippet;

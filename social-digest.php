@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, stock media sideloading, local asset caching, and RSS-only syndication.
- * Version: 5.7.53
+ * Version: 5.8
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) exit;
 
 // Plugin constants
 if (!defined('SOCIAL_DIGEST_VERSION')) {
-    define('SOCIAL_DIGEST_VERSION', '5.7.53');
+    define('SOCIAL_DIGEST_VERSION', '5.8');
 }
 if (!defined('SOCIAL_DIGEST_FILE')) {
     define('SOCIAL_DIGEST_FILE', __FILE__);
@@ -188,6 +188,7 @@ add_action('wp_head', function() {
             filter: brightness(0.96);
         }
         div.social-post .social-link-card {
+            display: block !important;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
             overflow: hidden;
@@ -196,15 +197,34 @@ add_action('wp_head', function() {
             background: #f8fafc;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
             text-decoration: none !important;
+            color: inherit !important;
+            cursor: pointer;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        div.social-post .social-link-card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+            text-decoration: none !important;
+        }
+        div.social-post .social-link-card-body {
+            display: block !important;
+            padding: 10px 14px;
         }
         div.social-post .social-link-card-title {
+            display: block !important;
             font-weight: 700 !important;
             font-size: 14px !important;
             margin-bottom: 4px;
             color: #0f172a;
             line-height: 1.35;
+            transition: color 0.15s ease;
+        }
+        div.social-post .social-link-card:hover .social-link-card-title {
+            text-decoration: underline !important;
+            color: #0284c7;
         }
         div.social-post .social-link-card-desc {
+            display: block !important;
             font-weight: 400 !important;
             font-size: 12.5px !important;
             color: #475569;
@@ -212,7 +232,7 @@ add_action('wp_head', function() {
             margin-bottom: 6px;
         }
         div.social-post .social-link-card-domain {
-            display: flex;
+            display: flex !important;
             align-items: center;
             gap: 5px;
             font-size: 12px !important;
@@ -330,6 +350,13 @@ add_action('wp_head', function() {
             background: #1e293b !important;
             border-color: #334155 !important;
         }
+        div.social-post.social-card.is-dark .social-link-card:hover,
+        div.social-post.social-card[data-social-theme="dark"] .social-link-card:hover,
+        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-link-card:hover
+        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-link-card:hover'; ?> {
+            border-color: #475569 !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+        }
         div.social-post.social-card.is-dark .social-link-card .social-link-card-domain,
         div.social-post.social-card[data-social-theme="dark"] .social-link-card .social-link-card-domain {
             color: #cbd5e1 !important;
@@ -337,6 +364,11 @@ add_action('wp_head', function() {
         div.social-post.social-card.is-dark .social-link-card .social-link-card-title,
         div.social-post.social-card[data-social-theme="dark"] .social-link-card .social-link-card-title {
             color: #38bdf8 !important;
+        }
+        div.social-post.social-card.is-dark .social-link-card:hover .social-link-card-title,
+        div.social-post.social-card[data-social-theme="dark"] .social-link-card:hover .social-link-card-title {
+            text-decoration: underline !important;
+            color: #7dd3fc !important;
         }
         div.social-post.social-card.is-dark .social-link-card .social-link-card-desc,
         div.social-post.social-card[data-social-theme="dark"] .social-link-card .social-link-card-desc {

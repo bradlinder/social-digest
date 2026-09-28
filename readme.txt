@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.7.53
+Stable tag: 5.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,13 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8 =
+* Unified Clickable Social Snippet Cards:
+  1. Full Snippet Clickability: Made the entire preview card area clickable to open the linked article in a new tab. Clicking anywhere in the snippet—the preview image thumbnail, the headline title, the snippet description text, or the source domain link—now seamlessly navigates readers to the destination page.
+  2. Native HTML5 & WordPress KSES / wpautop Protection: Restructured the social link card from nested block `<div>` elements into a semantic `<a class="social-link-card">` wrapper containing inline `<span style="display:block">` elements. This completely prevents WordPress filters (`wpautop`, `force_balance_tags`, `balanceTags`, and KSES) from prematurely closing anchor tags after images or splitting card paragraphs.
+  3. Interactive Micro-Interactions & Hover Polish: Added subtle elevation, card border transitions, and headline title underline/accent color shifts on hover, matching the intuitive feel of native Bluesky social cards.
+  4. Isolated Social Post Body: Cleanly preserved the social update text above the snippet widget in its own container so clicks on post commentary remain non-navigating.
 
 = 5.7.53 =
 * Configurable Default State for Unified Thread Cards:

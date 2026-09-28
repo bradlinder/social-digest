@@ -294,22 +294,30 @@ export default function App() {
                 The MINISFORUM S5 is a fanless PC or NAS with 16GB LPDDR5 RAM, an Intel Core 3 304 chip, 5 M.2 slots for PCIe 4.0 x1 NVMe storage, 10 GbE and 2.5 GbE LAN, WiFi 7, 40 Gbps USB4, plus a compact aluminum chassis with heatsink fins. <a href="https://store.minisforum.com/products/minisforum-ai-nas-s5-304" target="_blank" rel="noopener noreferrer" className="text-[#0284c7] hover:underline">store.minisforum.com/products/min...</a>
               </div>
 
-              {/* Native Link Embed Card (v5.7.10 Design Hierarchy) */}
-              <div className="social-link-card border border-slate-200 rounded-lg overflow-hidden my-3 bg-slate-50/80 shadow-xs hover:border-slate-300 transition-colors">
-                <a href="https://store.minisforum.com/products/minisforum-ai-nas-s5-304" target="_blank" rel="noopener noreferrer" className="block text-inherit no-underline">
-                  <div className="p-3">
-                    <div className="font-bold text-[14px] text-slate-900 mb-1 leading-snug">
-                      MINISFORUM AI NAS S5 304 Fanless PC
-                    </div>
-                    <div className="font-normal text-[12.5px] text-slate-600 leading-normal mb-1.5">
-                      Intel Core 3 304 fanless Mini PC with 5x M.2 NVMe slots, dual 10G/2.5G LAN ports, and aluminum heatsink chassis.
-                    </div>
-                    <div className="flex items-center gap-1 text-[12px] text-slate-500 font-normal mt-1">
-                      <span className="text-[11px] opacity-80">🔗</span> store.minisforum.com
-                    </div>
-                  </div>
-                </a>
-              </div>
+              {/* Native Link Embed Card (v5.8 Full Clickable Snippet Card) */}
+              <a
+                href="https://store.minisforum.com/products/minisforum-ai-nas-s5-304"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="social-link-card block border border-slate-200 rounded-lg overflow-hidden my-3 bg-slate-50/80 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all text-inherit no-underline group cursor-pointer"
+              >
+                <img
+                  src="https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:wxhudjcwjjwsfklsq4advde6/bafkreigqnojxmiohiw75kkagzi2t3ooferz67ehnj7pv5enhkri23snyhy"
+                  alt="MINISFORUM AI NAS S5 304 Fanless PC"
+                  className="w-full max-h-[220px] object-cover block border-none"
+                />
+                <span className="social-link-card-body block p-3">
+                  <span className="social-link-card-title block font-bold text-[14px] text-slate-900 group-hover:text-[#0284c7] group-hover:underline mb-1 leading-snug transition-colors">
+                    MINISFORUM AI NAS S5 304 Fanless PC
+                  </span>
+                  <span className="social-link-card-desc block font-normal text-[12.5px] text-slate-600 leading-normal mb-1.5">
+                    Intel Core 3 304 fanless Mini PC with 5x M.2 NVMe slots, dual 10G/2.5G LAN ports, and aluminum heatsink chassis.
+                  </span>
+                  <span className="social-link-card-domain flex items-center gap-1 text-[12px] text-slate-500 font-normal mt-1">
+                    <span className="text-[11px] opacity-80">🔗</span> store.minisforum.com
+                  </span>
+                </span>
+              </a>
 
               {/* Multi-Image Gallery with WP Media Thumbnail Settings (150x150) & ALT Overlay */}
               <div className="flex flex-wrap gap-2.5 my-3 w-full">

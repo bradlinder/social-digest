@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.7.53',
+  version: '5.8',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,25 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.52',
+  rollbackTarget: 'v5.7.53',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.8',
+    tag: 'v5.8',
+    isLatest: true,
+    highlights: [
+      'Unified Clickable Social Snippet Cards: Entire link preview cards (image thumbnail, headline title, snippet description text, and domain source URL) are now unified into a single clickable anchor tag opening the linked article in a new tab.',
+      'Native HTML5 & WordPress KSES / wpautop Protection: Refactored card markup to eliminate nested block <div> elements inside <a>, preventing WordPress content filters (wpautop, balanceTags) from prematurely terminating links after images.',
+      'Bluesky-Style Hover Micro-Interactions: Added subtle card elevation, border transitions, and headline title color underline shifts on hover matching native Bluesky widget interactions.',
+      'Isolated Post Body Text: Social post commentary above the widget remains cleanly non-navigating.'
+    ]
+  },
+  {
     version: '5.7.53',
     tag: 'v5.7.53',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Configurable Thread Card Default State: Added an admin setting under Feed Rules (Default Thread State) enabling publishers to choose whether unified multi-post author thread cards render collapsed or expanded by default.',
       'Native HTML5 <details open> Integration: When expanded by default, thread cards render with the open attribute so replies are immediately visible while retaining the interactive toggle for readers to collapse.',
