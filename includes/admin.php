@@ -1017,9 +1017,11 @@ function social_render_settings_page() {
 
                                                         <!-- Overrides Textarea -->
                                                         <?php
-                                                        $current_overrides = trim((string)($opts['title_tag_custom_overrides'] ?? ''));
-                                                        if ($current_overrides === '') {
+                                                        $raw_overrides = $opts['title_tag_custom_overrides'] ?? '';
+                                                        if (trim((string)$raw_overrides) === '') {
                                                             $current_overrides = social_get_default_tag_overrides_string();
+                                                        } else {
+                                                            $current_overrides = social_get_merged_tag_overrides($raw_overrides);
                                                         }
                                                         ?>
                                                         <textarea id="sd_title_tag_custom_overrides" name="social_digest_options[title_tag_custom_overrides]" rows="14" class="large-text" style="font-family: monospace; font-size: 12px; line-height: 1.5; padding: 8px 10px;" oninput="sdUpdateLineCount()" placeholder="SnapdragonX=Snapdragon X&#10;MINISFORUM*&#10;GEEKOM*&#10;NVIDIA*&#10;MediaTek=MediaTek&#10;FDroid=F-Droid"><?php echo esc_textarea($current_overrides); ?></textarea>
