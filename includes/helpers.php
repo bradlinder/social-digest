@@ -1040,7 +1040,7 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
         // Pass 1: Exact matches
         foreach ($lines as $line) {
             $line = trim($line);
-            if ($line === '') continue;
+            if ($line === '' || strpos($line, '#') === 0) continue;
             if (strpos($line, '=') !== false) {
                 list($k, $v) = explode('=', $line, 2);
                 $k = ltrim(trim($k), '#');
@@ -1048,6 +1048,15 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
                 if (substr($k, -1) === '*') continue; // Skip wildcard rules in exact pass
                 if ($k !== '' && $v !== '' && mb_strtolower(str_replace([' ', '_', '-'], '', $t)) === mb_strtolower(str_replace([' ', '_', '-'], '', $k))) {
                     return $v;
+                }
+            } else {
+                // Support standalone exact terms without '=' (e.g. "F-Droid", "MediaTek")
+                if (substr($line, -1) !== '*') {
+                    $k = ltrim($line, '#');
+                    $v = $line;
+                    if ($k !== '' && mb_strtolower(str_replace([' ', '_', '-'], '', $t)) === mb_strtolower(str_replace([' ', '_', '-'], '', $k))) {
+                        return $v;
+                    }
                 }
             }
         }

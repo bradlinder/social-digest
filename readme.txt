@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.2
+Stable tag: 5.8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,13 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.3 =
+* Tag Overrides Export/Import Restoration, Vocabulary Export & Syntax Guide:
+  1. Restored Export & Import Functionality: Resolved a fatal JavaScript string syntax error caused by unescaped multiline confirmations in the settings page. Both the "Export (.txt)" and "Import (.txt)" tools now work reliably across all modern browsers.
+  2. Dedicated Site Vocabulary Export: Added an "Export Vocabulary (.txt)" button in the Site Vocabulary Engine box. Publishers can export their indexed brand and product terms into an independent text file without inflating or polluting their editorial tag overrides.
+  3. Comprehensive Override Syntax Guide: Added a clear formatting reference guide directly beneath the Custom Tag Title Overrides box, documenting exact mappings (`rawtag=Formatted Title`), wildcard prefixes (`PREFIX*` and `PREFIX*=Formatted Prefix`), exact brand casing (`BRAND*`, `BrandName`), and comma/line-break separation rules.
+  4. Comment Preservation & Form State Detection: Exported files now include clean informational headers (`# Social Digest Export`), the import parser automatically filters out comments, and importing dynamically triggers form change detection with inline success confirmations.
 
 = 5.8.2 =
 * Master Avatar Deduplication, Unattached Parenting & Duplicate Cleanup Tool:
