@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.8.5',
+  version: '5.8.6',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,24 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.8.4',
+  rollbackTarget: 'v5.8.5',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.8.6',
+    tag: 'v5.8.6',
+    isLatest: true,
+    highlights: [
+      'Single Underscore as Space: Hashtags with single underscores are now automatically interpreted as spaces in digest titles, taxonomy tags, and slugs (e.g. #AI_PC -> "AI PC", #Mini_PC -> "Mini PC") without needing manual override rules.',
+      'Double Underscore as Hyphen: Consecutive underscores are parsed as hyphens (e.g. #Wi__Fi -> "Wi-Fi", #F__Droid -> "F-Droid") to support punctuation across social networks where hyphens break hashtags.',
+      'Text-Only Reference Hint: Added an unobtrusive, text-only formatting note directly under "Hashtag Auto-Tagging" in Settings explaining the single and double underscore conventions.'
+    ]
+  },
+  {
     version: '5.8.5',
     tag: 'v5.8.5',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'On-Site Tag Overrides Backup & Restore Snapshot Tool: Added dedicated "Backup Snapshot" and "Restore Snapshot" buttons directly beside the Export and Import buttons in the Custom Tag Title Overrides tool.',
       'Instant AJAX & Local Fallback Persistence: Captures snapshot content, timestamp, and active rule count, immediately saving to the WordPress options table (`social_digest_options[\'overrides_snapshot\']`) via authenticated AJAX (`wp_ajax_sd_save_snapshot`) with graceful local staging fallback.',

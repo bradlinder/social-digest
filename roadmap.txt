@@ -8,6 +8,12 @@ Social Digest - Feature Roadmap & Release Status
 2. Automated Weekly Archive Digest View [Publishing]:
    - Dedicated weekly/monthly archive rollup view grouping published digests with summary metrics.
 
+0. Release v5.8.6 Social Hashtag Underscore & Hyphen Shorthand Convention (Completed in v5.8.6)
+-----------------------------------------------------------------------------------------------
+[x] Single Underscore as Space (v5.8.6): Automatically parses single underscores in hashtags as spaces across digest titles, taxonomy tags, and slugs (e.g. `#AI_PC` -> `AI PC`, `#Mini_PC` -> `Mini PC`) without requiring custom override rules.
+[x] Double Underscore as Hyphen (v5.8.6): Consecutive underscores are parsed as hyphens (e.g. `#Wi__Fi` -> `Wi-Fi`, `#F__Droid` -> `F-Droid`), enabling hyphenated brand formatting on networks that only allow underscores.
+[x] Text-Only Settings Reference Hint (v5.8.6): Added a clean, text-only note under "Hashtag Auto-Tagging" in Settings documenting the `_` (space) and `__` (hyphen) shorthand conventions.
+
 0. Release v5.8.5 On-Site Tag Overrides Backup & Restore Snapshot Tool (Completed in v5.8.5)
 -------------------------------------------------------------------------------------------
 [x] On-Site Backup & Restore Buttons (v5.8.5): Added dedicated "💾 Backup Snapshot" and "↺ Restore Snapshot" buttons alongside the Export/Import controls.

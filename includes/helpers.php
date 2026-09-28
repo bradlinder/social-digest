@@ -1105,8 +1105,10 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
     // Get dynamic vocabulary dictionary learned from site content + baseline terms
     $compound_map = social_get_site_vocabulary_dictionary();
 
-    // Treat underscores as hyphens (social platforms like Mastodon do not allow hyphens in hashtags, so underscores represent hyphens)
-    $t = preg_replace('/_+/u', '-', $t);
+    // Two or more consecutive underscores represent a hyphen (e.g. #Wi__Fi -> Wi-Fi, #F__Droid -> F-Droid)
+    $t = preg_replace('/_{2,}/u', '-', $t);
+    // A single underscore represents a space (e.g. #AI_PC -> AI PC, #Mini_PC -> Mini PC)
+    $t = str_replace('_', ' ', $t);
     $t = trim($t, "- \t\n\r\0\x0B");
 
     // CamelCase transitions (e.g. "AcerGooglebook" -> "Acer Googlebook", "Android17QPR" -> "Android 17 QPR")

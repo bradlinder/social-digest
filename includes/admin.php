@@ -1037,6 +1037,7 @@ function social_render_settings_page() {
                                                 <td>
                                                     <label><input type="checkbox" name="social_digest_options[extract_tags]" value="1" <?php checked(!isset($opts['extract_tags']) || !empty($opts['extract_tags'])); ?> /> <strong>Automatically convert social hashtags into WordPress post tags</strong></label>
                                                     <p class="description">Extracts hashtags from included social updates and attaches them as taxonomy tags to the published WordPress post.</p>
+                                                    <p class="description" style="margin-top: 4px; color: #475569;">Social Tag Shorthand: Single underscore (<code>_</code>) creates a space (e.g. <code>#AI_PC</code> &rarr; <strong>AI PC</strong>); double underscore (<code>__</code>) creates a hyphen (e.g. <code>#Wi__Fi</code> &rarr; <strong>Wi-Fi</strong>).</p>
 
                                                     <div style="margin-top: 10px; padding: 12px; background: #f6f7f7; border: 1px solid #ccd0d4; border-radius: 4px; max-width: 500px;">
                                                         <div style="margin-bottom: 8px;">
