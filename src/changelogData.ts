@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.8.3',
+  version: '5.8.4',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,25 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.8.2',
+  rollbackTarget: 'v5.8.3',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.8.4',
+    tag: 'v5.8.4',
+    isLatest: true,
+    highlights: [
+      'Retired Dynamic Vocabulary Database Scraper: Removed automated post title and taxonomy database scanning to eliminate self-referential automated headline loops, database queries, and background memory spikes.',
+      'Fully Visible & Editable Built-In Baseline Terms: All 28+ built-in tech brand terms (Chromebook, Coreboot, Dell XPS, Dimensity, Elite Mini PC, F-Droid, MediaTek, Nintendo Switch, Raspberry Pi, Steam Deck, etc.) are now pre-populated directly into the Custom Tag Title Overrides box where they are completely visible, editable, and customizable by publishers.',
+      'Real-Time Search & Match Navigation: Added a lightweight, zero-dependency search bar above the tag overrides textarea. Highlights matches in real time, scrolls directly to matching rules, and supports Enter/Next match navigation with counter display (e.g. 1/3).',
+      'Alphabetical & Recency Sorting: Added one-click sort actions including "Sort A→Z", "Sort Z→A", "Reverse Order" (to view/invert by recency), and "Reset Baseline" to restore default rules at any time.'
+    ]
+  },
+  {
     version: '5.8.3',
     tag: 'v5.8.3',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Restored Export & Import Functionality: Resolved a fatal JavaScript string syntax error in admin settings caused by unescaped multiline confirm dialogs, restoring reliable .txt backup export and file import.',
       'Dedicated Site Vocabulary Export: Added an "Export Vocabulary (.txt)" button in the Site Vocabulary Engine status box, allowing publishers to inspect or back up indexed terms independently without inflating their manual tag overrides.',

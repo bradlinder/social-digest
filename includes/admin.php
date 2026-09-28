@@ -103,10 +103,7 @@ add_action('admin_init', function() {
             'title_tag_delimiter'          => 'oxford',
             'title_tag_max_count'          => 3,
             'title_tag_selection_strategy' => 'first',
-            'learn_site_vocabulary'        => 1,
-            'vocabulary_scan_frequency'    => '7_days',
-            'vocabulary_post_scan_limit'   => 150,
-            'title_tag_custom_overrides'   => '',
+            'title_tag_custom_overrides'   => social_get_default_tag_overrides_string(),
             'same_day_suffix_tpl'    => ' (Part {part})',
             'excluded_words'         => '#ad, sponsored',
             'header_text'            => '<p>Here is what we shared across social channels today:</p>',
@@ -216,12 +213,6 @@ add_action('admin_init', function() {
             add_settings_error('sd53', 'cutoff', 'Please select a date and time to set a custom cutoff.', 'error');
         }
     }
-
-    if (isset($_POST['sd53_reindex_vocab']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
-        $dict = social_flush_site_vocabulary_cache();
-        $count = count($dict);
-        add_settings_error('sd53', 'vocab', sprintf('Site vocabulary index refreshed successfully! %d terms indexed from your published post titles, tags, and categories.', $count), 'updated');
-    }
 });
 
 function social_sanitize_settings($input) {
@@ -300,11 +291,6 @@ function social_sanitize_settings($input) {
     $allowed_strategies = ['first', 'popularity', 'random'];
     $output['title_tag_selection_strategy'] = in_array($input['title_tag_selection_strategy'] ?? '', $allowed_strategies, true) ? $input['title_tag_selection_strategy'] : 'first';
 
-    $output['learn_site_vocabulary']     = !empty($input['learn_site_vocabulary']) ? 1 : 0;
-    $allowed_frequencies                 = ['24_hours', '7_days', '30_days'];
-    $output['vocabulary_scan_frequency'] = in_array($input['vocabulary_scan_frequency'] ?? '', $allowed_frequencies, true) ? $input['vocabulary_scan_frequency'] : '7_days';
-    $raw_limit                           = (int)($input['vocabulary_post_scan_limit'] ?? 150);
-    $output['vocabulary_post_scan_limit']= in_array($raw_limit, [50, 100, 150, 300, 500, 1000, -1], true) ? $raw_limit : 150;
     $output['title_tag_custom_overrides']= sanitize_textarea_field($input['title_tag_custom_overrides'] ?? '');
 
     if (isset($input['same_day_suffix_tpl'])) {
@@ -898,89 +884,63 @@ function social_render_settings_page() {
                                                 </td>
                                             </tr>
                                             <tr>
-                                                <th>Site Vocabulary Engine</th>
-                                                <td>
-                                                    <div style="padding: 12px; background: #f6f7f7; border: 1px solid #ccd0d4; border-radius: 4px; max-width: 550px;">
-                                                        <div style="margin-bottom: 6px;">
-                                                            <label><input type="checkbox" name="social_digest_options[learn_site_vocabulary]" value="1" <?php checked(!isset($opts['learn_site_vocabulary']) || !empty($opts['learn_site_vocabulary'])); ?>> Automatically learn vocabulary from published WordPress post titles, tags &amp; categories</label>
-                                                        </div>
-                                                        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 8px;">
-                                                            <div>
-                                                                <label style="display:inline-block; width: 120px; font-size: 12px;">Scan Frequency:</label>
-                                                                <select name="social_digest_options[vocabulary_scan_frequency]" style="font-size: 12px;">
-                                                                    <option value="24_hours" <?php selected($opts['vocabulary_scan_frequency'] ?? '', '24_hours'); ?>>Every 24 Hours</option>
-                                                                    <option value="7_days" <?php selected($opts['vocabulary_scan_frequency'] ?? '7_days', '7_days'); ?>>Every 7 Days (Recommended)</option>
-                                                                    <option value="30_days" <?php selected($opts['vocabulary_scan_frequency'] ?? '', '30_days'); ?>>Every 30 Days</option>
-                                                                </select>
-                                                            </div>
-                                                            <div>
-                                                                <?php $scan_limit_val = (int)($opts['vocabulary_post_scan_limit'] ?? 150); ?>
-                                                                <label style="display:inline-block; width: 120px; font-size: 12px;">Post Scan Depth:</label>
-                                                                <select name="social_digest_options[vocabulary_post_scan_limit]" id="sd_vocab_scan_limit_select" style="font-size: 12px;" onchange="sdToggleVocabWarning(this.value)">
-                                                                    <option value="50" <?php selected($scan_limit_val, 50); ?>>50 Posts (Light &amp; Fast)</option>
-                                                                    <option value="150" <?php selected($scan_limit_val, 150); ?>>150 Posts (Recommended Baseline)</option>
-                                                                    <option value="300" <?php selected($scan_limit_val, 300); ?>>300 Posts (Deep Coverage)</option>
-                                                                    <option value="500" <?php selected($scan_limit_val, 500); ?>>500 Posts (Extended Archive)</option>
-                                                                    <option value="1000" <?php selected($scan_limit_val, 1000); ?>>1,000 Posts (Heavy Archive)</option>
-                                                                    <option value="-1" <?php selected($scan_limit_val, -1); ?>>All Published Posts (Full Site History)</option>
-                                                                </select>
-                                                            </div>
-                                                        </div>
-                                                        <div id="sd_vocab_scan_warning" style="display: <?php echo ($scan_limit_val > 300 || $scan_limit_val === -1) ? 'block' : 'none'; ?>; background: #fff8e5; border: 1px solid #f0c36d; color: #8a6d3b; padding: 8px 12px; border-radius: 4px; font-size: 11px; margin-bottom: 8px;">
-                                                            <strong>⚠️ Large Archive Scan Warning:</strong> Indexing <span id="sd_scan_num_label"><?php echo $scan_limit_val === -1 ? 'all published' : $scan_limit_val; ?></span> posts scans your database for product titles &amp; taxonomies. Re-indexing large archives (>300 posts) may temporarily increase memory usage.
-                                                        </div>
-                                                        <?php 
-                                                        $current_vocab = social_get_site_vocabulary_dictionary();
-                                                        $vocab_count = count($current_vocab);
-                                                        $vocab_export_list = array_values($current_vocab);
-                                                        natcasesort($vocab_export_list);
-                                                        $vocab_export_list = array_values(array_unique($vocab_export_list));
-                                                        ?>
-                                                        <div style="background: #fff; border: 1px solid #dcdcde; padding: 8px 12px; border-radius: 4px; font-size: 11px; margin-bottom: 6px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;">
-                                                            <div>
-                                                                <strong>Vocabulary Cache Status:</strong> Currently indexed <strong><?php echo $vocab_count; ?></strong> brand &amp; topic terms from your site content.
-                                                            </div>
-                                                            <div style="display: flex; gap: 6px;">
-                                                                <button type="submit" name="sd53_reindex_vocab" class="button button-small">Re-index Vocabulary Now</button>
-                                                                <button type="button" class="button button-small" onclick="sdExportVocabulary()" title="Download a .txt file containing all currently indexed vocabulary terms">📥 Export Vocabulary (.txt)</button>
-                                                            </div>
-                                                        </div>
-                                                        <textarea id="sd_vocab_export_data" style="display:none;" readonly><?php echo esc_textarea(implode("\n", $vocab_export_list)); ?></textarea>
-                                                        <p class="description" style="margin-top: 2px; font-size: 11px;">Extracts proper nouns and product terms from your site so all-lowercase social hashtags (e.g. <code>#eliteminipc</code>) map automatically to your site's exact terminology.</p>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            <tr>
                                                 <th>Custom Tag Title Overrides</th>
                                                 <td>
-                                                    <div style="max-width: 580px;">
-                                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                                            <label style="font-weight:600;">Tag Override Rules:</label>
+                                                    <div style="max-width: 620px;">
+                                                        <!-- Top Action Bar: Title & Search -->
+                                                        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px;">
                                                             <div style="display: flex; align-items: center; gap: 6px;">
-                                                                <button type="button" class="button button-small" onclick="sdExportCustomOverrides()" title="Export custom overrides">📥 Export (.txt)</button>
-                                                                <button type="button" class="button button-small" onclick="document.getElementById('sd_import_overrides_file').click()" title="Import custom overrides">📤 Import (.txt)</button>
+                                                                <label style="font-weight:600; font-size: 13px;">Tag Override Rules:</label>
+                                                                <span style="font-size: 11px; color: #64748b;" id="sd_overrides_line_count"></span>
+                                                            </div>
+                                                            
+                                                            <!-- Lightweight Search Box -->
+                                                            <div style="display: flex; align-items: center; gap: 4px; background: #fff; border: 1px solid #ccd0d4; border-radius: 4px; padding: 2px 6px;">
+                                                                <span class="dashicons dashicons-search" style="font-size: 16px; width: 16px; height: 16px; color: #64748b; line-height: 1.3;"></span>
+                                                                <input type="search" id="sd_overrides_search" placeholder="Find in rules (e.g. XPS)..." style="border: none; background: transparent; font-size: 11px; padding: 1px 4px; width: 140px; outline: none; box-shadow: none;" oninput="sdSearchOverrides(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();sdSearchNextOverride();}">
+                                                                <span id="sd_search_count" style="font-size: 10px; color: #0284c7; font-weight: 600; min-width: 14px; text-align: center;"></span>
+                                                                <button type="button" class="button button-small" style="height: 20px; line-height: 18px; padding: 0 4px; font-size: 10px;" onclick="sdSearchNextOverride()" title="Find Next Match (Enter)">↓</button>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Secondary Action Bar: Sort & Import/Export -->
+                                                        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 6px;">
+                                                            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                                                                <button type="button" class="button button-small" onclick="sdSortOverrides('az')" title="Sort rules alphabetically A to Z">🔤 Sort A→Z</button>
+                                                                <button type="button" class="button button-small" onclick="sdSortOverrides('za')" title="Sort rules Z to A">🔤 Sort Z→A</button>
+                                                                <button type="button" class="button button-small" onclick="sdSortOverrides('reverse')" title="Reverse order of rules (useful for recency / swapping newest to top)">🔄 Reverse Order</button>
+                                                                <button type="button" class="button button-small" onclick="sdResetOverrides()" title="Restore the built-in baseline terms">↺ Reset Baseline</button>
+                                                            </div>
+                                                            <div style="display: flex; gap: 4px;">
+                                                                <button type="button" class="button button-small" onclick="sdExportCustomOverrides()" title="Export all rules to a .txt backup file">📥 Export (.txt)</button>
+                                                                <button type="button" class="button button-small" onclick="document.getElementById('sd_import_overrides_file').click()" title="Import rules from a .txt or .csv file">📤 Import (.txt)</button>
                                                                 <input type="file" id="sd_import_overrides_file" accept=".txt,.csv" style="display:none;" onchange="sdImportCustomOverrides(this)">
                                                             </div>
                                                         </div>
+
                                                         <div id="sd_import_status" style="display:none; margin-bottom: 6px; padding: 6px 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; font-size: 11px; color: #166534; font-weight: 500;"></div>
-                                                        <textarea id="sd_title_tag_custom_overrides" name="social_digest_options[title_tag_custom_overrides]" rows="6" class="large-text" style="font-family: monospace; font-size: 12px; line-height: 1.4;" placeholder="SnapdragonX=Snapdragon X&#10;MINISFORUM*&#10;GEEKOM*&#10;NVIDIA*&#10;MediaTek=MediaTek&#10;FDroid=F-Droid"><?php echo esc_textarea($opts['title_tag_custom_overrides'] ?? ''); ?></textarea>
+
+                                                        <!-- Overrides Textarea -->
+                                                        <?php
+                                                        $current_overrides = $opts['title_tag_custom_overrides'] ?? '';
+                                                        if ($current_overrides === '' && !isset($opts['title_tag_custom_overrides'])) {
+                                                            $current_overrides = social_get_default_tag_overrides_string();
+                                                        }
+                                                        ?>
+                                                        <textarea id="sd_title_tag_custom_overrides" name="social_digest_options[title_tag_custom_overrides]" rows="14" class="large-text" style="font-family: monospace; font-size: 12px; line-height: 1.5; padding: 8px 10px;" oninput="sdUpdateLineCount()" placeholder="SnapdragonX=Snapdragon X&#10;MINISFORUM*&#10;GEEKOM*&#10;NVIDIA*&#10;MediaTek=MediaTek&#10;FDroid=F-Droid"><?php echo esc_textarea($current_overrides); ?></textarea>
                                                         
                                                         <div style="margin-top: 8px; font-size: 11px; line-height: 1.5; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px;">
-                                                            <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">Formatting Guide &amp; Syntax Examples:</div>
+                                                            <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">Tag Override Rules &amp; Built-In Baseline:</div>
+                                                            <p style="margin: 0 0 6px 0;">All built-in technology terms are pre-populated above, fully visible and editable. You can freely edit, add, or delete any rule.</p>
                                                             <ul style="margin: 0 0 6px 18px; list-style-type: disc;">
-                                                                <li><strong>Separators:</strong> Enter rules <strong>one per line</strong> (recommended) or separated by <strong>commas</strong>. Leading <code>#</code> symbols are stripped automatically.</li>
-                                                                <li><strong>Exact Mapping (<code>tag=Formatted Title</code>):</strong> Explicitly renames a hashtag to your exact preferred title and casing.
-                                                                    <br><code style="color:#0369a1;">SnapdragonX=Snapdragon X</code> &rarr; maps <code>#snapdragonx</code> to <strong>Snapdragon X</strong>
-                                                                    <br><code style="color:#0369a1;">FDroid=F-Droid</code> &rarr; maps <code>#fdroid</code> to <strong>F-Droid</strong>
-                                                                </li>
-                                                                <li><strong>Wildcard Prefix (<code>PREFIX*</code>):</strong> Preserves uppercase brand prefixes while splitting trailing model numbers and words.
-                                                                    <br><code style="color:#0369a1;">MINISFORUM*</code> &rarr; maps <code>#MINISFORUMS5</code> to <strong>MINISFORUM S5</strong>
-                                                                    <br><code style="color:#0369a1;">SnapdragonX*=Snapdragon X</code> &rarr; maps <code>#SnapdragonXElite</code> to <strong>Snapdragon X Elite</strong>
-                                                                </li>
-                                                                <li><strong>Exact Brand Casing (<code>BRAND*</code> or <code>BrandName</code>):</strong> Preserves specific casing for acronyms and compound names (e.g. <code>XPS*</code>, <code>NVIDIA*</code>, <code>MediaTek</code>).</li>
+                                                                <li><strong>Formatting:</strong> Enter rules <strong>one per line</strong> (recommended) or separated by commas. Leading <code>#</code> symbols are stripped automatically. Comments beginning with <code>#</code> are preserved.</li>
+                                                                <li><strong>Exact Mapping (<code>tag=Formatted Title</code>):</strong> Explicitly renames a hashtag to your desired title casing (e.g. <code>SnapdragonX=Snapdragon X</code>, <code>FDroid=F-Droid</code>).</li>
+                                                                <li><strong>Wildcard Prefixes (<code>PREFIX*</code>):</strong> Preserves uppercase brand prefixes while splitting trailing model numbers (e.g. <code>MINISFORUM*</code> formats <code>#MINISFORUMS5</code> to <strong>MINISFORUM S5</strong>).</li>
+                                                                <li><strong>Exact Brand Casing (<code>BRAND*</code> or <code>BrandName</code>):</strong> Preserves specific casing for acronyms and compound names (e.g. <code>XPS*</code>, <code>NVIDIA*</code>, <code>MediaTek</code>, <code>Chromebook</code>).</li>
                                                             </ul>
-                                                            <div style="color: #64748b; font-size: 10.5px; border-top: 1px dashed #cbd5e1; padding-top: 6px; margin-top: 4px;">
-                                                                💡 <em>Tip: Use <strong>📥 Export (.txt)</strong> to back up your custom rules to your computer, or <strong>📤 Import (.txt)</strong> to load rules from a backup file.</em>
+                                                            <div style="color: #64748b; font-size: 10.5px; border-top: 1px dashed #cbd5e1; padding-top: 6px; margin-top: 4px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px;">
+                                                                <span>💡 <em>Use <strong>🔤 Sort A→Z</strong> to keep terms alphabetized, or <strong>🔄 Reverse Order</strong> to view by recency.</em></span>
+                                                                <span><em>Use <strong>📥 Export / 📤 Import</strong> to save backups or sync between sites.</em></span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1133,15 +1093,116 @@ function social_render_settings_page() {
                                     </div>
                                 </div>
                                 <script>
-                                function sdToggleVocabWarning(val) {
-                                    var box = document.getElementById('sd_vocab_scan_warning');
-                                    var label = document.getElementById('sd_scan_num_label');
-                                    var num = parseInt(val, 10);
-                                    if (num > 300 || num === -1) {
-                                        box.style.display = 'block';
-                                        label.textContent = (num === -1) ? 'all published' : num;
+                                var sdSearchMatches = [];
+                                var sdCurrentMatchIdx = -1;
+                                var sdDefaultBaselineText = <?php echo json_encode(social_get_default_tag_overrides_string()); ?>;
+
+                                function sdUpdateLineCount() {
+                                    var textarea = document.getElementById('sd_title_tag_custom_overrides');
+                                    var countEl = document.getElementById('sd_overrides_line_count');
+                                    if (!textarea || !countEl) return;
+                                    var lines = textarea.value.split('\n').filter(function(l) { return l.trim().length > 0 && l.trim().charAt(0) !== '#'; });
+                                    countEl.textContent = '(' + lines.length + ' active rules)';
+                                }
+
+                                function sdSearchOverrides(query) {
+                                    query = (query || '').trim().toLowerCase();
+                                    var textarea = document.getElementById('sd_title_tag_custom_overrides');
+                                    var countEl = document.getElementById('sd_search_count');
+                                    sdSearchMatches = [];
+                                    sdCurrentMatchIdx = -1;
+
+                                    if (!query || !textarea) {
+                                        if (countEl) countEl.textContent = '';
+                                        return;
+                                    }
+
+                                    var text = textarea.value;
+                                    var lowerText = text.toLowerCase();
+                                    var pos = 0;
+                                    while ((pos = lowerText.indexOf(query, pos)) !== -1) {
+                                        sdSearchMatches.push({ start: pos, end: pos + query.length });
+                                        pos += query.length;
+                                    }
+
+                                    if (sdSearchMatches.length > 0) {
+                                        sdCurrentMatchIdx = 0;
+                                        sdHighlightCurrentMatch();
+                                        if (countEl) countEl.textContent = '1/' + sdSearchMatches.length;
                                     } else {
-                                        box.style.display = 'none';
+                                        if (countEl) countEl.textContent = '0';
+                                    }
+                                }
+
+                                function sdSearchNextOverride() {
+                                    if (sdSearchMatches.length === 0) return;
+                                    sdCurrentMatchIdx = (sdCurrentMatchIdx + 1) % sdSearchMatches.length;
+                                    sdHighlightCurrentMatch();
+                                    var countEl = document.getElementById('sd_search_count');
+                                    if (countEl) countEl.textContent = (sdCurrentMatchIdx + 1) + '/' + sdSearchMatches.length;
+                                }
+
+                                function sdHighlightCurrentMatch() {
+                                    var textarea = document.getElementById('sd_title_tag_custom_overrides');
+                                    if (!textarea || sdCurrentMatchIdx < 0 || sdCurrentMatchIdx >= sdSearchMatches.length) return;
+                                    var match = sdSearchMatches[sdCurrentMatchIdx];
+                                    textarea.focus();
+                                    textarea.setSelectionRange(match.start, match.end);
+
+                                    // Scroll textarea to the line of match
+                                    var linesBefore = textarea.value.substring(0, match.start).split('\n').length;
+                                    var lineHeight = 18;
+                                    textarea.scrollTop = Math.max(0, (linesBefore - 4) * lineHeight);
+                                }
+
+                                function sdSortOverrides(direction) {
+                                    var textarea = document.getElementById('sd_title_tag_custom_overrides');
+                                    if (!textarea) return;
+                                    var text = textarea.value;
+                                    var lines = text.split(/\r?\n/);
+                                    
+                                    var comments = [];
+                                    var rules = [];
+                                    for (var i = 0; i < lines.length; i++) {
+                                        var trimmed = lines[i].trim();
+                                        if (trimmed.charAt(0) === '#' && rules.length === 0) {
+                                            comments.push(lines[i]);
+                                        } else if (trimmed.length > 0) {
+                                            rules.push(lines[i]);
+                                        }
+                                    }
+
+                                    if (direction === 'az') {
+                                        rules.sort(function(a, b) {
+                                            return a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true });
+                                        });
+                                    } else if (direction === 'za') {
+                                        rules.sort(function(a, b) {
+                                            return b.localeCompare(a, undefined, { sensitivity: 'base', numeric: true });
+                                        });
+                                    } else if (direction === 'reverse') {
+                                        rules.reverse();
+                                    }
+
+                                    var result = (comments.length > 0 ? comments.join('\n') + '\n\n' : '') + rules.join('\n');
+                                    textarea.value = result;
+                                    sdUpdateLineCount();
+                                    try {
+                                        textarea.dispatchEvent(new Event('change', { bubbles: true }));
+                                    } catch (e) {}
+                                }
+
+                                function sdResetOverrides() {
+                                    if (!confirm("Reset tag overrides to the built-in baseline rules?\n\nThis will replace any custom rules currently in the box with the default list.")) {
+                                        return;
+                                    }
+                                    var textarea = document.getElementById('sd_title_tag_custom_overrides');
+                                    if (textarea) {
+                                        textarea.value = sdDefaultBaselineText;
+                                        sdUpdateLineCount();
+                                        try {
+                                            textarea.dispatchEvent(new Event('change', { bubbles: true }));
+                                        } catch (e) {}
                                     }
                                 }
 
@@ -1165,35 +1226,12 @@ function social_render_settings_page() {
                                     URL.revokeObjectURL(url);
                                 }
 
-                                function sdExportVocabulary() {
-                                    var dataEl = document.getElementById('sd_vocab_export_data');
-                                    var content = dataEl ? dataEl.value.trim() : '';
-                                    if (!content) {
-                                        alert('The site vocabulary cache is currently empty. Click "Re-index Vocabulary Now" first.');
-                                        return;
-                                    }
-                                    var totalTerms = content.split('\n').filter(function(l) { return l.trim().length > 0; }).length;
-                                    var header = '# Social Digest - Site Vocabulary Index Export\n' +
-                                                 '# Generated: ' + new Date().toISOString().split('T')[0] + '\n' +
-                                                 '# Total Indexed Terms: ' + totalTerms + '\n\n';
-                                    var blob = new Blob([header + content + '\n'], { type: 'text/plain;charset=utf-8' });
-                                    var url = URL.createObjectURL(blob);
-                                    var a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = 'site-vocabulary.txt';
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    document.body.removeChild(a);
-                                    URL.revokeObjectURL(url);
-                                }
-
                                 function sdImportCustomOverrides(input) {
                                     if (!input.files || !input.files[0]) return;
                                     var file = input.files[0];
                                     var reader = new FileReader();
                                     reader.onload = function(e) {
                                         var rawText = e.target.result || '';
-                                        // Filter out comment lines starting with #
                                         var lines = rawText.split(/\r?\n/).filter(function(line) {
                                             var trimmed = line.trim();
                                             return trimmed.length > 0 && trimmed.charAt(0) !== '#';
@@ -1219,7 +1257,8 @@ function social_render_settings_page() {
                                             textarea.value = importedText;
                                         }
 
-                                        // Dispatch events so form modification detectors recognize the change
+                                        sdUpdateLineCount();
+
                                         try {
                                             textarea.dispatchEvent(new Event('change', { bubbles: true }));
                                             textarea.dispatchEvent(new Event('input', { bubbles: true }));
@@ -1239,6 +1278,8 @@ function social_render_settings_page() {
                                     reader.readAsText(file);
                                     input.value = '';
                                 }
+
+                                document.addEventListener('DOMContentLoaded', sdUpdateLineCount);
                                 </script>
                                 <?php submit_button('Save Settings'); ?>
             </form>

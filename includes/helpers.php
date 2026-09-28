@@ -868,34 +868,52 @@ function social_get_cached_tag_weights() {
 }
 
 /**
- * Dynamically extract and cache vocabulary terms from local published posts, tags, and categories.
- * Learns terms organically from the host WordPress site without external API dependencies.
+ * Returns the built-in baseline tag title override rules as an editable string.
+ * Pre-populated into Custom Tag Title Overrides and completely visible and editable by administrators.
+ *
+ * @return string Default baseline rules, one per line.
+ */
+function social_get_default_tag_overrides_string() {
+    return implode("\n", [
+        'Chromebook',
+        'Coreboot',
+        'DellXPS=Dell XPS',
+        'Dimensity',
+        'E-ink',
+        'EliteMiniPC=Elite Mini PC',
+        'FDroid=F-Droid',
+        'GEEKOM*',
+        'Googlebook',
+        'MediaTek=MediaTek',
+        'MINISFORUM*',
+        'MiniPC=Mini PC',
+        'MinimalPhone=Minimal Phone',
+        'NintendoSwitch=Nintendo Switch',
+        'NVIDIA*',
+        'OpenClaw',
+        'PocketBook',
+        'Qualcomm',
+        'RaspberryPi=Raspberry Pi',
+        'SamsungGalaxy=Samsung Galaxy',
+        'SamsungGalaxyTab=Samsung Galaxy Tab',
+        'SnapdragonX=Snapdragon X',
+        'SteamDeck=Steam Deck',
+        'SteamFrame=Steam Frame',
+        'SteamOS=SteamOS',
+        'ThinkBook*',
+        'U-Boot',
+        'XPS*',
+    ]);
+}
+
+/**
+ * Returns static dictionary map of built-in baseline terms for fallback compatibility.
+ * Zero database queries or background archive scanning.
+ *
+ * @return array Normalized key to formatted brand name map.
  */
 function social_get_site_vocabulary_dictionary() {
-    $opts = get_option('social_digest_options', []);
-    $enabled = !isset($opts['learn_site_vocabulary']) || !empty($opts['learn_site_vocabulary']);
-    if (!$enabled) {
-        return [];
-    }
-
-    $ttl_setting = $opts['vocabulary_scan_frequency'] ?? '7_days';
-    $ttl_seconds = 7 * DAY_IN_SECONDS;
-    if ($ttl_setting === '24_hours') {
-        $ttl_seconds = DAY_IN_SECONDS;
-    } elseif ($ttl_setting === '30_days') {
-        $ttl_seconds = 30 * DAY_IN_SECONDS;
-    }
-
-    $cache_key = 'social_digest_site_vocab_cache';
-    $cached = get_transient($cache_key);
-    if (is_array($cached)) {
-        return $cached;
-    }
-
-    $dict = [];
-
-    // 1. Core Default Baseline Terms (out-of-the-box fallback for fresh WP installs)
-    $baseline = [
+    return [
         'samsunggalaxytab'  => 'Samsung Galaxy Tab',
         'samsunggalaxy'     => 'Samsung Galaxy',
         'snapdragonx2'      => 'Snapdragon X2',
@@ -929,72 +947,10 @@ function social_get_site_vocabulary_dictionary() {
         'uboot'             => 'U-Boot',
         'coreboot'          => 'Coreboot',
     ];
-    foreach ($baseline as $k => $v) {
-        $dict[$k] = $v;
-    }
-
-    // 2. Extract Taxonomy Terms (Post Tags, Categories, Custom Taxonomies)
-    $taxonomies = get_taxonomies(['public' => true], 'names');
-    if (!empty($taxonomies)) {
-        $terms = get_terms([
-            'taxonomy'   => array_values($taxonomies),
-            'hide_empty' => false,
-            'number'     => 1000,
-        ]);
-        if (!is_wp_error($terms) && is_array($terms)) {
-            foreach ($terms as $term) {
-                $name = trim($term->name);
-                if ($name === '') continue;
-                $key = mb_strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $name));
-                if ($key !== '' && strlen($key) >= 2) {
-                    $dict[$key] = $name;
-                }
-            }
-        }
-    }
-
-    // 3. Extract Capitalized Brand & Product Phrases from Recent Published Post Titles
-    $scan_limit = (int)($opts['vocabulary_post_scan_limit'] ?? 150);
-    if ($scan_limit === 0) $scan_limit = 150;
-
-    $posts = get_posts([
-        'numberposts' => $scan_limit,
-        'post_status' => 'publish',
-        'post_type'   => 'post',
-        'fields'      => 'post_title',
-    ]);
-    if (is_array($posts)) {
-        foreach ($posts as $title_obj) {
-            $title = is_object($title_obj) ? ($title_obj->post_title ?? '') : (string)$title_obj;
-            $title = wp_strip_all_tags($title);
-            if (empty($title)) continue;
-
-            // Match capitalized multi-word sequences (e.g. "ThinkBook Plus Gen 7", "Snapdragon X Elite")
-            preg_match_all('/(?:\b[A-Z0-9][a-zA-Z0-9\-\+\.]*\b\s*){1,4}/u', $title, $matches);
-            if (!empty($matches[0])) {
-                foreach ($matches[0] as $match) {
-                    $m = trim($match);
-                    if (strlen($m) < 3 || is_numeric($m)) continue;
-                    $key = mb_strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $m));
-                    if ($key !== '' && !isset($dict[$key])) {
-                        $dict[$key] = $m;
-                    }
-                }
-            }
-        }
-    }
-
-    // Sort keys by length descending so longer compound terms match first (greedy segmentation)
-    uksort($dict, function($a, $b) {
-        return strlen($b) - strlen($a);
-    });
-
-    set_transient($cache_key, $dict, $ttl_seconds);
-    return $dict;
 }
 
 /**
- * Flush the site vocabulary transient cache and force immediate re-index.
+ * Flush the site vocabulary cache (retained for backward compatibility).
  */
 function social_flush_site_vocabulary_cache() {
     delete_transient('social_digest_site_vocab_cache');
@@ -1033,7 +989,15 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
     $t = ltrim(trim((string)$tag), '#');
     if ($t === '') return '';
 
-    // Check optional custom overrides first (e.g. "rawtag=Formatted Name" or "MINISFORUM*")
+    // Check custom overrides (e.g. "rawtag=Formatted Name", "MINISFORUM*", or baseline terms)
+    if (empty($custom_overrides_str)) {
+        $opts = get_option('social_digest_options', []);
+        $custom_overrides_str = $opts['title_tag_custom_overrides'] ?? '';
+        if (empty($custom_overrides_str)) {
+            $custom_overrides_str = social_get_default_tag_overrides_string();
+        }
+    }
+
     if (!empty($custom_overrides_str)) {
         $lines = preg_split('/[\r\n,]+/', $custom_overrides_str);
         

@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.3
+Stable tag: 5.8.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,13 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.4 =
+* Streamlined Tag Overrides Engine, Built-In Baseline Visibility, Search & Sorting:
+  1. Retired Dynamic Vocabulary Database Scraper: Removed automated post title and taxonomy database scanning to eliminate self-referential automated headline loops, database queries, and background memory spikes.
+  2. Fully Visible & Editable Built-In Baseline Terms: All 28+ built-in tech brand terms (Chromebook, Coreboot, Dell XPS, Dimensity, Elite Mini PC, F-Droid, MediaTek, Nintendo Switch, Raspberry Pi, Steam Deck, etc.) are now pre-populated directly into the Custom Tag Title Overrides box where they are completely visible, editable, and customizable by publishers.
+  3. Real-Time Search & Match Navigation: Added a lightweight, zero-dependency search bar above the tag overrides textarea. Highlights matches in real time, scrolls directly to matching rules, and supports Enter/Next match navigation with counter display (e.g. 1/3).
+  4. Alphabetical & Recency Sorting: Added one-click sort actions including "Sort A→Z", "Sort Z→A", "Reverse Order" (to view/invert by recency), and "Reset Baseline" to restore default rules at any time.
 
 = 5.8.3 =
 * Tag Overrides Export/Import Restoration, Vocabulary Export & Syntax Guide:
