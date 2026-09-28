@@ -8,6 +8,19 @@ Social Digest - Feature Roadmap & Release Status
 2. Automated Weekly Archive Digest View [Publishing]:
    - Dedicated weekly/monthly archive rollup view grouping published digests with summary metrics.
 
+0. Release v5.8.8 Zero-Hidden-Rules Architecture, User Customizations Preservation & Snapshot Resilience (Completed in v5.8.8)
+---------------------------------------------------------------------------------------------------------------------------------
+[x] Zero-Hidden-Rules Architecture (v5.8.8): Fully exposed all 33 built-in technology brand rules (Chromebook, Coreboot, Dell XPS, Dimensity, Elite Mini PC, F-Droid, MediaTek, Nintendo Switch, Raspberry Pi, Steam Deck, etc.) directly in the Custom Tag Title Overrides box. Zero terms are hidden in internal fallbacks.
+[x] Absolute Preservation of User Customizations (v5.8.8): Custom tag title overrides entered by administrators are never removed, overwritten, or cleared during version upgrades or settings saves. Existing custom rules are prioritized and cleanly merged with baseline rules during migration.
+[x] Multi-Tier Snapshot Persistence & Recovery (v5.8.8): Hardened options sanitization scope in settings saving to ensure backup snapshots are never cleared by form submissions. Added standalone redundant database backup storage (`social_digest_overrides_snapshot`) and automatic browser `localStorage` recovery so snapshots remain restorable across updates.
+[x] Real-Time Active Line Count & Text-Only Formatting Hints (v5.8.8): Added immediate active rule counter initialization on page load and verified text-only hashtag shorthand notes under Hashtag Auto-Tagging.
+
+0. Release v5.8.7 Baseline Rules Display & Automatic Migration (Completed in v5.8.7)
+-------------------------------------------------------------------------------------
+[x] Baseline Rules Display on Existing Installs (v5.8.7): Fixed an option presence condition where sites with a previously empty overrides setting in the database failed to render the default rules.
+[x] Guaranteed Baseline Auto-Population (v5.8.7): When the overrides setting is empty, the textarea automatically pre-populates all built-in technology brand rules.
+[x] Automatic Database Upgrade Migration (v5.8.7): Added automatic migration during `admin_init` that populates empty override options directly into the database.
+
 0. Release v5.8.6 Social Hashtag Underscore & Hyphen Shorthand Convention (Completed in v5.8.6)
 -----------------------------------------------------------------------------------------------
 [x] Single Underscore as Space (v5.8.6): Automatically parses single underscores in hashtags as spaces across digest titles, taxonomy tags, and slugs (e.g. `#AI_PC` -> `AI PC`, `#Mini_PC` -> `Mini PC`) without requiring custom override rules.

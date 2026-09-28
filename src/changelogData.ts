@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.8.7',
+  version: '5.8.8',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,25 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.8.6',
+  rollbackTarget: 'v5.8.7',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.8.8',
+    tag: 'v5.8.8',
+    isLatest: true,
+    highlights: [
+      'Zero-Hidden-Rules Architecture: Fully exposes all 33 built-in brand rules (Adreno, Chromebook, Coreboot, Dell XPS, Dimensity, E-ink, Elite Mini PC, F-Droid, MediaTek, Nintendo Switch, Raspberry Pi, Samsung Galaxy Tab, Snapdragon X, Steam Deck, ThinkBook, U-Boot, XPS, etc.) directly in the Custom Tag Title Overrides box with zero terms hidden in internal fallbacks.',
+      'Absolute Preservation of User Customizations: Custom tag title overrides entered by administrators are never removed, overwritten, or cleared during version upgrades or settings saves. Existing custom rules are prioritized and cleanly merged with baseline rules during migration.',
+      'Multi-Tier Snapshot Persistence & Recovery: Hardened options sanitization scope in settings saving to ensure backup snapshots are never cleared by form submissions. Added standalone redundant database backup storage (social_digest_overrides_snapshot) and automatic browser localStorage recovery so snapshots remain restorable across updates.',
+      'Real-Time Active Line Count & Text-Only Formatting Hints: Added immediate active rule counter initialization on page load and verified text-only hashtag shorthand notes under Hashtag Auto-Tagging.'
+    ]
+  },
+  {
     version: '5.8.7',
     tag: 'v5.8.7',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Resolved Baseline Rules Display on Existing Installs: Fixed an option presence condition where sites with a previously empty overrides setting in the database failed to display the 28 baseline terms.',
       'Guaranteed Baseline Auto-Population: When the overrides setting is empty, the textarea automatically pre-populates all 28 built-in technology brand rules (Chromebook, Coreboot, Dell XPS, Dimensity, Elite Mini PC, F-Droid, MediaTek, Nintendo Switch, Raspberry Pi, Steam Deck, etc.) making them immediately visible, searchable, sortable, and editable.',

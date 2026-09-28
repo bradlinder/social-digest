@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.7
+Stable tag: 5.8.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,13 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.8 =
+* Zero-Hidden-Rules Architecture, User Customizations Preservation & Snapshot Resilience:
+  1. Complete Baseline Exposure Without Hidden Rules: Fully exposed all 33 built-in technology brand rules (Adreno, Chromebook, Coreboot, Dell XPS, Dimensity, E-ink, Elite Mini PC, F-Droid, MediaTek, Nintendo Switch, Raspberry Pi, Samsung Galaxy Tab, Snapdragon X, Steam Deck, ThinkBook, U-Boot, XPS, etc.) directly in the Custom Tag Title Overrides box. Zero terms are hidden in internal fallbacks.
+  2. Absolute Preservation of User Customizations: Guaranteed that custom tag title overrides entered by administrators are never removed, overwritten, or cleared during version upgrades or settings saves. Existing custom rules are prioritized and cleanly merged with baseline rules during migration.
+  3. Multi-Tier Snapshot Persistence & Recovery: Hardened options sanitization scope in settings saving to ensure backup snapshots are never cleared by form submissions. Added standalone redundant database backup storage (`social_digest_overrides_snapshot`) and automatic browser `localStorage` recovery so snapshots remain restorable across updates.
+  4. Real-Time Active Line Count & Text-Only Formatting Hints: Added immediate active rule counter initialization on page load and verified text-only hashtag shorthand notes under Hashtag Auto-Tagging.
 
 = 5.8.7 =
 * Automatic Built-In Baseline Terms Population & Existing Install Migration:

@@ -122,7 +122,22 @@ add_action('admin_init', function() {
         ]
     ]);
 
-    // Ensure built-in baseline terms are populated if custom overrides option is empty or missing
+    // Ensure built-in baseline terms are populated if custom overrides option is empty or missing,
+    // and migrate existing installations so that baseline terms are fully visible and editable.
+    if (!get_option('social_digest_baseline_migrated_v588')) {
+        $stored_opts = get_option('social_digest_options', []);
+        if (is_array($stored_opts)) {
+            $existing_val = $stored_opts['title_tag_custom_overrides'] ?? '';
+            if (trim((string)$existing_val) === '') {
+                $stored_opts['title_tag_custom_overrides'] = social_get_default_tag_overrides_string();
+            } else {
+                $stored_opts['title_tag_custom_overrides'] = social_get_merged_tag_overrides($existing_val);
+            }
+            update_option('social_digest_options', $stored_opts);
+        }
+        update_option('social_digest_baseline_migrated_v588', 1);
+    }
+
     $stored_opts = get_option('social_digest_options', []);
     if (is_array($stored_opts) && (!isset($stored_opts['title_tag_custom_overrides']) || trim((string)$stored_opts['title_tag_custom_overrides']) === '')) {
         $stored_opts['title_tag_custom_overrides'] = social_get_default_tag_overrides_string();
@@ -254,6 +269,7 @@ add_action('wp_ajax_sd_save_snapshot', function() {
     }
     $opts['overrides_snapshot'] = $snapshot;
     update_option('social_digest_options', $opts);
+    update_option('social_digest_overrides_snapshot', $snapshot);
 
     wp_send_json_success([
         'message'  => "On-site backup snapshot saved to database! ({$count} active rules on {$time_str})",
@@ -262,6 +278,10 @@ add_action('wp_ajax_sd_save_snapshot', function() {
 });
 
 function social_sanitize_settings($input) {
+    $existing_opts = get_option('social_digest_options', []);
+    if (!is_array($existing_opts)) {
+        $existing_opts = [];
+    }
     $output = [];
     $output['network_mode']       = in_array($input['network_mode'] ?? '', ['bsky', 'mastodon', 'both']) ? $input['network_mode'] : 'both';
     $output['avatar_source']      = in_array($input['avatar_source'] ?? '', ['auto', 'bsky', 'mastodon', 'none'], true) ? $input['avatar_source'] : 'auto';
@@ -341,37 +361,38 @@ function social_sanitize_settings($input) {
 
     if (isset($input['overrides_snapshot'])) {
         $decoded = json_decode(stripslashes((string)$input['overrides_snapshot']), true);
-        if (is_array($decoded) && isset($decoded['content'])) {
+        if (is_array($decoded) && isset($decoded['content']) && $decoded['content'] !== '') {
             $output['overrides_snapshot'] = [
                 'content'   => sanitize_textarea_field($decoded['content']),
                 'time'      => absint($decoded['time'] ?? time()),
                 'time_str'  => sanitize_text_field($decoded['time_str'] ?? ''),
                 'count'     => absint($decoded['count'] ?? 0),
             ];
+            update_option('social_digest_overrides_snapshot', $output['overrides_snapshot']);
         } else {
-            $output['overrides_snapshot'] = $opts['overrides_snapshot'] ?? [];
+            $output['overrides_snapshot'] = $existing_opts['overrides_snapshot'] ?? get_option('social_digest_overrides_snapshot', []);
         }
     } else {
-        $output['overrides_snapshot'] = $opts['overrides_snapshot'] ?? [];
+        $output['overrides_snapshot'] = $existing_opts['overrides_snapshot'] ?? get_option('social_digest_overrides_snapshot', []);
     }
 
     if (isset($input['same_day_suffix_tpl'])) {
         $output['same_day_suffix_tpl'] = sanitize_text_field($input['same_day_suffix_tpl']);
     } else {
-        $output['same_day_suffix_tpl'] = $opts['same_day_suffix_tpl'] ?? ' (Part {part})';
+        $output['same_day_suffix_tpl'] = $existing_opts['same_day_suffix_tpl'] ?? ' (Part {part})';
     }
     $output['excluded_words']      = sanitize_textarea_field($input['excluded_words'] ?? '');
 
     if (isset($input['header_text'])) {
         $output['header_text'] = wp_kses_post(trim($input['header_text']));
     } else {
-        $output['header_text'] = $opts['header_text'] ?? '<p>Here is what we shared across social channels today:</p>';
+        $output['header_text'] = $existing_opts['header_text'] ?? '<p>Here is what we shared across social channels today:</p>';
     }
 
     if (isset($input['footer_text'])) {
         $output['footer_text'] = wp_kses_post(trim($input['footer_text']));
     } else {
-        $output['footer_text'] = $opts['footer_text'] ?? '<hr><p>Follow us directly on social media for real-time updates!</p>';
+        $output['footer_text'] = $existing_opts['footer_text'] ?? '<hr><p>Follow us directly on social media for real-time updates!</p>';
     }
 
     $output['nosnippet_header']               = isset($input['nosnippet_header']) ? (!empty($input['nosnippet_header']) ? 1 : 0) : 1;
@@ -976,6 +997,9 @@ function social_render_settings_page() {
                                                             <div style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;">
                                                                 <?php 
                                                                 $snap = $opts['overrides_snapshot'] ?? []; 
+                                                                if (empty($snap['content'])) {
+                                                                    $snap = get_option('social_digest_overrides_snapshot', []);
+                                                                }
                                                                 $has_snap = !empty($snap['content']); 
                                                                 ?>
                                                                 <button type="button" class="button button-small" onclick="sdSaveSnapshot()" title="Save an instant on-site backup snapshot of your current rules to the WordPress database">💾 Backup Snapshot</button>
@@ -988,7 +1012,7 @@ function social_render_settings_page() {
                                                             </div>
                                                         </div>
 
-                                                        <input type="hidden" id="sd_overrides_snapshot_field" name="social_digest_options[overrides_snapshot]" value="<?php echo esc_attr(json_encode($opts['overrides_snapshot'] ?? [])); ?>">
+                                                        <input type="hidden" id="sd_overrides_snapshot_field" name="social_digest_options[overrides_snapshot]" value="<?php echo esc_attr(json_encode($snap)); ?>">
                                                         <div id="sd_import_status" style="display:none; margin-bottom: 6px; padding: 6px 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; font-size: 11px; color: #166534; font-weight: 500;"></div>
 
                                                         <!-- Overrides Textarea -->
@@ -1011,7 +1035,7 @@ function social_render_settings_page() {
                                                                 <li><strong>Exact Brand Casing (<code>BRAND*</code> or <code>BrandName</code>):</strong> Preserves specific casing for acronyms and compound names (e.g. <code>XPS*</code>, <code>NVIDIA*</code>, <code>MediaTek</code>, <code>Chromebook</code>).</li>
                                                             </ul>
                                                             <div style="color: #64748b; font-size: 10.5px; border-top: 1px dashed #cbd5e1; padding-top: 6px; margin-top: 4px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px;">
-                                                                <span>💡 <em>Use <strong>🔤 Sort A→Z</strong> to keep terms alphabetized, or <strong>🔄 Reverse Order</strong> to view by recency.</em></span>
+                                                                <span><em>Use <strong>🔤 Sort A→Z</strong> to keep terms alphabetized, or <strong>🔄 Reverse Order</strong> to view by recency.</em></span>
                                                                 <span><em>Use <strong>📥 Export / 📤 Import</strong> to save backups or sync between sites.</em></span>
                                                             </div>
                                                         </div>
@@ -1169,7 +1193,7 @@ function social_render_settings_page() {
                                 var sdSearchMatches = [];
                                 var sdCurrentMatchIdx = -1;
                                 var sdDefaultBaselineText = <?php echo json_encode(social_get_default_tag_overrides_string()); ?>;
-                                var sdSnapshot = <?php echo json_encode($opts['overrides_snapshot'] ?? null); ?>;
+                                var sdSnapshot = <?php echo json_encode(!empty($snap['content']) ? $snap : null); ?>;
                                 var sdSnapshotNonce = <?php echo json_encode(wp_create_nonce('sd_snapshot_action')); ?>;
 
                                 function sdUpdateLineCount() {
@@ -1179,6 +1203,41 @@ function social_render_settings_page() {
                                     var lines = textarea.value.split('\n').filter(function(l) { return l.trim().length > 0 && l.trim().charAt(0) !== '#'; });
                                     countEl.textContent = '(' + lines.length + ' active rules)';
                                 }
+
+                                // Auto-initialize line count and recover local snapshot if server record is empty
+                                (function sdInitOverridesState() {
+                                    if (document.readyState === 'loading') {
+                                        document.addEventListener('DOMContentLoaded', sdInitOverridesState);
+                                        return;
+                                    }
+                                    sdUpdateLineCount();
+
+                                    if (!sdSnapshot || !sdSnapshot.content) {
+                                        try {
+                                            var local = localStorage.getItem('sd_overrides_snapshot');
+                                            if (local) {
+                                                var parsedLocal = JSON.parse(local);
+                                                if (parsedLocal && parsedLocal.content) {
+                                                    sdSnapshot = parsedLocal;
+                                                    var restoreBtn = document.getElementById('sd_restore_snapshot_btn');
+                                                    if (restoreBtn) {
+                                                        restoreBtn.disabled = false;
+                                                        restoreBtn.style.opacity = '1';
+                                                        restoreBtn.title = 'Restore on-site backup snapshot saved on ' + (parsedLocal.time_str || 'backup') + ' (' + (parsedLocal.count || 0) + ' rules)';
+                                                    }
+                                                    var indicator = document.getElementById('sd_snapshot_indicator');
+                                                    if (indicator && !indicator.textContent.trim()) {
+                                                        indicator.innerHTML = '(Saved: ' + (parsedLocal.time_str || 'backup') + ' &bull; ' + (parsedLocal.count || 0) + ' rules)';
+                                                    }
+                                                    var hiddenField = document.getElementById('sd_overrides_snapshot_field');
+                                                    if (hiddenField) {
+                                                        hiddenField.value = JSON.stringify(parsedLocal);
+                                                    }
+                                                }
+                                            }
+                                        } catch(e) {}
+                                    }
+                                })();
 
                                 function sdSearchOverrides(query) {
                                     query = (query || '').trim().toLowerCase();
@@ -1404,6 +1463,10 @@ function social_render_settings_page() {
                                     if (textarea) {
                                         textarea.value = snapshot.content;
                                         sdUpdateLineCount();
+                                        var hiddenField = document.getElementById('sd_overrides_snapshot_field');
+                                        if (hiddenField) {
+                                            hiddenField.value = JSON.stringify(snapshot);
+                                        }
                                         try {
                                             textarea.dispatchEvent(new Event('input', { bubbles: true }));
                                             textarea.dispatchEvent(new Event('change', { bubbles: true }));

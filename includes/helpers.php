@@ -875,35 +875,89 @@ function social_get_cached_tag_weights() {
  */
 function social_get_default_tag_overrides_string() {
     return implode("\n", [
+        'Adreno',
         'Chromebook',
         'Coreboot',
         'DellXPS=Dell XPS',
         'Dimensity',
-        'E-ink',
-        'EliteMiniPC=Elite Mini PC',
+        'EInk=E-ink',
+        'EliteMiniPC*=Elite Mini PC',
         'FDroid=F-Droid',
+        'GalaxyTab*=Galaxy Tab',
         'GEEKOM*',
         'Googlebook',
         'MediaTek=MediaTek',
-        'MINISFORUM*',
-        'MiniPC=Mini PC',
         'MinimalPhone=Minimal Phone',
+        'MINISFORUM*',
+        'MiniPC*=Mini PC',
         'NintendoSwitch=Nintendo Switch',
         'NVIDIA*',
         'OpenClaw',
         'PocketBook',
         'Qualcomm',
         'RaspberryPi=Raspberry Pi',
-        'SamsungGalaxy=Samsung Galaxy',
-        'SamsungGalaxyTab=Samsung Galaxy Tab',
-        'SnapdragonX=Snapdragon X',
+        'SamsungGalaxyTab*=Samsung Galaxy Tab',
+        'SamsungGalaxy*=Samsung Galaxy',
+        'SnapdragonX*=Snapdragon X',
+        'Snapdragon*=Snapdragon',
         'SteamDeck=Steam Deck',
         'SteamFrame=Steam Frame',
         'SteamOS=SteamOS',
+        'ThinkBookPlusGen*=ThinkBook Plus Gen',
+        'ThinkBookPlus*=ThinkBook Plus',
         'ThinkBook*',
-        'U-Boot',
+        'UBoot=U-Boot',
         'XPS*',
     ]);
+}
+
+/**
+ * Merges existing custom overrides with the built-in baseline rules.
+ * Never removes or alters any custom rule entered by the administrator.
+ *
+ * @param string $custom_str Existing custom overrides string.
+ * @return string Merged rules with user rules prioritized at top.
+ */
+function social_get_merged_tag_overrides($custom_str) {
+    if (empty($custom_str) || trim((string)$custom_str) === '') {
+        return social_get_default_tag_overrides_string();
+    }
+
+    $lines = preg_split('/[\r\n]+/', trim((string)$custom_str));
+    $existing_keys = [];
+    foreach ($lines as $line) {
+        $trimmed = trim($line);
+        if ($trimmed === '' || strpos($trimmed, '#') === 0) continue;
+        if (strpos($trimmed, '=') !== false) {
+            list($k) = explode('=', $trimmed, 2);
+            $existing_keys[mb_strtolower(ltrim(trim($k), '#'))] = true;
+        } else {
+            $existing_keys[mb_strtolower(ltrim($trimmed, '#'))] = true;
+        }
+    }
+
+    $default_lines = preg_split('/[\r\n]+/', social_get_default_tag_overrides_string());
+    $missing_defaults = [];
+    foreach ($default_lines as $d_line) {
+        $trimmed = trim($d_line);
+        if ($trimmed === '' || strpos($trimmed, '#') === 0) continue;
+        $d_key = '';
+        if (strpos($trimmed, '=') !== false) {
+            list($k) = explode('=', $trimmed, 2);
+            $d_key = mb_strtolower(ltrim(trim($k), '#'));
+        } else {
+            $d_key = mb_strtolower(ltrim($trimmed, '#'));
+        }
+        if (!isset($existing_keys[$d_key])) {
+            $missing_defaults[] = $trimmed;
+        }
+    }
+
+    if (empty($missing_defaults)) {
+        return trim((string)$custom_str);
+    }
+
+    return rtrim((string)$custom_str) . "\n\n# Built-In Baseline Terms\n" . implode("\n", $missing_defaults);
 }
 
 /**
@@ -1084,66 +1138,22 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
         }
     }
 
-    // 1. Explicit Samsung Galaxy Tab S-Series pattern matching (e.g. "SamsungGalaxyTabS12", "samsunggalaxytabs12", "TabS12")
-    if (preg_match('/(?i)samsung\s*galaxy\s*tab\s*s\s*(\d+)/u', $t, $m)) {
-        $t = preg_replace('/(?i)samsung\s*galaxy\s*tab\s*s\s*\d+/u', 'Samsung Galaxy Tab S' . $m[1], $t);
-    } elseif (preg_match('/(?i)samsung\s*galaxy\s*tabs\s*(\d+)/u', $t, $m)) {
-        $t = preg_replace('/(?i)samsung\s*galaxy\s*tabs\s*\d+/u', 'Samsung Galaxy Tab S' . $m[1], $t);
-    } elseif (preg_match('/(?i)galaxy\s*tabs\s*(\d+)/u', $t, $m)) {
-        $t = preg_replace('/(?i)galaxy\s*tabs\s*\d+/u', 'Galaxy Tab S' . $m[1], $t);
-    } elseif (preg_match('/(?i)tab\s*s\s*(\d+)/u', $t, $m)) {
-        $t = preg_replace('/(?i)tab\s*s\s*\d+/u', 'Tab S' . $m[1], $t);
-    }
-
-    // 2. Explicit Snapdragon X-Series processor pattern matching (e.g. "SnapdragonX2", "snapdragonx2", "SnapdragonX2Elite")
-    if (preg_match('/(?i)snapdragon\s*x\s*(\d+)/u', $t, $m)) {
-        $t = preg_replace('/(?i)snapdragon\s*x\s*\d+/u', 'Snapdragon X' . $m[1], $t);
-    } elseif (preg_match('/(?i)snapdragon\s*x(\d+)/u', $t, $m)) {
-        $t = preg_replace('/(?i)snapdragon\s*x\d+/u', 'Snapdragon X' . $m[1], $t);
-    }
-
-    // Get dynamic vocabulary dictionary learned from site content + baseline terms
-    $compound_map = social_get_site_vocabulary_dictionary();
-
-    // Two or more consecutive underscores represent a hyphen (e.g. #Wi__Fi -> Wi-Fi, #F__Droid -> F-Droid)
+    // If not matched by explicit or wildcard user overrides, apply universal syntax splitting:
+    // 1. Two or more consecutive underscores represent a hyphen (e.g. #Wi__Fi -> Wi-Fi)
     $t = preg_replace('/_{2,}/u', '-', $t);
-    // A single underscore represents a space (e.g. #AI_PC -> AI PC, #Mini_PC -> Mini PC)
+    // 2. A single underscore represents a space (e.g. #AI_PC -> AI PC)
     $t = str_replace('_', ' ', $t);
     $t = trim($t, "- \t\n\r\0\x0B");
 
-    // CamelCase transitions (e.g. "AcerGooglebook" -> "Acer Googlebook", "Android17QPR" -> "Android 17 QPR")
+    // 3. Universal CamelCase transitions (e.g. "AcerLaptop" -> "Acer Laptop", "Android17QPR" -> "Android 17 QPR")
     $t = preg_replace('/([a-z0-9])([A-Z])/u', '$1 $2', $t);
     $t = preg_replace('/([A-Z]{2,})([A-Z][a-z])/u', '$1 $2', $t);
-    // Single uppercase letter prefix before Titlecase word (e.g. "FDroid" -> "F Droid", "GSuite" -> "G Suite", "XScreen" -> "X Screen")
+    // Single uppercase letter prefix before Titlecase word (e.g. "GSuite" -> "G Suite", "XScreen" -> "X Screen")
     $t = preg_replace('/(?:\b|^)([A-Z])([A-Z][a-z]+)/u', '$1 $2', $t);
 
-    // Letter-number boundary splitting (e.g. "Googlebook14" -> "Googlebook 14", "QPR2" -> "QPR 2", "gen7" -> "gen 7")
+    // 4. Letter-number boundary splitting (e.g. "QPR2" -> "QPR 2", "gen7" -> "gen 7")
     $t = preg_replace('/([a-zA-Z]+)([0-9]+)/u', '$1 $2', $t);
     $t = preg_replace('/([0-9]+)([a-zA-Z]+)/u', '$1 $2', $t);
-
-    // Specific model/chip designation regex splits
-    $t = preg_replace('/(elite)(mini)(pc)/i', '$1 $2 $3', $t);
-    $t = preg_replace('/(mini)(pc|pcs)/i', '$1 $2', $t);
-
-    $segment_word = function($w) use (&$segment_word, $compound_map) {
-        $clean = mb_strtolower(trim($w));
-        if ($clean === '' || is_numeric($clean)) return $w;
-
-        if (isset($compound_map[$clean])) {
-            return $compound_map[$clean];
-        }
-
-        // Try greedy prefix matching against compound map keys
-        foreach ($compound_map as $k => $v) {
-            if (strlen($k) >= 3 && strpos($clean, $k) === 0 && strlen($clean) > strlen($k)) {
-                $rest = substr($clean, strlen($k));
-                $seg_rest = $segment_word($rest);
-                return $v . ' ' . $seg_rest;
-            }
-        }
-
-        return $w;
-    };
 
     $raw_tokens = explode(' ', $t);
     $processed_phrases = [];
@@ -1159,35 +1169,18 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
         $token = trim($token);
         if ($token === '') continue;
 
-        $segmented = $segment_word($token);
-        $sub_words = explode(' ', $segmented);
-
-        foreach ($sub_words as $sw) {
-            $sw = trim($sw);
-            if ($sw === '') continue;
-
-            $sw_upper = mb_strtoupper($sw);
-            if (in_array($sw_upper, $upper_acronyms, true)) {
-                $processed_phrases[] = $sw_upper;
-            } elseif (preg_match('/^[A-Z0-9\-\.]/u', $sw) && !ctype_lower($sw) && !ctype_upper($sw)) {
-                // Preserve exact mixed capitalization if provided by site vocabulary term (e.g. MediaTek, ThinkBook)
-                $processed_phrases[] = $sw;
-            } else {
-                $processed_phrases[] = mb_convert_case($sw, MB_CASE_TITLE, "UTF-8");
-            }
+        $token_upper = mb_strtoupper($token);
+        if (in_array($token_upper, $upper_acronyms, true)) {
+            $processed_phrases[] = $token_upper;
+        } elseif (preg_match('/^[A-Z0-9\-\.]/u', $token) && !ctype_lower($token) && !ctype_upper($token)) {
+            // Preserve mixed capitalization if present
+            $processed_phrases[] = $token;
+        } else {
+            $processed_phrases[] = mb_convert_case($token, MB_CASE_TITLE, "UTF-8");
         }
     }
 
-    $res = trim(implode(' ', $processed_phrases));
-    // Final precision fixes for model designations
-    $res = preg_replace('/\bSamsung Galaxy Tabs (\d+)\b/i', 'Samsung Galaxy Tab S$1', $res);
-    $res = preg_replace('/\bGalaxy Tabs (\d+)\b/i', 'Galaxy Tab S$1', $res);
-    $res = preg_replace('/\bSnapdragon X (\d+)\b/i', 'Snapdragon X$1', $res);
-    $res = preg_replace('/\bMedia\s*Tek\b/i', 'MediaTek', $res);
-    $res = preg_replace('/\bF\s+Droid\b/i', 'F-Droid', $res);
-    $res = preg_replace('/\bE\s+Ink\b/i', 'E-Ink', $res);
-
-    return $res;
+    return trim(implode(' ', $processed_phrases));
 }
 
 function social_extract_topic_keywords_from_posts($items) {
