@@ -319,53 +319,68 @@ export default function App() {
                 </span>
               </a>
 
-              {/* Multi-Image Gallery with WP Media Thumbnail Settings (150x150) & ALT Overlay */}
+              {/* Multi-Image Gallery with Lightbox Integration & Grouping (v5.8.1) */}
               <div className="flex flex-wrap gap-2.5 my-3 w-full">
-                <div className="relative group overflow-hidden rounded-md w-[140px] h-[140px] shrink-0">
+                <a
+                  href="https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:wxhudjcwjjwsfklsq4advde6/bafkreigqnojxmiohiw75kkagzi2t3ooferz67ehnj7pv5enhkri23snyhy"
+                  data-rel="lightbox-gallery-minisforum"
+                  className="social-lightbox-trigger relative group overflow-hidden rounded-md w-[140px] h-[140px] shrink-0 block cursor-zoom-in"
+                  title="MINISFORUM S5 chassis profile view"
+                >
                   <img
                     src="https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:wxhudjcwjjwsfklsq4advde6/bafkreigqnojxmiohiw75kkagzi2t3ooferz67ehnj7pv5enhkri23snyhy"
                     alt="MINISFORUM S5 chassis"
-                    className="w-full h-full object-cover rounded-md block"
+                    className="w-full h-full object-cover rounded-md block group-hover:scale-105 transition-transform duration-200"
                   />
                   <button
                     type="button"
-                    onClick={() => alert('ALT: MINISFORUM S5 fanless chassis profile view.')}
-                    className="absolute bottom-1.5 left-1.5 bg-slate-900/85 hover:bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wider shadow cursor-help transition-colors"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); alert('ALT: MINISFORUM S5 fanless chassis profile view.'); }}
+                    className="absolute bottom-1.5 left-1.5 bg-slate-900/85 hover:bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wider shadow cursor-help transition-colors z-10"
                     title="ALT: MINISFORUM S5 fanless chassis profile view."
                   >
                     ALT
                   </button>
-                </div>
-                <div className="relative group overflow-hidden rounded-md w-[140px] h-[140px] shrink-0">
+                </a>
+                <a
+                  href="https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:wxhudjcwjjwsfklsq4advde6/bafkreiga4h4hxetzx2dwbqk542n5rqvo5zg6ywaks35wcfbbkeqojvi37y"
+                  data-rel="lightbox-gallery-minisforum"
+                  className="social-lightbox-trigger relative group overflow-hidden rounded-md w-[140px] h-[140px] shrink-0 block cursor-zoom-in"
+                  title="MINISFORUM S5 internal layout showing 5x M.2 NVMe slots"
+                >
                   <img
                     src="https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:wxhudjcwjjwsfklsq4advde6/bafkreiga4h4hxetzx2dwbqk542n5rqvo5zg6ywaks35wcfbbkeqojvi37y"
                     alt="MINISFORUM S5 ports and internal layout"
-                    className="w-full h-full object-cover rounded-md block"
+                    className="w-full h-full object-cover rounded-md block group-hover:scale-105 transition-transform duration-200"
                   />
                   <button
                     type="button"
-                    onClick={() => alert('ALT: MINISFORUM S5 internal layout showing 5x M.2 NVMe slots.')}
-                    className="absolute bottom-1.5 left-1.5 bg-slate-900/85 hover:bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wider shadow cursor-help transition-colors"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); alert('ALT: MINISFORUM S5 internal layout showing 5x M.2 NVMe slots.'); }}
+                    className="absolute bottom-1.5 left-1.5 bg-slate-900/85 hover:bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wider shadow cursor-help transition-colors z-10"
                     title="ALT: MINISFORUM S5 internal layout showing 5x M.2 NVMe slots."
                   >
                     ALT
                   </button>
-                </div>
-                <div className="relative group overflow-hidden rounded-md w-[140px] h-[140px] shrink-0">
+                </a>
+                <a
+                  href="https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:wxhudjcwjjwsfklsq4advde6/bafkreiambm2ccrza3se7adwhnbgwgpgfj4pxqeb4cqydoytm3banfv4iw4"
+                  data-rel="lightbox-gallery-minisforum"
+                  className="social-lightbox-trigger relative group overflow-hidden rounded-md w-[140px] h-[140px] shrink-0 block cursor-zoom-in"
+                  title="MINISFORUM S5 aluminum heatsink fin array"
+                >
                   <img
                     src="https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:wxhudjcwjjwsfklsq4advde6/bafkreiambm2ccrza3se7adwhnbgwgpgfj4pxqeb4cqydoytm3banfv4iw4"
                     alt="MINISFORUM S5 heatsink fins"
-                    className="w-full h-full object-cover rounded-md block"
+                    className="w-full h-full object-cover rounded-md block group-hover:scale-105 transition-transform duration-200"
                   />
                   <button
                     type="button"
-                    onClick={() => alert('ALT: MINISFORUM S5 aluminum heatsink fin array.')}
-                    className="absolute bottom-1.5 left-1.5 bg-slate-900/85 hover:bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wider shadow cursor-help transition-colors"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); alert('ALT: MINISFORUM S5 aluminum heatsink fin array.'); }}
+                    className="absolute bottom-1.5 left-1.5 bg-slate-900/85 hover:bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wider shadow cursor-help transition-colors z-10"
                     title="ALT: MINISFORUM S5 aluminum heatsink fin array."
                   >
                     ALT
                   </button>
-                </div>
+                </a>
               </div>
 
               {/* Collapsible Thread Preview */}

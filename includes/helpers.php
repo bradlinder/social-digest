@@ -776,6 +776,9 @@ function social_sideload_content_media($content, $post_id, $only_avatars_and_car
                 }
 
                 $content = str_replace($img_tag, $replacement_tag, $content);
+
+                // Update wrapping image/lightbox anchor href if it points to this remote image
+                $content = str_replace('href="' . $img_url . '"', 'href="' . $local_url . '"', $content);
             }
         }
     }

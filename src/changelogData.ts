@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.8',
+  version: '5.8.1',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,26 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.7.53',
+  rollbackTarget: 'v5.8',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.8.1',
+    tag: 'v5.8.1',
+    isLatest: true,
+    highlights: [
+      'On-Site Gallery Lightbox Integration: Embedded gallery and update images now open in an on-site lightbox modal, allowing visitors to view high-resolution photos without leaving the page.',
+      'Native Responsive Lightbox Compatibility: Automatically integrates with Responsive Lightbox by dFactory (and WordPress core/third-party lightboxes) using shared data-rel grouping attributes for multi-image swipe and arrow navigation.',
+      'Standalone Zero-Dependency Fallback Viewer: If no lightbox plugin is active, Social Digest provides a lightweight (~1.5 KB) vanilla JS modal with dark backdrop, ALT captions, image counter (e.g. 2 / 4), and ESC/arrow key controls.',
+      'Gallery Image Click Setting: Added an admin setting under Media Optimization allowing publishers to choose between Lightbox (default), Direct Image File, Original Social Post, or None (unlinked).',
+      'Sideloaded Media Link Harmonization: Automatically updates wrapping lightbox/image link hrefs to local Media Library URLs when assets are sideloaded.'
+    ]
+  },
+  {
     version: '5.8',
     tag: 'v5.8',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Unified Clickable Social Snippet Cards: Entire link preview cards (image thumbnail, headline title, snippet description text, and domain source URL) are now unified into a single clickable anchor tag opening the linked article in a new tab.',
       'Native HTML5 & WordPress KSES / wpautop Protection: Refactored card markup to eliminate nested block <div> elements inside <a>, preventing WordPress content filters (wpautop, balanceTags) from prematurely terminating links after images.',

@@ -254,10 +254,16 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
             } else {
                 $gallery_html .= '<div class="social-embed-images" style="margin:12px 0;">';
             }
+
+            $opts_global = get_option('social_digest_options', []);
+            $gallery_action = $opts_global['gallery_click_action'] ?? 'lightbox';
+            $gallery_group = 'lightbox-gallery-' . substr(md5($web_url), 0, 10);
+
             foreach ($images as $img) {
-                $img_url = esc_url($img['thumb'] ?? $img['fullsize'] ?? '');
-                $alt_raw = trim($img['alt'] ?? '');
-                $alt_txt = esc_attr($alt_raw ?: 'Bluesky image');
+                $img_full = esc_url($img['fullsize'] ?? $img['thumb'] ?? '');
+                $img_url  = esc_url($img['thumb'] ?? $img['fullsize'] ?? '');
+                $alt_raw  = trim($img['alt'] ?? '');
+                $alt_txt  = esc_attr($alt_raw ?: 'Bluesky image');
                 $alt_badge = '';
                 if ($alt_raw !== '' && strtolower($alt_raw) !== 'bluesky image') {
                     $alt_badge = '<span data-nosnippet class="social-alt-badge" onclick="event.preventDefault(); event.stopPropagation(); alert(this.getAttribute(\'title\'));" style="position:absolute; bottom:6px; left:6px; background:rgba(15,23,42,0.85); color:#ffffff; font-size:10px; font-weight:700; padding:2px 5px; border-radius:4px; letter-spacing:0.5px; backdrop-filter:blur(4px); box-shadow:0 1px 3px rgba(0,0,0,0.3); z-index:3; pointer-events:auto; cursor:help;" title="ALT: ' . $alt_txt . '">ALT</span>';
@@ -265,13 +271,21 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
                 if ($img_url) {
                     if (!$first_image_url) $first_image_url = $img_url;
                     $title_attr = ($num_imgs > 1) ? 'View full gallery on Bluesky' : 'View image on Bluesky';
-                    $gallery_html .= '<a href="' . esc_url($web_url) . '" target="_blank" rel="noopener" title="' . esc_attr($title_attr) . '" style="display:inline-block; text-decoration:none;">';
                     if ($num_imgs > 1) {
-                        $gallery_html .= '<figure style="margin:0; position:relative; width:' . $wp_thumb_w . 'px; height:' . $wp_thumb_h . 'px; max-width:100%; overflow:hidden; border-radius:6px; flex-shrink:0;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="width:100%; height:100%; object-fit:cover; border-radius:6px; display:block;" />' . $alt_badge . '</figure>';
+                        $fig_html = '<figure style="margin:0; position:relative; width:' . $wp_thumb_w . 'px; height:' . $wp_thumb_h . 'px; max-width:100%; overflow:hidden; border-radius:6px; flex-shrink:0;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="width:100%; height:100%; object-fit:cover; border-radius:6px; display:block;" />' . $alt_badge . '</figure>';
                     } else {
-                        $gallery_html .= '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="max-width:100%; max-height:400px; width:auto; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
+                        $fig_html = '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="max-width:100%; max-height:400px; width:auto; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
                     }
-                    $gallery_html .= '</a>';
+
+                    if ($gallery_action === 'lightbox') {
+                        $gallery_html .= '<a href="' . $img_full . '" data-rel="' . esc_attr($gallery_group) . '" rel="' . esc_attr($gallery_group) . '" class="social-lightbox-trigger" title="' . esc_attr($alt_raw ?: $title_attr) . '" data-title="' . esc_attr($alt_raw ?: '') . '" data-post-url="' . esc_url($web_url) . '" style="display:inline-block; text-decoration:none; cursor:zoom-in;">' . $fig_html . '</a>';
+                    } elseif ($gallery_action === 'file') {
+                        $gallery_html .= '<a href="' . $img_full . '" target="_blank" rel="noopener" title="' . esc_attr($alt_raw ?: $title_attr) . '" style="display:inline-block; text-decoration:none;">' . $fig_html . '</a>';
+                    } elseif ($gallery_action === 'social') {
+                        $gallery_html .= '<a href="' . esc_url($web_url) . '" target="_blank" rel="noopener" title="' . esc_attr($title_attr) . '" style="display:inline-block; text-decoration:none;">' . $fig_html . '</a>';
+                    } else {
+                        $gallery_html .= $fig_html;
+                    }
                 }
             }
             $gallery_html .= '</div>';
@@ -529,10 +543,16 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
                 } else {
                     $gallery_html .= '<div class="social-embed-media" style="margin:12px 0;">';
                 }
+
+                $opts_global = get_option('social_digest_options', []);
+                $gallery_action = $opts_global['gallery_click_action'] ?? 'lightbox';
+                $gallery_group = 'lightbox-gallery-' . substr(md5($post_url), 0, 10);
+
                 foreach ($images as $med) {
-                    $img_url = esc_url($med['preview_url'] ?? $med['url'] ?? '');
-                    $alt_raw = trim($med['description'] ?? '');
-                    $alt_txt = esc_attr($alt_raw ?: 'Mastodon image');
+                    $img_full = esc_url($med['url'] ?? $med['preview_url'] ?? '');
+                    $img_url  = esc_url($med['preview_url'] ?? $med['url'] ?? '');
+                    $alt_raw  = trim($med['description'] ?? '');
+                    $alt_txt  = esc_attr($alt_raw ?: 'Mastodon image');
                     $alt_badge = '';
                     if ($alt_raw !== '' && strtolower($alt_raw) !== 'mastodon image') {
                         $alt_badge = '<span data-nosnippet class="social-alt-badge" onclick="event.preventDefault(); event.stopPropagation(); alert(this.getAttribute(\'title\'));" style="position:absolute; bottom:6px; left:6px; background:rgba(15,23,42,0.85); color:#ffffff; font-size:10px; font-weight:700; padding:2px 5px; border-radius:4px; letter-spacing:0.5px; backdrop-filter:blur(4px); box-shadow:0 1px 3px rgba(0,0,0,0.3); z-index:3; pointer-events:auto; cursor:help;" title="ALT: ' . $alt_txt . '">ALT</span>';
@@ -540,13 +560,21 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
                     if ($img_url) {
                         if (!$first_image_url) $first_image_url = $img_url;
                         $title_attr = ($num_imgs > 1) ? 'View full gallery on Mastodon' : 'View image on Mastodon';
-                        $gallery_html .= '<a href="' . esc_url($post_url) . '" target="_blank" rel="noopener" title="' . esc_attr($title_attr) . '" style="display:inline-block; text-decoration:none;">';
                         if ($num_imgs > 1) {
-                            $gallery_html .= '<figure style="margin:0; position:relative; width:' . $wp_thumb_w . 'px; height:' . $wp_thumb_h . 'px; max-width:100%; overflow:hidden; border-radius:6px; flex-shrink:0;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="width:100%; height:100%; object-fit:cover; border-radius:6px; display:block;" />' . $alt_badge . '</figure>';
+                            $fig_html = '<figure style="margin:0; position:relative; width:' . $wp_thumb_w . 'px; height:' . $wp_thumb_h . 'px; max-width:100%; overflow:hidden; border-radius:6px; flex-shrink:0;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="width:100%; height:100%; object-fit:cover; border-radius:6px; display:block;" />' . $alt_badge . '</figure>';
                         } else {
-                            $gallery_html .= '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="max-width:100%; max-height:400px; width:auto; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
+                            $fig_html = '<figure style="margin:0; position:relative;"><img src="' . $img_url . '" alt="' . $alt_txt . '" style="max-width:100%; max-height:400px; width:auto; border-radius:8px; display:block;" />' . $alt_badge . '</figure>';
                         }
-                        $gallery_html .= '</a>';
+
+                        if ($gallery_action === 'lightbox') {
+                            $gallery_html .= '<a href="' . $img_full . '" data-rel="' . esc_attr($gallery_group) . '" rel="' . esc_attr($gallery_group) . '" class="social-lightbox-trigger" title="' . esc_attr($alt_raw ?: $title_attr) . '" data-title="' . esc_attr($alt_raw ?: '') . '" data-post-url="' . esc_url($post_url) . '" style="display:inline-block; text-decoration:none; cursor:zoom-in;">' . $fig_html . '</a>';
+                        } elseif ($gallery_action === 'file') {
+                            $gallery_html .= '<a href="' . $img_full . '" target="_blank" rel="noopener" title="' . esc_attr($alt_raw ?: $title_attr) . '" style="display:inline-block; text-decoration:none;">' . $fig_html . '</a>';
+                        } elseif ($gallery_action === 'social') {
+                            $gallery_html .= '<a href="' . esc_url($post_url) . '" target="_blank" rel="noopener" title="' . esc_attr($title_attr) . '" style="display:inline-block; text-decoration:none;">' . $fig_html . '</a>';
+                        } else {
+                            $gallery_html .= $fig_html;
+                        }
                     }
                 }
                 $gallery_html .= '</div>';

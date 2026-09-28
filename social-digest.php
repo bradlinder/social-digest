@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, stock media sideloading, local asset caching, and RSS-only syndication.
- * Version: 5.8
+ * Version: 5.8.1
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) exit;
 
 // Plugin constants
 if (!defined('SOCIAL_DIGEST_VERSION')) {
-    define('SOCIAL_DIGEST_VERSION', '5.8');
+    define('SOCIAL_DIGEST_VERSION', '5.8.1');
 }
 if (!defined('SOCIAL_DIGEST_FILE')) {
     define('SOCIAL_DIGEST_FILE', __FILE__);
@@ -239,6 +239,17 @@ add_action('wp_head', function() {
             color: #64748b;
             font-weight: 400 !important;
             margin-top: 4px;
+        }
+
+        /* Lightbox Image Hover & Triggers */
+        div.social-post .social-lightbox-trigger {
+            display: inline-block;
+            cursor: zoom-in;
+            transition: opacity 0.15s ease, filter 0.15s ease;
+        }
+        div.social-post .social-lightbox-trigger:hover {
+            opacity: 0.92;
+            filter: brightness(1.04);
         }
         @media (max-width: 480px) {
             div.social-post .social-card-footer {
@@ -703,6 +714,239 @@ function social_digest_render_smart_theme_script() {
     <?php
 }
 add_action('wp_footer', 'SocialDigest\\social_digest_render_smart_theme_script');
+
+/**
+ * Lightweight Zero-Dependency Standalone Fallback Lightbox for Social Digest
+ * Automatically detects whether Responsive Lightbox (dFactory) or any site-wide lightbox
+ * plugin is active. If so, delegates all clicks to the existing lightbox.
+ * If no lightbox plugin is active, provides a seamless, touch-friendly on-page modal viewer.
+ */
+function social_digest_render_lightbox_script() {
+    $opts = get_option('social_digest_options', []);
+    $action = $opts['gallery_click_action'] ?? 'lightbox';
+    if ($action !== 'lightbox') {
+        return;
+    }
+    ?>
+    <script id="social-digest-lightbox-script">
+    (function() {
+        function initSocialLightbox() {
+            var triggers = document.querySelectorAll('.social-lightbox-trigger');
+            if (!triggers.length) return;
+
+            // Check if Responsive Lightbox or another global lightbox is active on the page
+            var hasThirdPartyLightbox = !!(
+                window.rlArgs ||
+                (window.jQuery && (
+                    window.jQuery.fn.swipebox ||
+                    window.jQuery.fn.prettyPhoto ||
+                    window.jQuery.fn.fancybox ||
+                    window.jQuery.fn.magnificPopup ||
+                    window.jQuery.fn.colorbox ||
+                    window.jQuery.fn.featherlight ||
+                    window.jQuery.fn.tosrus ||
+                    window.jQuery.fn.nivoLightbox ||
+                    window.jQuery.fn.imageLightbox
+                ))
+            );
+
+            // If a known third-party lightbox library is detected, let it handle the clicks
+            if (hasThirdPartyLightbox) return;
+
+            var overlay = null;
+            var modalImg = null;
+            var modalCaption = null;
+            var modalCounter = null;
+            var modalPostLink = null;
+            var prevBtn = null;
+            var nextBtn = null;
+            var currentGroup = [];
+            var currentIndex = 0;
+
+            function createModal() {
+                if (overlay) return;
+                overlay = document.createElement('div');
+                overlay.className = 'social-lightbox-overlay';
+                overlay.setAttribute('role', 'dialog');
+                overlay.setAttribute('aria-modal', 'true');
+                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.92);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:999999;display:none;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s ease;';
+
+                var container = document.createElement('div');
+                container.className = 'social-lightbox-container';
+                container.style.cssText = 'position:relative;max-width:92vw;max-height:90vh;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none;';
+
+                modalImg = document.createElement('img');
+                modalImg.className = 'social-lightbox-img';
+                modalImg.style.cssText = 'max-width:92vw;max-height:80vh;object-fit:contain;border-radius:6px;box-shadow:0 10px 25px rgba(0,0,0,0.5);display:block;transition:transform 0.15s ease;';
+
+                var infoBar = document.createElement('div');
+                infoBar.className = 'social-lightbox-infobar';
+                infoBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:10px;color:#f8fafc;font-size:13px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
+
+                modalCaption = document.createElement('div');
+                modalCaption.className = 'social-lightbox-caption';
+                modalCaption.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:12px;color:#e2e8f0;font-size:13px;';
+
+                var rightControls = document.createElement('div');
+                rightControls.style.cssText = 'display:flex;align-items:center;gap:12px;flex-shrink:0;';
+
+                modalCounter = document.createElement('span');
+                modalCounter.className = 'social-lightbox-counter';
+                modalCounter.style.cssText = 'color:#94a3b8;font-size:12px;font-weight:600;';
+
+                modalPostLink = document.createElement('a');
+                modalPostLink.className = 'social-lightbox-post-link';
+                modalPostLink.target = '_blank';
+                modalPostLink.rel = 'noopener';
+                modalPostLink.style.cssText = 'color:#38bdf8;text-decoration:none;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:3px;';
+                modalPostLink.textContent = 'View Post ↗';
+
+                rightControls.appendChild(modalCounter);
+                rightControls.appendChild(modalPostLink);
+
+                infoBar.appendChild(modalCaption);
+                infoBar.appendChild(rightControls);
+
+                var closeBtn = document.createElement('button');
+                closeBtn.className = 'social-lightbox-close';
+                closeBtn.type = 'button';
+                closeBtn.setAttribute('aria-label', 'Close');
+                closeBtn.innerHTML = '&times;';
+                closeBtn.style.cssText = 'position:fixed;top:16px;right:20px;width:40px;height:40px;border-radius:50%;background:rgba(30,41,59,0.7);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:1000000;';
+                closeBtn.addEventListener('click', closeModal);
+
+                prevBtn = document.createElement('button');
+                prevBtn.className = 'social-lightbox-prev';
+                prevBtn.type = 'button';
+                prevBtn.setAttribute('aria-label', 'Previous image');
+                prevBtn.innerHTML = '&#10094;';
+                prevBtn.style.cssText = 'position:fixed;top:50%;left:16px;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(30,41,59,0.7);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:1000000;';
+                prevBtn.addEventListener('click', function(e) { e.stopPropagation(); navigate(-1); });
+
+                nextBtn = document.createElement('button');
+                nextBtn.className = 'social-lightbox-next';
+                nextBtn.type = 'button';
+                nextBtn.setAttribute('aria-label', 'Next image');
+                nextBtn.innerHTML = '&#10095;';
+                nextBtn.style.cssText = 'position:fixed;top:50%;right:16px;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(30,41,59,0.7);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:1000000;';
+                nextBtn.addEventListener('click', function(e) { e.stopPropagation(); navigate(1); });
+
+                container.appendChild(modalImg);
+                container.appendChild(infoBar);
+
+                overlay.appendChild(closeBtn);
+                overlay.appendChild(prevBtn);
+                overlay.appendChild(nextBtn);
+                overlay.appendChild(container);
+
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === overlay || e.target === container) {
+                        closeModal();
+                    }
+                });
+
+                document.body.appendChild(overlay);
+
+                document.addEventListener('keydown', function(e) {
+                    if (!overlay || overlay.style.display !== 'flex') return;
+                    if (e.key === 'Escape') closeModal();
+                    else if (e.key === 'ArrowLeft') navigate(-1);
+                    else if (e.key === 'ArrowRight') navigate(1);
+                });
+            }
+
+            function openModal(group, index) {
+                createModal();
+                currentGroup = group;
+                currentIndex = index;
+                renderCurrent();
+                overlay.style.display = 'flex';
+                requestAnimationFrame(function() {
+                    overlay.style.opacity = '1';
+                });
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeModal() {
+                if (!overlay) return;
+                overlay.style.opacity = '0';
+                setTimeout(function() {
+                    overlay.style.display = 'none';
+                    document.body.style.overflow = '';
+                }, 200);
+            }
+
+            function navigate(dir) {
+                if (!currentGroup.length) return;
+                currentIndex = (currentIndex + dir + currentGroup.length) % currentGroup.length;
+                renderCurrent();
+            }
+
+            function renderCurrent() {
+                var item = currentGroup[currentIndex];
+                if (!item) return;
+                modalImg.src = item.src;
+                modalCaption.textContent = item.title || '';
+                modalCaption.title = item.title || '';
+                if (currentGroup.length > 1) {
+                    modalCounter.textContent = (currentIndex + 1) + ' / ' + currentGroup.length;
+                    modalCounter.style.display = 'inline';
+                    prevBtn.style.display = 'flex';
+                    nextBtn.style.display = 'flex';
+                } else {
+                    modalCounter.style.display = 'none';
+                    prevBtn.style.display = 'none';
+                    nextBtn.style.display = 'none';
+                }
+                if (item.postUrl) {
+                    modalPostLink.href = item.postUrl;
+                    modalPostLink.style.display = 'inline-flex';
+                } else {
+                    modalPostLink.style.display = 'none';
+                }
+            }
+
+            triggers.forEach(function(trigger) {
+                trigger.addEventListener('click', function(e) {
+                    // If a third-party lightbox has already bound an event handler that called preventDefault, respect it
+                    if (e.defaultPrevented) return;
+
+                    // Also double check if a third-party lightbox initialized dynamically
+                    if (window.rlArgs || (window.jQuery && (window.jQuery.fn.swipebox || window.jQuery.fn.prettyPhoto || window.jQuery.fn.fancybox))) {
+                        return;
+                    }
+
+                    e.preventDefault();
+                    var rel = trigger.getAttribute('data-rel') || trigger.getAttribute('rel') || '';
+                    var groupTriggers = rel ? Array.from(document.querySelectorAll('.social-lightbox-trigger[data-rel="' + rel + '"], .social-lightbox-trigger[rel="' + rel + '"]')) : [trigger];
+                    
+                    var groupItems = groupTriggers.map(function(el) {
+                        var imgEl = el.querySelector('img');
+                        return {
+                            src: el.getAttribute('href') || (imgEl ? imgEl.src : ''),
+                            title: el.getAttribute('data-title') || el.getAttribute('title') || (imgEl ? imgEl.alt : ''),
+                            postUrl: el.getAttribute('data-post-url') || ''
+                        };
+                    });
+
+                    var idx = groupTriggers.indexOf(trigger);
+                    if (idx < 0) idx = 0;
+
+                    openModal(groupItems, idx);
+                });
+            });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initSocialLightbox);
+        } else {
+            initSocialLightbox();
+        }
+    })();
+    </script>
+    <?php
+}
+add_action('wp_footer', 'SocialDigest\\social_digest_render_lightbox_script');
 add_action('admin_footer', function() {
     $screen = function_exists('get_current_screen') ? get_current_screen() : null;
     if ($screen && strpos($screen->id, 'social-digest') !== false) {

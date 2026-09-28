@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8
+Stable tag: 5.8.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,14 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.1 =
+* Gallery Image Lightbox & Responsive Lightbox Integration:
+  1. On-Site Lightbox Integration: Embedded gallery and update images now open in an on-site lightbox modal, allowing visitors to inspect full-resolution photos without disrupting their reading experience or navigating away from your website.
+  2. Native Responsive Lightbox Compatibility: Automatically delegates to your site's existing lightbox plugin (including Responsive Lightbox by dFactory, Swipebox, prettyPhoto, Fancybox, and WordPress core lightboxes). Images in the same social update share unique gallery group keys (`data-rel="lightbox-gallery-..."`) so readers can swipe and arrow-navigate between multi-image sets.
+  3. Standalone Zero-Dependency Fallback Viewer: If no third-party lightbox plugin is installed, Social Digest activates a lightweight (~1.5 KB), pure vanilla JS modal viewer complete with full-screen dark backdrop, ALT captions, image counters (e.g. 2 / 4), keyboard navigation (`ESC`, arrow keys), and a discreet "View Post ↗" link.
+  4. Configurable Click Action Setting: Added a "Gallery Image Click" selector under Settings > Media Optimization offering Lightbox (default), Direct Image File, Original Social Post (legacy), or None (unlinked).
+  5. Sideloaded Media Link Harmonization: When images are cached into the local Media Library, both the `<img>` source and the surrounding lightbox anchor `href` are seamlessly synchronized to the local high-resolution attachment URL.
 
 = 5.8 =
 * Unified Clickable Social Snippet Cards:

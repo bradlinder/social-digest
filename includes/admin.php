@@ -77,6 +77,7 @@ add_action('admin_init', function() {
             'cache_local_assets'     => 1,
             'generate_srcsets'       => 1,
             'sideload_all_media'     => 0,
+            'gallery_click_action'   => 'lightbox',
             'rss_only_mode'          => 0,
             'output_gutenberg_blocks'=> 1,
             'dark_mode_mode'         => 'auto',
@@ -248,6 +249,8 @@ function social_sanitize_settings($input) {
     $output['cache_local_assets']   = !empty($input['cache_local_assets']) ? 1 : 0;
     $output['generate_srcsets']     = !empty($input['generate_srcsets']) ? 1 : 0;
     $output['sideload_all_media']   = !empty($input['sideload_all_media']) ? 1 : 0;
+    $allowed_gallery_actions        = ['lightbox', 'file', 'social', 'none'];
+    $output['gallery_click_action'] = in_array($input['gallery_click_action'] ?? '', $allowed_gallery_actions, true) ? $input['gallery_click_action'] : 'lightbox';
     $allowed_dark_modes             = ['auto', 'light', 'dark'];
     $output['dark_mode_mode']       = in_array($input['dark_mode_mode'] ?? '', $allowed_dark_modes, true) ? $input['dark_mode_mode'] : 'auto';
 
@@ -680,6 +683,18 @@ function social_render_settings_page() {
                                                     <label><input type="checkbox" name="social_digest_options[generate_srcsets]" value="1" <?php checked($opts['generate_srcsets'] ?? 1, 1); ?> /> Generate standard responsive srcset sizes</label><br>
                                                     <label><input type="checkbox" name="social_digest_options[sideload_all_media]" value="1" <?php checked($opts['sideload_all_media'] ?? 0, 1); ?> /> <strong>Sideload all embedded post media into WordPress Media Library</strong></label>
                                                     <p class="description">Automatically downloads and imports all embedded update images directly into the local Media Library as stock assets when publishing or drafting, protecting against external link rot and server outages.</p>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>Gallery Image Click</th>
+                                                <td>
+                                                    <select name="social_digest_options[gallery_click_action]">
+                                                        <option value="lightbox" <?php selected($opts['gallery_click_action'] ?? 'lightbox', 'lightbox'); ?>>Lightbox (Auto-detects Responsive Lightbox / Core Lightbox with standalone fallback)</option>
+                                                        <option value="file" <?php selected($opts['gallery_click_action'] ?? '', 'file'); ?>>Direct Image File (plain links to full-resolution image)</option>
+                                                        <option value="social" <?php selected($opts['gallery_click_action'] ?? '', 'social'); ?>>Original Social Post (legacy: opens Bluesky / Mastodon post)</option>
+                                                        <option value="none" <?php selected($opts['gallery_click_action'] ?? '', 'none'); ?>>None (display only, unlinked)</option>
+                                                    </select>
+                                                    <p class="description">Controls what happens when readers click an embedded gallery or update image. When set to <strong>Lightbox</strong>, images open seamlessly in your site's active lightbox plugin (such as Responsive Lightbox) with a lightweight zero-dependency on-page fallback viewer if no lightbox plugin is present.</p>
                                                 </td>
                                             </tr>
                                         </table>
