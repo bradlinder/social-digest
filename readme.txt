@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.14
+Stable tag: 5.8.16
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,16 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.16 =
+* Custom Lightbox Removal, Responsive Lightbox & Gallery Integration & Native WordPress Lightbox Fallback:
+  1. Complete Removal of Custom Lightbox Code: Removed all custom modal JavaScript, custom modal overlay DOM elements, custom touch/keyboard listeners, and inline modal styling. Eliminates conflicts with site lightbox plugins and resolves the issue where gallery clicks failed to respond on mobile Android Chrome.
+  2. Native Respect for Responsive Lightbox & Gallery: Gallery and update images in Social Digest posts are rendered with standard semantic links, unique gallery keys (`data-rel="lightbox-gallery-..."`), and `rl-gallery-link` classes. When Responsive Lightbox & Gallery (or any third-party lightbox plugin) is installed, Social Digest defers to it completely, ensuring images open with the exact same effects and configurations (Swipebox, prettyPhoto, Fancybox, etc.) as all other galleries on your website.
+  3. Native WordPress Lightbox Fallback: If no third-party lightbox plugin is installed on the site, Social Digest automatically falls back to the native WordPress lightbox (Interactivity API, WP 6.4+), enqueuing core image lightbox view scripts and registering the native WordPress overlay in the footer.
+  4. Direct File Fallback for Classic Environments: If neither a lightbox plugin nor native WordPress lightbox is present (e.g. older WordPress versions), image clicks gracefully navigate to the full-resolution image file.
+* Responsive Lightbox & Gallery Conditional Loading Bypass & Direct prettyPhoto Binding:
+  1. Responsive Lightbox Conditional Loading Bypass: When Responsive Lightbox (dFactory) has "Conditional Loading" active, it checks raw post_content for image links and skips enqueuing its scripts on posts with custom blocks or unlinked images. Social Digest now hooks at priority 5 and 20 in wp_enqueue_scripts to ensure Responsive Lightbox's assets (including prettyPhoto/Swipebox, CSS, and rlArgs) are never suppressed on digest posts.
+  2. Direct prettyPhoto and Swipebox Initialization: Enhanced frontend script to directly bind prettyPhoto and Swipebox with exact Responsive Lightbox attributes (rl-gallery-link, data-rl_title, data-rl_caption) and re-trigger doResponsiveLightbox, guaranteeing the site's native lightbox handles all clicks rather than any custom fallback modal.
 
 = 5.8.14 =
 * Responsive Lightbox Restoration, Semantic Figure Anchors & Event Re-Triggering:

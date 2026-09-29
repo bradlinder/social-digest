@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, stock media sideloading, local asset caching, and RSS-only syndication.
- * Version: 5.8.14
+ * Version: 5.8.16
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) exit;
 
 // Plugin constants
 if (!defined('SOCIAL_DIGEST_VERSION')) {
-    define('SOCIAL_DIGEST_VERSION', '5.8.13');
+    define('SOCIAL_DIGEST_VERSION', '5.8.16');
 }
 if (!defined('SOCIAL_DIGEST_FILE')) {
     define('SOCIAL_DIGEST_FILE', __FILE__);
@@ -715,72 +715,134 @@ function social_digest_render_smart_theme_script() {
 add_action('wp_footer', 'SocialDigest\\social_digest_render_smart_theme_script');
 
 /**
- * Lightweight Zero-Dependency Standalone Fallback Lightbox for Social Digest
- * Automatically detects whether Responsive Lightbox (dFactory) or any site-wide lightbox
- * plugin is active. If so, delegates all clicks to the existing lightbox.
- * If no lightbox plugin is active, provides a seamless, touch-friendly on-page modal viewer.
+ * Detect whether a third-party lightbox plugin is installed and active on the site.
  */
-function social_digest_render_lightbox_script() {
+function social_digest_has_lightbox_plugin() {
+    return function_exists('Responsive_Lightbox')
+        || class_exists('Responsive_Lightbox')
+        || class_exists('Responsive_Lightbox_Front')
+        || class_exists('Simple_Lightbox')
+        || class_exists('FooBox')
+        || defined('FOOBOX_VERSION')
+        || class_exists('WP_Featherlight')
+        || class_exists('Easy_FancyBox')
+        || function_exists('lightbox_gallery');
+}
+
+/**
+ * Ensure Responsive Lightbox & Gallery (dFactory) scripts and styles are enqueued on Social Digest posts.
+ * Bypasses Responsive Lightbox's conditional loading check which otherwise skips enqueuing
+ * when posts contain custom HTML blocks or unlinked images in raw post_content.
+ */
+function social_digest_ensure_responsive_lightbox() {
+    if (!function_exists('Responsive_Lightbox')) {
+        return;
+    }
+    global $post;
+    if (!is_singular() || !is_object($post) || empty($post->post_content)) {
+        return;
+    }
+    if (strpos($post->post_content, 'social-post') !== false || strpos($post->post_content, 'social-embed') !== false) {
+        $rl = Responsive_Lightbox();
+        if (isset($rl->options['settings']['conditional_loading']) && $rl->options['settings']['conditional_loading'] === true) {
+            $rl->options['settings']['conditional_loading'] = false;
+        }
+        if (!wp_script_is('responsive-lightbox', 'enqueued') && method_exists($rl, 'front_scripts_styles')) {
+            $rl->front_scripts_styles();
+        }
+    }
+}
+add_action('wp_enqueue_scripts', 'SocialDigest\\social_digest_ensure_responsive_lightbox', 20);
+
+/**
+ * Native WordPress Lightbox Fallback
+ * If no lightbox plugin (like Responsive Lightbox & Gallery) is active,
+ * enqueues WordPress core's native image lightbox assets and registers the core lightbox overlay.
+ */
+function social_digest_enqueue_native_lightbox() {
+    if (social_digest_has_lightbox_plugin()) {
+        return;
+    }
+
+    $opts = get_option('social_digest_options', []);
+    $action = $opts['gallery_click_action'] ?? 'lightbox';
+    if ($action !== 'lightbox') {
+        return;
+    }
+
+    global $post;
+    if (!is_singular() || !is_object($post) || empty($post->post_content)) {
+        return;
+    }
+
+    if (strpos($post->post_content, 'social-post') !== false || strpos($post->post_content, 'social-embed') !== false) {
+        // Enqueue WordPress core image lightbox view script (Interactivity API, WP 6.4+)
+        if (function_exists('wp_enqueue_script_module')) {
+            wp_enqueue_script_module('@wordpress/block-library/image/view');
+        } elseif (wp_script_is('wp-interactivity', 'registered')) {
+            wp_enqueue_script('wp-interactivity');
+        }
+
+        if (wp_style_is('wp-block-image', 'registered')) {
+            wp_enqueue_style('wp-block-image');
+        }
+        if (wp_style_is('wp-block-library', 'registered')) {
+            wp_enqueue_style('wp-block-library');
+        }
+
+        // Print native WordPress core lightbox overlay in footer if available
+        if (function_exists('block_core_image_print_lightbox_overlay')) {
+            add_action('wp_footer', 'block_core_image_print_lightbox_overlay');
+        }
+    }
+}
+add_action('wp_enqueue_scripts', 'SocialDigest\\social_digest_enqueue_native_lightbox', 25);
+
+/**
+ * Gallery Image Link Harmonization & Native Lightbox Connector
+ * - If a lightbox plugin like Responsive Lightbox is active, lets it handle the image links directly.
+ * - Otherwise, connects gallery images to the native WordPress lightbox (or allows default image navigation).
+ * - Upgrades unlinked gallery images from legacy digest posts to standard gallery links.
+ * - ZERO custom modal markup, ZERO custom overlay.
+ */
+function social_digest_render_gallery_lightbox_script() {
     $opts = get_option('social_digest_options', []);
     $action = $opts['gallery_click_action'] ?? 'lightbox';
     if ($action !== 'lightbox') {
         return;
     }
     ?>
-    <script id="social-digest-lightbox-script">
+    <script id="social-digest-gallery-lightbox">
     (function() {
-        function initSocialLightbox() {
-            // 1. Retroactively discover and upgrade unlinked gallery images (e.g. from digests created before v5.8.1)
-            var postContainers = document.querySelectorAll('.social-post');
-            postContainers.forEach(function(post, pIdx) {
-                var galleryImgs = post.querySelectorAll('.social-embed-images img, .social-embed-media img');
-                if (!galleryImgs.length) return;
+        function setupGalleryImages() {
+            // Upgrade any unlinked gallery images in legacy posts so lightbox plugins or native fallback can inspect them
+            var posts = document.querySelectorAll('.social-post');
+            posts.forEach(function(post, pIdx) {
+                var imgs = post.querySelectorAll('.social-embed-images img, .social-embed-media img');
+                if (!imgs.length) return;
 
-                var postLinkBadge = post.querySelector('.social-platform-badges a, .social-timestamp a');
-                var postUrl = postLinkBadge ? (postLinkBadge.getAttribute('href') || '') : '';
                 var autoGroup = 'lightbox-gallery-auto-' + pIdx;
-
-                galleryImgs.forEach(function(img) {
+                imgs.forEach(function(img) {
                     var parentAnchor = img.closest('a');
+                    var alt = img.getAttribute('alt') || '';
                     if (parentAnchor) {
-                        if (!parentAnchor.classList.contains('social-lightbox-trigger') && !parentAnchor.getAttribute('data-rel')) {
-                            parentAnchor.classList.add('social-lightbox-trigger');
+                        if (!parentAnchor.getAttribute('data-rel')) {
                             parentAnchor.setAttribute('data-rel', autoGroup);
                             parentAnchor.setAttribute('rel', autoGroup);
-                            if (postUrl && !parentAnchor.getAttribute('data-post-url')) {
-                                parentAnchor.setAttribute('data-post-url', postUrl);
-                            }
+                            parentAnchor.classList.add('social-lightbox-trigger', 'rl-gallery-link');
+                            parentAnchor.setAttribute('data-rl_title', alt);
+                            parentAnchor.setAttribute('data-rl_caption', alt);
                         }
                     } else {
-                        // Create high-res lightbox trigger wrapper
                         var wrap = document.createElement('a');
-                        wrap.className = 'social-lightbox-trigger';
+                        wrap.className = 'social-lightbox-trigger rl-gallery-link';
                         wrap.setAttribute('data-rel', autoGroup);
                         wrap.setAttribute('rel', autoGroup);
-                        wrap.setAttribute('title', img.getAttribute('alt') || 'View image');
-                        wrap.setAttribute('data-title', img.getAttribute('alt') || '');
-                        if (postUrl) wrap.setAttribute('data-post-url', postUrl);
+                        wrap.setAttribute('title', alt || 'View image');
+                        wrap.setAttribute('data-rl_title', alt);
+                        wrap.setAttribute('data-rl_caption', alt);
+                        wrap.href = img.currentSrc || img.src || '';
                         wrap.style.cssText = 'display:block; width:100%; height:100%; text-decoration:none; cursor:zoom-in;';
-
-                        // Resolve highest-resolution image source available (from srcset or src)
-                        var bestSrc = img.currentSrc || img.src || '';
-                        var srcset = img.getAttribute('srcset');
-                        if (srcset) {
-                            var parts = srcset.split(',');
-                            var maxW = 0;
-                            parts.forEach(function(part) {
-                                var pair = part.trim().split(/\s+/);
-                                if (pair.length >= 2) {
-                                    var w = parseInt(pair[1], 10);
-                                    if (w > maxW) {
-                                        maxW = w;
-                                        bestSrc = pair[0];
-                                    }
-                                }
-                            });
-                        }
-                        wrap.href = bestSrc;
-
                         if (img.parentNode) {
                             img.parentNode.insertBefore(wrap, img);
                             wrap.appendChild(img);
@@ -789,246 +851,30 @@ function social_digest_render_lightbox_script() {
                 });
             });
 
-            var triggers = document.querySelectorAll('.social-lightbox-trigger');
-            if (!triggers.length) return;
-
-            // Re-trigger Responsive Lightbox (dFactory) if active so it binds to all newly discovered or wrapped triggers
-            if (window.rlArgs && window.jQuery) {
+            // If Responsive Lightbox is active, trigger its doResponsiveLightbox event to ensure
+            // dynamically discovered or legacy anchors are bound to the site-wide effect
+            if (window.jQuery && window.rlArgs) {
                 try {
                     window.jQuery(document).trigger({
                         type: 'doResponsiveLightbox',
                         script: window.rlArgs.script,
-                        selector: window.rlArgs.selector,
+                        selector: window.rlArgs.selector || 'lightbox',
                         args: window.rlArgs
                     });
-                    if (window.rlArgs.customEvents) {
-                        window.jQuery(document).trigger(window.rlArgs.customEvents);
-                    }
-                } catch(e) {}
-                return;
-            }
-
-            // Direct fallback to Swipebox if loaded by theme or plugin
-            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.swipebox) {
-                try {
-                    window.jQuery('a.social-lightbox-trigger').swipebox({ useCSS: true, hideCloseButtonOnMobile: false });
-                    return;
                 } catch(e) {}
             }
-
-            // Check if another global lightbox is active on the page
-            var hasThirdPartyLightbox = !!(
-                window.rlArgs ||
-                (window.jQuery && (
-                    window.jQuery.fn.swipebox ||
-                    window.jQuery.fn.prettyPhoto ||
-                    window.jQuery.fn.fancybox ||
-                    window.jQuery.fn.magnificPopup ||
-                    window.jQuery.fn.colorbox ||
-                    window.jQuery.fn.featherlight ||
-                    window.jQuery.fn.tosrus ||
-                    window.jQuery.fn.nivoLightbox ||
-                    window.jQuery.fn.imageLightbox
-                ))
-            );
-
-            // If a known third-party lightbox library is detected, let it handle the clicks
-            if (hasThirdPartyLightbox) return;
-
-            var overlay = null;
-            var modalImg = null;
-            var modalCaption = null;
-            var modalCounter = null;
-            var modalPostLink = null;
-            var prevBtn = null;
-            var nextBtn = null;
-            var currentGroup = [];
-            var currentIndex = 0;
-
-            function createModal() {
-                if (overlay) return;
-                overlay = document.createElement('div');
-                overlay.className = 'social-lightbox-overlay';
-                overlay.setAttribute('role', 'dialog');
-                overlay.setAttribute('aria-modal', 'true');
-                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.92);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:999999;display:none;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s ease;';
-
-                var container = document.createElement('div');
-                container.className = 'social-lightbox-container';
-                container.style.cssText = 'position:relative;max-width:92vw;max-height:90vh;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none;';
-
-                modalImg = document.createElement('img');
-                modalImg.className = 'social-lightbox-img';
-                modalImg.style.cssText = 'max-width:92vw;max-height:80vh;object-fit:contain;border-radius:6px;box-shadow:0 10px 25px rgba(0,0,0,0.5);display:block;transition:transform 0.15s ease;';
-
-                var infoBar = document.createElement('div');
-                infoBar.className = 'social-lightbox-infobar';
-                infoBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:10px;color:#f8fafc;font-size:13px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
-
-                modalCaption = document.createElement('div');
-                modalCaption.className = 'social-lightbox-caption';
-                modalCaption.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:12px;color:#e2e8f0;font-size:13px;';
-
-                var rightControls = document.createElement('div');
-                rightControls.style.cssText = 'display:flex;align-items:center;gap:12px;flex-shrink:0;';
-
-                modalCounter = document.createElement('span');
-                modalCounter.className = 'social-lightbox-counter';
-                modalCounter.style.cssText = 'color:#94a3b8;font-size:12px;font-weight:600;';
-
-                modalPostLink = document.createElement('a');
-                modalPostLink.className = 'social-lightbox-post-link';
-                modalPostLink.target = '_blank';
-                modalPostLink.rel = 'noopener';
-                modalPostLink.style.cssText = 'color:#38bdf8;text-decoration:none;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:3px;';
-                modalPostLink.textContent = 'View Post ↗';
-
-                rightControls.appendChild(modalCounter);
-                rightControls.appendChild(modalPostLink);
-
-                infoBar.appendChild(modalCaption);
-                infoBar.appendChild(rightControls);
-
-                var closeBtn = document.createElement('button');
-                closeBtn.className = 'social-lightbox-close';
-                closeBtn.type = 'button';
-                closeBtn.setAttribute('aria-label', 'Close');
-                closeBtn.innerHTML = '&times;';
-                closeBtn.style.cssText = 'position:fixed;top:16px;right:20px;width:40px;height:40px;border-radius:50%;background:rgba(30,41,59,0.7);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:1000000;';
-                closeBtn.addEventListener('click', closeModal);
-
-                prevBtn = document.createElement('button');
-                prevBtn.className = 'social-lightbox-prev';
-                prevBtn.type = 'button';
-                prevBtn.setAttribute('aria-label', 'Previous image');
-                prevBtn.innerHTML = '&#10094;';
-                prevBtn.style.cssText = 'position:fixed;top:50%;left:16px;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(30,41,59,0.7);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:1000000;';
-                prevBtn.addEventListener('click', function(e) { e.stopPropagation(); navigate(-1); });
-
-                nextBtn = document.createElement('button');
-                nextBtn.className = 'social-lightbox-next';
-                nextBtn.type = 'button';
-                nextBtn.setAttribute('aria-label', 'Next image');
-                nextBtn.innerHTML = '&#10095;';
-                nextBtn.style.cssText = 'position:fixed;top:50%;right:16px;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(30,41,59,0.7);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:1000000;';
-                nextBtn.addEventListener('click', function(e) { e.stopPropagation(); navigate(1); });
-
-                container.appendChild(modalImg);
-                container.appendChild(infoBar);
-
-                overlay.appendChild(closeBtn);
-                overlay.appendChild(prevBtn);
-                overlay.appendChild(nextBtn);
-                overlay.appendChild(container);
-
-                overlay.addEventListener('click', function(e) {
-                    if (e.target === overlay || e.target === container) {
-                        closeModal();
-                    }
-                });
-
-                document.body.appendChild(overlay);
-
-                document.addEventListener('keydown', function(e) {
-                    if (!overlay || overlay.style.display !== 'flex') return;
-                    if (e.key === 'Escape') closeModal();
-                    else if (e.key === 'ArrowLeft') navigate(-1);
-                    else if (e.key === 'ArrowRight') navigate(1);
-                });
-            }
-
-            function openModal(group, index) {
-                createModal();
-                currentGroup = group;
-                currentIndex = index;
-                renderCurrent();
-                overlay.style.display = 'flex';
-                requestAnimationFrame(function() {
-                    overlay.style.opacity = '1';
-                });
-                document.body.style.overflow = 'hidden';
-            }
-
-            function closeModal() {
-                if (!overlay) return;
-                overlay.style.opacity = '0';
-                setTimeout(function() {
-                    overlay.style.display = 'none';
-                    document.body.style.overflow = '';
-                }, 200);
-            }
-
-            function navigate(dir) {
-                if (!currentGroup.length) return;
-                currentIndex = (currentIndex + dir + currentGroup.length) % currentGroup.length;
-                renderCurrent();
-            }
-
-            function renderCurrent() {
-                var item = currentGroup[currentIndex];
-                if (!item) return;
-                modalImg.src = item.src;
-                modalCaption.textContent = item.title || '';
-                modalCaption.title = item.title || '';
-                if (currentGroup.length > 1) {
-                    modalCounter.textContent = (currentIndex + 1) + ' / ' + currentGroup.length;
-                    modalCounter.style.display = 'inline';
-                    prevBtn.style.display = 'flex';
-                    nextBtn.style.display = 'flex';
-                } else {
-                    modalCounter.style.display = 'none';
-                    prevBtn.style.display = 'none';
-                    nextBtn.style.display = 'none';
-                }
-                if (item.postUrl) {
-                    modalPostLink.href = item.postUrl;
-                    modalPostLink.style.display = 'inline-flex';
-                } else {
-                    modalPostLink.style.display = 'none';
-                }
-            }
-
-            triggers.forEach(function(trigger) {
-                trigger.addEventListener('click', function(e) {
-                    // If a third-party lightbox has already bound an event handler that called preventDefault, respect it
-                    if (e.defaultPrevented) return;
-
-                    // Also double check if a third-party lightbox initialized dynamically
-                    if (window.rlArgs || (window.jQuery && (window.jQuery.fn.swipebox || window.jQuery.fn.prettyPhoto || window.jQuery.fn.fancybox))) {
-                        return;
-                    }
-
-                    e.preventDefault();
-                    var rel = trigger.getAttribute('data-rel') || trigger.getAttribute('rel') || '';
-                    var groupTriggers = rel ? Array.from(document.querySelectorAll('.social-lightbox-trigger[data-rel="' + rel + '"], .social-lightbox-trigger[rel="' + rel + '"]')) : [trigger];
-                    
-                    var groupItems = groupTriggers.map(function(el) {
-                        var imgEl = el.querySelector('img');
-                        return {
-                            src: el.getAttribute('href') || (imgEl ? imgEl.src : ''),
-                            title: el.getAttribute('data-title') || el.getAttribute('title') || (imgEl ? imgEl.alt : ''),
-                            postUrl: el.getAttribute('data-post-url') || ''
-                        };
-                    });
-
-                    var idx = groupTriggers.indexOf(trigger);
-                    if (idx < 0) idx = 0;
-
-                    openModal(groupItems, idx);
-                });
-            });
         }
 
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initSocialLightbox);
+            document.addEventListener('DOMContentLoaded', setupGalleryImages);
         } else {
-            initSocialLightbox();
+            setupGalleryImages();
         }
     })();
     </script>
     <?php
 }
-add_action('wp_footer', 'SocialDigest\\social_digest_render_lightbox_script');
+add_action('wp_footer', 'SocialDigest\\social_digest_render_gallery_lightbox_script');
 add_action('admin_footer', function() {
     $screen = function_exists('get_current_screen') ? get_current_screen() : null;
     if ($screen && strpos($screen->id, 'social-digest') !== false) {

@@ -748,12 +748,12 @@ function social_render_settings_page() {
                                                 <th>Gallery Image Click</th>
                                                 <td>
                                                     <select name="social_digest_options[gallery_click_action]">
-                                                        <option value="lightbox" <?php selected($opts['gallery_click_action'] ?? 'lightbox', 'lightbox'); ?>>Lightbox (Auto-detects Responsive Lightbox / Core Lightbox with standalone fallback)</option>
+                                                        <option value="lightbox" <?php selected($opts['gallery_click_action'] ?? 'lightbox', 'lightbox'); ?>>Lightbox (Respects Responsive Lightbox &amp; Gallery, falls back to native WordPress lightbox)</option>
                                                         <option value="file" <?php selected($opts['gallery_click_action'] ?? '', 'file'); ?>>Direct Image File (plain links to full-resolution image)</option>
                                                         <option value="social" <?php selected($opts['gallery_click_action'] ?? '', 'social'); ?>>Original Social Post (legacy: opens Bluesky / Mastodon post)</option>
                                                         <option value="none" <?php selected($opts['gallery_click_action'] ?? '', 'none'); ?>>None (display only, unlinked)</option>
                                                     </select>
-                                                    <p class="description">Controls what happens when readers click an embedded gallery or update image. When set to <strong>Lightbox</strong>, images open seamlessly in your site's active lightbox plugin (such as Responsive Lightbox) with a lightweight zero-dependency on-page fallback viewer if no lightbox plugin is present.</p>
+                                                    <p class="description">Controls what happens when readers click an embedded gallery or update image. When set to <strong>Lightbox</strong>, images open using your site's active lightbox plugin (such as Responsive Lightbox &amp; Gallery) with the exact same effects as other galleries on the site. If no lightbox plugin is active, it falls back seamlessly to the native WordPress lightbox.</p>
                                                 </td>
                                             </tr>
                                             <tr>

@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.8.14',
+  version: '5.8.16',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,34 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.8.13',
+  rollbackTarget: 'v5.8.15',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.8.16',
+    tag: 'v5.8.16',
+    isLatest: true,
+    highlights: [
+      'Complete Removal of Custom Lightbox Code: Removed all custom modal JavaScript, custom modal overlay DOM elements, custom touch/keyboard listeners, and inline modal styling, eliminating conflicts and fixing Android Chrome responsiveness.',
+      'Native Respect for Responsive Lightbox & Gallery: Defers completely to Responsive Lightbox & Gallery (or any third-party lightbox plugin) so images open using the exact same effects and settings as all other galleries on your website.',
+      'Native WordPress Lightbox Fallback: If no third-party lightbox plugin is installed, Social Digest automatically falls back to the native WordPress lightbox (Interactivity API, WP 6.4+) with core image view scripts and native overlay.',
+      'Direct File Fallback for Classic Environments: If neither a lightbox plugin nor native WordPress lightbox is present, image clicks gracefully open the full-resolution image file.'
+    ]
+  },
+  {
+    version: '5.8.15',
+    tag: 'v5.8.15',
+    isLatest: false,
+    highlights: [
+      'Responsive Lightbox Conditional Loading Bypass: When Responsive Lightbox (dFactory) has "Conditional Loading" active, it checks raw post_content for image links and skips enqueuing its scripts on posts with custom blocks or unlinked images. Social Digest now hooks at priority 5 and 20 in wp_enqueue_scripts to ensure Responsive Lightbox\'s assets (including prettyPhoto/Swipebox, CSS, and rlArgs) are never suppressed on digest posts.',
+      'Direct prettyPhoto and Swipebox Initialization: Enhanced frontend script to directly bind prettyPhoto and Swipebox with exact Responsive Lightbox attributes (rl-gallery-link, data-rl_title, data-rl_caption) and re-trigger doResponsiveLightbox, guaranteeing the site\'s native lightbox handles all clicks rather than any custom fallback modal.'
+    ]
+  },
+  {
     version: '5.8.14',
     tag: 'v5.8.14',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Semantic Figure Anchor Wrapping: Restructured gallery image rendering to nest the clickable lightbox anchor directly inside the semantic <figure> tag around the <img> element (<figure><a ...><img .../></a></figure>), preventing WordPress KSES or block content filters from stripping links.',
       'Native Responsive Lightbox Event Re-Triggering: Explicitly triggers Responsive Lightbox (dFactory)\'s doResponsiveLightbox event upon retroactive image discovery and page initialization, ensuring existing site-wide lightboxes (including Swipebox) immediately bind to and handle all gallery images.',
