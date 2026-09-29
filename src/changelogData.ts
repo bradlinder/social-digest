@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.8.12',
+  version: '5.8.13',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,24 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.8.11',
+  rollbackTarget: 'v5.8.12',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.8.13',
+    tag: 'v5.8.13',
+    isLatest: true,
+    highlights: [
+      'Universal Retroactive Lightbox for Legacy Posts: Enhanced the frontend lightbox script to automatically scan for unlinked gallery images (.social-embed-images img, .social-embed-media img) within all social digest cards, automatically enabling modal inspection and swipe navigation across previously published articles created before v5.8.1.',
+      'Automatic High-Resolution Source Discovery: Resolves the highest-resolution image source available from responsive srcset and currentSrc attributes, ensuring readers view crisp full-size photos in the modal instead of downscaled thumbnails.',
+      'Per-Post Gallery Grouping: Automatically links multi-image gallery sets per social card so readers can browse multi-photo updates with arrows and swipe gestures.'
+    ]
+  },
+  {
     version: '5.8.12',
     tag: 'v5.8.12',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Left Accent Border Removal: Removed the 4px colored accent border (#0284c7 / #38bdf8) from the left side of social post cards in published WordPress posts, giving entries a clean, balanced, and uniform 1px border on all sides.',
       'Drop Shadow Removal: Removed the card drop shadow (box-shadow: none) so social post entries blend seamlessly and natively into any WordPress theme or layout without heavy glowing or dark drop-shadow edges.'

@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.12
+Stable tag: 5.8.13
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,12 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.13 =
+* Retroactive Lightbox Auto-Discovery & High-Resolution Image Upgrades:
+  1. Universal Retroactive Lightbox for Legacy Posts: Enhanced the frontend lightbox script to automatically scan for unlinked gallery images (`.social-embed-images img`, `.social-embed-media img`) within all social digest cards. Automatically enhances embedded images from historical or previously published digest articles created before v5.8.1, enabling full modal viewing, zoom cursor styling, and swipe/keyboard navigation without having to re-publish or edit old articles.
+  2. Automatic High-Resolution Source Discovery: Resolves the highest-resolution image source available from responsive `srcset` and `currentSrc` attributes, ensuring readers view crisp full-size photos in the modal instead of downscaled thumbnail previews.
+  3. Per-Post Gallery Grouping: Automatically links multi-image gallery sets per social card so readers can browse multi-photo updates with arrows and swipe gestures.
 
 = 5.8.12 =
 * Clean Modern Social Post Card Styling:
