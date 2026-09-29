@@ -86,7 +86,7 @@ function social_render_native_card($item, $opts = []) {
     }
 
     // Build the Native Card HTML
-    $html = '<div class="social-post social-card" style="border:1px solid #e2e8f0; border-left:4px solid #0284c7; border-radius:12px; padding:18px; margin:26px auto; background:#ffffff; box-shadow:0 2px 6px rgba(0,0,0,0.04); max-width:600px; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif;">';
+    $html = '<div class="social-post social-card" style="border:1px solid #e2e8f0; border-radius:12px; padding:18px; margin:26px auto; background:#ffffff; box-shadow:none; max-width:600px; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif;">';
     if ($repost_html) {
         $html .= $repost_html;
     }

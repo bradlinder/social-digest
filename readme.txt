@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.11
+Stable tag: 5.8.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,11 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.12 =
+* Clean Modern Social Post Card Styling:
+  1. Left Accent Border Removal: Removed the 4px colored accent border (`#0284c7` / `#38bdf8`) from the left side of social post cards in published WordPress posts, giving entries a clean, balanced, and uniform 1px border on all sides.
+  2. Drop Shadow Removal: Removed the card drop shadow (`box-shadow: none`) so social post entries blend seamlessly and natively into any WordPress theme or layout without heavy glowing or dark drop-shadow edges.
 
 = 5.8.11 =
 * Dual Save Settings Buttons & Poststuff Container Markup Repair:

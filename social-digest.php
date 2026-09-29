@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, stock media sideloading, local asset caching, and RSS-only syndication.
- * Version: 5.8.11
+ * Version: 5.8.12
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) exit;
 
 // Plugin constants
 if (!defined('SOCIAL_DIGEST_VERSION')) {
-    define('SOCIAL_DIGEST_VERSION', '5.8.11');
+    define('SOCIAL_DIGEST_VERSION', '5.8.12');
 }
 if (!defined('SOCIAL_DIGEST_FILE')) {
     define('SOCIAL_DIGEST_FILE', __FILE__);
@@ -160,10 +160,9 @@ add_action('wp_head', function() {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-left: 4px solid #0284c7;
             border-radius: 12px;
             padding: 18px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+            box-shadow: none;
             color: #1e293b;
             transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
         }
@@ -277,10 +276,9 @@ add_action('wp_head', function() {
         .night-mode div.social-post.social-card:not(.is-light):not([data-social-theme="light"])
         <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card'; ?> {
             background: #0f172a !important;
-            border-color: #334155 !important;
-            border-left: 4px solid #38bdf8 !important;
+            border: 1px solid #334155 !important;
             color: #ffffff !important;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
+            box-shadow: none !important;
         }
 
         /* Body & Content Text in Dark Mode (Crisp pure white #ffffff) */

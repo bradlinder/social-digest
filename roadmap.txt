@@ -8,6 +8,11 @@ Social Digest - Feature Roadmap & Release Status
 2. Automated Weekly Archive Digest View [Publishing]:
    - Dedicated weekly/monthly archive rollup view grouping published digests with summary metrics.
 
+0. Release v5.8.12 Clean Modern Social Post Card Styling (Completed in v5.8.12)
+---------------------------------------------------------------------------------
+[x] Left Accent Border Removal (v5.8.12): Removed the 4px colored accent border (`#0284c7` / `#38bdf8`) from the left side of social post cards in published WordPress posts, giving entries a clean, balanced, and uniform 1px border on all sides.
+[x] Drop Shadow Removal (v5.8.12): Removed the card drop shadow (`box-shadow: none`) so social post entries blend seamlessly and natively into any WordPress theme or layout without heavy glowing or dark drop-shadow edges.
+
 0. Release v5.8.11 Dual Save Settings Buttons & Poststuff Markup Repair (Completed in v5.8.11)
 -----------------------------------------------------------------------------------------------
 [x] Dual Save Settings Buttons (v5.8.11): Added a matching primary "Save Settings" button directly to the top bar of the Settings tab alongside the drag-and-drop indicator, allowing instant saves from both the top and bottom of the page without scrolling.

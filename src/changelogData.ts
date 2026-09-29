@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.8.11',
+  version: '5.8.12',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,23 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.8.10',
+  rollbackTarget: 'v5.8.11',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.8.12',
+    tag: 'v5.8.12',
+    isLatest: true,
+    highlights: [
+      'Left Accent Border Removal: Removed the 4px colored accent border (#0284c7 / #38bdf8) from the left side of social post cards in published WordPress posts, giving entries a clean, balanced, and uniform 1px border on all sides.',
+      'Drop Shadow Removal: Removed the card drop shadow (box-shadow: none) so social post entries blend seamlessly and natively into any WordPress theme or layout without heavy glowing or dark drop-shadow edges.'
+    ]
+  },
+  {
     version: '5.8.11',
     tag: 'v5.8.11',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Dual Save Settings Buttons: Added a matching primary "Save Settings" button directly to the top bar of the Settings tab alongside the drag-and-drop indicator, allowing instant saves from both the top and bottom of the page without scrolling.',
       'Poststuff Container DOM Repair: Properly closed WordPress #poststuff and .metabox-holder wrapper elements before rendering the bottom submit button to ensure consistent visibility across all viewport heights.'
