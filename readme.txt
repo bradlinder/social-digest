@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.13
+Stable tag: 5.8.14
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,13 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.14 =
+* Responsive Lightbox Restoration, Semantic Figure Anchors & Event Re-Triggering:
+  1. Semantic Figure Anchor Wrapping: Restructured gallery image rendering to nest the clickable lightbox anchor directly inside the semantic `<figure>` tag around the `<img>` element (`<figure><a ...><img .../></a></figure>`). Resolves an issue where block-level `<figure>` elements placed inside inline `<a>` tags could be stripped or broken by WordPress KSES or block content filters.
+  2. Native Responsive Lightbox Event Re-Triggering: Explicitly triggers Responsive Lightbox (dFactory)'s `doResponsiveLightbox` event upon retroactive image discovery and page initialization. Ensures existing site-wide lightboxes (including Swipebox) immediately bind to and handle all gallery images without relying solely on initial document-ready hooks.
+  3. Sideloaded Full-Resolution URL Harmonization: Synchronized anchor `href` replacements during media sideloading to map both thumbnail and full-size remote CDN variants to local WordPress Media Library attachments.
+  4. Backward Compatibility for Legacy Posts: Injects zoom-enabled lightbox links inside `<figure>` containers for older or previously published digest articles where images were saved unlinked.
 
 = 5.8.13 =
 * Retroactive Lightbox Auto-Discovery & High-Resolution Image Upgrades:

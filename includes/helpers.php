@@ -822,8 +822,12 @@ function social_sideload_content_media($content, $post_id, $only_avatars_and_car
 
                 $content = str_replace($img_tag, $replacement_tag, $content);
 
-                // Update wrapping image/lightbox anchor href if it points to this remote image
+                // Update wrapping image/lightbox anchor href if it points to this remote image or its fullsize version
                 $content = str_replace('href="' . $img_url . '"', 'href="' . $local_url . '"', $content);
+                if (strpos($img_url, 'feed_thumbnail') !== false) {
+                    $full_remote = str_replace('feed_thumbnail', 'feed_fullsize', $img_url);
+                    $content = str_replace('href="' . $full_remote . '"', 'href="' . $local_url . '"', $content);
+                }
             }
         }
     }

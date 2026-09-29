@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.8.13',
+  version: '5.8.14',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,25 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.8.12',
+  rollbackTarget: 'v5.8.13',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.8.14',
+    tag: 'v5.8.14',
+    isLatest: true,
+    highlights: [
+      'Semantic Figure Anchor Wrapping: Restructured gallery image rendering to nest the clickable lightbox anchor directly inside the semantic <figure> tag around the <img> element (<figure><a ...><img .../></a></figure>), preventing WordPress KSES or block content filters from stripping links.',
+      'Native Responsive Lightbox Event Re-Triggering: Explicitly triggers Responsive Lightbox (dFactory)\'s doResponsiveLightbox event upon retroactive image discovery and page initialization, ensuring existing site-wide lightboxes (including Swipebox) immediately bind to and handle all gallery images.',
+      'Sideloaded Full-Resolution URL Harmonization: Synchronized anchor href replacements during media sideloading to map both thumbnail and full-size remote CDN variants to local WordPress Media Library attachments.',
+      'Backward Compatibility for Legacy Posts: Injects zoom-enabled lightbox links inside <figure> containers for older or previously published digest articles where images were saved unlinked.'
+    ]
+  },
+  {
     version: '5.8.13',
     tag: 'v5.8.13',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Universal Retroactive Lightbox for Legacy Posts: Enhanced the frontend lightbox script to automatically scan for unlinked gallery images (.social-embed-images img, .social-embed-media img) within all social digest cards, automatically enabling modal inspection and swipe navigation across previously published articles created before v5.8.1.',
       'Automatic High-Resolution Source Discovery: Resolves the highest-resolution image source available from responsive srcset and currentSrc attributes, ensuring readers view crisp full-size photos in the modal instead of downscaled thumbnails.',

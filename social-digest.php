@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, stock media sideloading, local asset caching, and RSS-only syndication.
- * Version: 5.8.13
+ * Version: 5.8.14
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -760,7 +760,7 @@ function social_digest_render_lightbox_script() {
                         wrap.setAttribute('title', img.getAttribute('alt') || 'View image');
                         wrap.setAttribute('data-title', img.getAttribute('alt') || '');
                         if (postUrl) wrap.setAttribute('data-post-url', postUrl);
-                        wrap.style.cssText = 'display:inline-block; text-decoration:none; cursor:zoom-in;';
+                        wrap.style.cssText = 'display:block; width:100%; height:100%; text-decoration:none; cursor:zoom-in;';
 
                         // Resolve highest-resolution image source available (from srcset or src)
                         var bestSrc = img.currentSrc || img.src || '';
@@ -781,11 +781,7 @@ function social_digest_render_lightbox_script() {
                         }
                         wrap.href = bestSrc;
 
-                        var fig = img.closest('figure');
-                        if (fig && fig.parentNode) {
-                            fig.parentNode.insertBefore(wrap, fig);
-                            wrap.appendChild(fig);
-                        } else if (img.parentNode) {
+                        if (img.parentNode) {
                             img.parentNode.insertBefore(wrap, img);
                             wrap.appendChild(img);
                         }
@@ -796,7 +792,31 @@ function social_digest_render_lightbox_script() {
             var triggers = document.querySelectorAll('.social-lightbox-trigger');
             if (!triggers.length) return;
 
-            // Check if Responsive Lightbox or another global lightbox is active on the page
+            // Re-trigger Responsive Lightbox (dFactory) if active so it binds to all newly discovered or wrapped triggers
+            if (window.rlArgs && window.jQuery) {
+                try {
+                    window.jQuery(document).trigger({
+                        type: 'doResponsiveLightbox',
+                        script: window.rlArgs.script,
+                        selector: window.rlArgs.selector,
+                        args: window.rlArgs
+                    });
+                    if (window.rlArgs.customEvents) {
+                        window.jQuery(document).trigger(window.rlArgs.customEvents);
+                    }
+                } catch(e) {}
+                return;
+            }
+
+            // Direct fallback to Swipebox if loaded by theme or plugin
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.swipebox) {
+                try {
+                    window.jQuery('a.social-lightbox-trigger').swipebox({ useCSS: true, hideCloseButtonOnMobile: false });
+                    return;
+                } catch(e) {}
+            }
+
+            // Check if another global lightbox is active on the page
             var hasThirdPartyLightbox = !!(
                 window.rlArgs ||
                 (window.jQuery && (
