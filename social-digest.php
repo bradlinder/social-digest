@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, stock media sideloading, local asset caching, and RSS-only syndication.
- * Version: 5.8.16
+ * Version: 5.8.17
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) exit;
 
 // Plugin constants
 if (!defined('SOCIAL_DIGEST_VERSION')) {
-    define('SOCIAL_DIGEST_VERSION', '5.8.16');
+    define('SOCIAL_DIGEST_VERSION', '5.8.17');
 }
 if (!defined('SOCIAL_DIGEST_FILE')) {
     define('SOCIAL_DIGEST_FILE', __FILE__);
@@ -841,7 +841,23 @@ function social_digest_render_gallery_lightbox_script() {
                         wrap.setAttribute('title', alt || 'View image');
                         wrap.setAttribute('data-rl_title', alt);
                         wrap.setAttribute('data-rl_caption', alt);
-                        wrap.href = img.currentSrc || img.src || '';
+                        var bestSrc = img.currentSrc || img.src || '';
+                        var srcset = img.getAttribute('srcset');
+                        if (srcset) {
+                            var parts = srcset.split(',');
+                            var maxW = 0;
+                            parts.forEach(function(part) {
+                                var pair = part.trim().split(/\s+/);
+                                if (pair.length >= 2) {
+                                    var w = parseInt(pair[1], 10);
+                                    if (w > maxW) {
+                                        maxW = w;
+                                        bestSrc = pair[0];
+                                    }
+                                }
+                            });
+                        }
+                        wrap.href = bestSrc;
                         wrap.style.cssText = 'display:block; width:100%; height:100%; text-decoration:none; cursor:zoom-in;';
                         if (img.parentNode) {
                             img.parentNode.insertBefore(wrap, img);
@@ -861,6 +877,9 @@ function social_digest_render_gallery_lightbox_script() {
                         selector: window.rlArgs.selector || 'lightbox',
                         args: window.rlArgs
                     });
+                    if (window.rlArgs.customEvents) {
+                        window.jQuery(document).trigger(window.rlArgs.customEvents);
+                    }
                 } catch(e) {}
             }
         }
@@ -870,6 +889,8 @@ function social_digest_render_gallery_lightbox_script() {
         } else {
             setupGalleryImages();
         }
+        window.addEventListener('load', setupGalleryImages);
+        setTimeout(setupGalleryImages, 250);
     })();
     </script>
     <?php

@@ -497,18 +497,47 @@ function social_sanitize_next_run($input) {
         $out['preview']['title'] = $custom_title;
     }
 
+    // Preserve custom scheduled publication datetime if submitted
+    if (isset($input['sd53_schedule_datetime'])) {
+        $out['schedule_datetime'] = sanitize_text_field($input['sd53_schedule_datetime']);
+    }
+
     $pinned_key   = sanitize_key($input['pinned_lead_post'] ?? '');
     $featured_sel = sanitize_key($input['selected_featured_post'] ?? '');
 
-    // Process candidate updates first so candidate state is active
-    if (!empty($input['candidate']) && is_array($input['candidate'])) {
-        foreach ($input['candidate'] as $key => $raw) {
-            $key = sanitize_key($key);
-            if (!$key || !isset($old_candidates[$key])) continue;
+    // Process candidate updates and preserve custom editorial ordering
+    $ordered_keys = [];
+    if (!empty($input['candidate_order']) && is_array($input['candidate_order'])) {
+        foreach ($input['candidate_order'] as $ok) {
+            $ok = sanitize_key($ok);
+            if ($ok && isset($old_candidates[$ok]) && !in_array($ok, $ordered_keys, true)) {
+                $ordered_keys[] = $ok;
+            }
+        }
+    }
+    // Fallback to submitted candidate array order if candidate_order is absent
+    if (empty($ordered_keys) && !empty($input['candidate']) && is_array($input['candidate'])) {
+        foreach (array_keys($input['candidate']) as $ok) {
+            $ok = sanitize_key($ok);
+            if ($ok && isset($old_candidates[$ok]) && !in_array($ok, $ordered_keys, true)) {
+                $ordered_keys[] = $ok;
+            }
+        }
+    }
+    // Any remaining old candidates that were not explicitly ordered are appended
+    foreach (array_keys($old_candidates) as $ok) {
+        if (!in_array($ok, $ordered_keys, true)) {
+            $ordered_keys[] = $ok;
+        }
+    }
+
+    if (!empty($ordered_keys)) {
+        foreach ($ordered_keys as $key) {
             $base = $old_candidates[$key];
+            $raw  = $input['candidate'][$key] ?? [];
             $base['excluded']   = !empty($raw['excluded']);
             $base['pinned']     = ($key === $pinned_key && empty($base['excluded']));
-            $base['commentary'] = sanitize_textarea_field($raw['commentary'] ?? '');
+            $base['commentary'] = sanitize_textarea_field($raw['commentary'] ?? ($base['commentary'] ?? ''));
             if (!empty($base['html'])) $base['html'] = preg_replace('/(\w)&;(\w)/', "$1'$2", $base['html']);
             if (!empty($base['text'])) $base['text'] = preg_replace('/(\w)&;(\w)/', "$1'$2", $base['text']);
             if (!empty($base['full_text'])) $base['full_text'] = preg_replace('/(\w)&;(\w)/', "$1'$2", $base['full_text']);
@@ -692,7 +721,7 @@ function social_build_workbench_content($state) {
     return ['success' => true, 'content' => $content, 'count' => count($selected)];
 }
 
-function social_publish_workbench_run($state, $force_status = null) {
+function social_publish_workbench_run($state, $force_status = null, $schedule_time = null) {
     try {
         if (function_exists('wp_raise_memory_limit')) {
             wp_raise_memory_limit('admin');
@@ -733,6 +762,18 @@ function social_publish_workbench_run($state, $force_status = null) {
         }
 
         $status_to_use = ($force_status !== null) ? $force_status : ($opts['post_status'] ?? 'publish');
+        $site_tz = wp_timezone();
+        $schedule_ts = 0;
+        $post_date_local = '';
+        $post_date_gmt = '';
+        if ($status_to_use === 'future') {
+            $schedule_ts = (int)($schedule_time ?: ($state['schedule_time'] ?? 0));
+            if ($schedule_ts <= time()) {
+                $schedule_ts = time() + 3600;
+            }
+            $post_date_local = wp_date('Y-m-d H:i:s', $schedule_ts, $site_tz);
+            $post_date_gmt   = gmdate('Y-m-d H:i:s', $schedule_ts);
+        }
 
         // Generate post excerpt
         $post_excerpt = '';
@@ -806,11 +847,16 @@ function social_publish_workbench_run($state, $force_status = null) {
             'post_title'   => $title,
             'post_content' => $built['content'],
             'post_excerpt' => $post_excerpt,
-            'post_status'  => ($status_to_use === 'publish') ? 'draft' : $status_to_use,
+            'post_status'  => ($status_to_use === 'publish' || $status_to_use === 'future') ? 'draft' : $status_to_use,
             'post_author'  => $author_id,
             'post_type'    => 'post',
             'tags_input'   => $target_tags,
         ];
+        if ($status_to_use === 'future') {
+            $post_args['post_date']     = $post_date_local;
+            $post_args['post_date_gmt'] = $post_date_gmt;
+            $post_args['edit_date']     = true;
+        }
         if (!empty($opts['categories']) && is_array($opts['categories'])) {
             $post_args['post_category'] = array_map('absint', $opts['categories']);
         }
@@ -949,6 +995,15 @@ function social_publish_workbench_run($state, $force_status = null) {
                 'post_status'  => 'publish',
                 'post_content' => $built['content'],
             ]);
+        } elseif ($status_to_use === 'future') {
+            wp_update_post([
+                'ID'            => $post_id,
+                'post_status'   => 'future',
+                'post_date'     => $post_date_local,
+                'post_date_gmt' => $post_date_gmt,
+                'edit_date'     => true,
+                'post_content'  => $built['content'],
+            ]);
         }
 
         // Purge W3 Total Cache and active page/object caches for the newly published digest
@@ -958,9 +1013,17 @@ function social_publish_workbench_run($state, $force_status = null) {
             \social_purge_site_caches($post_id);
         }
 
-        $status_label = ($status_to_use === 'draft') ? 'Draft created' : 'Digest published';
-        social_log_run(true, "Workbench {$status_label} (ID: {$post_id}) with {$built['count']} article(s).", $post_id);
-        return ['success' => true, 'post_id' => $post_id, 'status' => $status_to_use, 'message' => "{$status_label} (ID: {$post_id}) with {$built['count']} selected article(s)."];
+        $status_label = ($status_to_use === 'draft') ? 'Draft created' : (($status_to_use === 'future') ? 'Digest scheduled' : 'Digest published');
+        $status_log = ($status_to_use === 'future') 
+            ? "Workbench {$status_label} (ID: {$post_id}) for " . wp_date('Y-m-d H:i:s T', $schedule_ts, $site_tz) . " with {$built['count']} article(s)."
+            : "Workbench {$status_label} (ID: {$post_id}) with {$built['count']} article(s).";
+        social_log_run(true, $status_log, $post_id);
+
+        $return_msg = ($status_to_use === 'future')
+            ? "{$status_label} (ID: {$post_id}) for " . esc_html(wp_date('Y-m-d H:i:s T', $schedule_ts, $site_tz)) . " with {$built['count']} selected article(s)."
+            : "{$status_label} (ID: {$post_id}) with {$built['count']} selected article(s).";
+
+        return ['success' => true, 'post_id' => $post_id, 'status' => $status_to_use, 'message' => $return_msg];
     } catch (\Throwable $e) {
         return ['success' => false, 'message' => 'Fatal runtime error publishing digest: ' . $e->getMessage()];
     }

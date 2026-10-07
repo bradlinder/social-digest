@@ -9,7 +9,7 @@ export interface ReleaseEntry {
 
 export const PLUGIN_META = {
   name: 'Social Digest for WordPress',
-  version: '5.8.16',
+  version: '5.8.17',
   requiresWP: '6.0+',
   testedUpTo: '7.1.1',
   requiresPHP: '7.4+',
@@ -17,14 +17,24 @@ export const PLUGIN_META = {
   author: 'Brad Linder',
   githubRepo: 'BradLinder/social-digest',
   releaseZip: 'social-digest.zip',
-  rollbackTarget: 'v5.8.15',
+  rollbackTarget: 'v5.8.16',
 };
 
 export const CHANGELOG_DATA: ReleaseEntry[] = [
   {
+    version: '5.8.17',
+    tag: 'v5.8.17',
+    isLatest: true,
+    highlights: [
+      'Scheduled Publishing from Actions & Preview: Full future-publication scheduling directly from the Actions & Preview Workbench (in addition to "Save as Draft" and "Publish Immediately") with site-timezone datetime selection, WordPress future post status, and automated cron publication.',
+      'Drag-and-Drop Manual Post Reordering: Interactive jQuery UI drag-and-drop sequencing for candidate update cards in the workbench, featuring grab handles and dynamic numbering (#1, #2, ...) that preserves editorial story sequences across saved, scheduled, drafted, and published digests.',
+      'Cutoff & Editorial State Integrity: Preserves scheduled datetime selections across workbench updates, advances network cutoff markers upon future post creation to prevent duplicate ingestion, and provides direct WordPress edit links in admin notices.'
+    ]
+  },
+  {
     version: '5.8.16',
     tag: 'v5.8.16',
-    isLatest: true,
+    isLatest: false,
     highlights: [
       'Complete Removal of Custom Lightbox Code: Removed all custom modal JavaScript, custom modal overlay DOM elements, custom touch/keyboard listeners, and inline modal styling, eliminating conflicts and fixing Android Chrome responsiveness.',
       'Native Respect for Responsive Lightbox & Gallery: Defers completely to Responsive Lightbox & Gallery (or any third-party lightbox plugin) so images open using the exact same effects and settings as all other galleries on your website.',

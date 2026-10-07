@@ -174,6 +174,36 @@ add_action('admin_init', function() {
         }
     }
 
+    if (isset($_POST['sd53_schedule']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+        $state = social_sanitize_next_run($_POST);
+        social_save_workbench_state($state);
+
+        $sched_dt_str = sanitize_text_field($_POST['sd53_schedule_datetime'] ?? '');
+        $tz = wp_timezone();
+        $dt = null;
+        if (!empty($sched_dt_str)) {
+            $dt = date_create_immutable($sched_dt_str, $tz);
+        }
+        if (!$dt) {
+            $dt = date_create_immutable('now', $tz)->modify('+1 hour');
+        }
+        $sched_ts = $dt->getTimestamp();
+        $now_ts = time();
+        if ($sched_ts <= $now_ts) {
+            add_settings_error('sd53', 'schedule', 'Scheduled publication time must be in the future. Please select a future date and time.', 'error');
+        } else {
+            $result = social_publish_workbench_run($state, 'future', $sched_ts);
+            if (!empty($result['success'])) {
+                social_clear_workbench_state();
+                $post_id = absint($result['post_id'] ?? 1);
+                wp_safe_redirect(admin_url('edit.php?page=social-digest-settings&tab=workbench&sd53_scheduled=' . $post_id));
+                exit;
+            } else {
+                add_settings_error('sd53', 'schedule', $result['message'] ?? 'Scheduling failed.', 'error');
+            }
+        }
+    }
+
     if (isset($_POST['sd53_manual_run']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
         try {
             $result = social_run_digest_import(false);
@@ -485,6 +515,29 @@ function social_render_settings_page() {
             margin-bottom: 20px;
             border-radius: 6px;
         }
+        .sd53-candidates-sortable {
+            position: relative;
+        }
+        .sd53-item-sortable-placeholder {
+            border: 2px dashed #0284c7 !important;
+            background: #f0f9ff !important;
+            min-height: 80px;
+            margin-bottom: 12px;
+            border-radius: 6px;
+            visibility: visible !important;
+        }
+        .sd53-drag-handle {
+            cursor: grab;
+            user-select: none;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        .sd53-drag-handle:hover {
+            background: #cbd5e1 !important;
+            border-color: #94a3b8 !important;
+        }
+        .sd53-drag-handle:active {
+            cursor: grabbing;
+        }
         .sd53-grid {
             display: grid;
             grid-template-columns: minmax(360px, 5fr) minmax(420px, 7fr);
@@ -538,6 +591,13 @@ function social_render_settings_page() {
             $draft_id = absint($_GET['sd53_drafted']);
             $edit_link = ($draft_id > 1 && function_exists('get_edit_post_link')) ? ' <a href="' . esc_url(get_edit_post_link($draft_id)) . '" class="button button-small" style="margin-left:10px;">Edit Draft in WordPress ↗</a>' : '';
             add_settings_error('sd53', 'draft', 'Draft post created successfully!' . $edit_link, 'updated');
+        }
+        if (!empty($_GET['sd53_scheduled'])) {
+            $sched_id = absint($_GET['sd53_scheduled']);
+            $edit_link = ($sched_id > 1 && function_exists('get_edit_post_link')) ? ' <a href="' . esc_url(get_edit_post_link($sched_id)) . '" class="button button-small" style="margin-left:10px;">Edit Scheduled Post in WordPress ↗</a>' : '';
+            $sched_post = get_post($sched_id);
+            $sched_date_str = ($sched_post && !empty($sched_post->post_date)) ? ' for ' . esc_html(wp_date('Y-m-d H:i:s T', strtotime($sched_post->post_date), wp_timezone())) : '';
+            add_settings_error('sd53', 'schedule', 'Digest scheduled successfully' . $sched_date_str . '!' . $edit_link, 'updated');
         }
         ?>
         <?php settings_errors('sd53'); ?>
@@ -1683,6 +1743,19 @@ function social_render_settings_page() {
                             <button class="button" name="sd53_save" value="1">Save Next-Run Changes</button>
                             <button class="button" name="sd53_reset" value="1" onclick="return confirm('Discard all changes?')">Reset Next Run</button>
                             <button class="button" name="sd53_save_draft" value="1" onclick="return confirm('Save this staged digest as a WordPress Draft post?')"><span class="dashicons dashicons-edit" style="vertical-align:text-bottom; margin-right:2px; font-size:16px;"></span> Save as Draft</button>
+                            
+                            <div style="display:inline-flex; align-items:center; gap:6px; background:#f0f6fc; padding:3px 10px; border-radius:4px; border:1px solid #c8d8ec;">
+                                <span class="dashicons dashicons-calendar-alt" style="color:#2271b1; font-size:16px; width:16px; height:16px;"></span>
+                                <label for="sd53_schedule_datetime" style="font-size:12px; font-weight:600; color:#1d2327;">Schedule for:</label>
+                                <?php 
+                                $default_sched_val = !empty($state['schedule_datetime']) 
+                                    ? $state['schedule_datetime'] 
+                                    : wp_date('Y-m-d\TH:i', time() + 3600, $site_tz); 
+                                ?>
+                                <input type="datetime-local" id="sd53_schedule_datetime" name="sd53_schedule_datetime" style="font-size:12px; padding:2px 6px; height:28px;" value="<?php echo esc_attr($default_sched_val); ?>" />
+                                <button class="button" name="sd53_schedule" value="1" onclick="return confirm('Schedule this digest for future publication at the selected date and time?');" style="color:#2271b1; font-weight:600;"><span class="dashicons dashicons-clock" style="vertical-align:text-bottom; margin-right:2px; font-size:15px;"></span> Schedule Post</button>
+                            </div>
+
                             <button class="button button-primary" name="sd53_publish" value="1" onclick="return confirm('Publish this digest immediately?')">Publish Next Run</button>
                         </div>
                     </div>
@@ -1731,6 +1804,12 @@ function social_render_settings_page() {
                                     </div>
                                 </div>
 
+                                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:6px 12px; margin-bottom:12px; font-size:12px; color:#475569; display:flex; align-items:center; gap:6px;">
+                                    <span class="dashicons dashicons-move" style="color:#0284c7;"></span>
+                                    <span><strong>Custom Story Sequencing:</strong> Drag and drop candidate cards by their handle (<code>#1</code>, <code>#2</code>, etc.) to reorder the story sequence. Your custom order is preserved when saving, scheduling, or publishing.</span>
+                                </div>
+
+                                <div id="sd53_candidates_list" class="sd53-candidates-sortable">
                                 <?php foreach ($candidates as $i => $c): 
                                     $key = sanitize_key($c['key']); 
                                     $excluded = !empty($c['excluded']); 
@@ -1740,8 +1819,13 @@ function social_render_settings_page() {
                                     $is_featured_thumb = ($c_thumb !== '' && $active_featured === $c_thumb);
                                 ?>
                                     <div class="sd53-item <?php echo $excluded ? 'excluded' : ''; ?> <?php echo $pinned ? 'is-pinned' : ''; ?> <?php echo $is_featured_thumb ? 'is-featured-thumb' : ''; ?>" id="sd53_<?php echo esc_attr($key); ?>" style="transition: all 0.2s ease;">
+                                        <input type="hidden" name="candidate_order[]" value="<?php echo esc_attr($key); ?>" />
                                         <div class="sd53-item-head">
                                             <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                                                <div class="sd53-drag-handle" title="Drag to reorder story sequence" style="cursor:grab; color:#64748b; display:inline-flex; align-items:center; padding:2px 6px; border-radius:3px; background:#e2e8f0; border:1px solid #cbd5e1; user-select:none;">
+                                                    <span class="dashicons dashicons-menu" style="font-size:15px; width:15px; height:15px; vertical-align:middle; color:#475569;"></span>
+                                                    <span style="font-size:11px; font-weight:700; margin-left:3px; color:#334155;">#<span class="sd53-order-num"><?php echo esc_html($i + 1); ?></span></span>
+                                                </div>
                                                 <label style="font-weight:600;"><input type="checkbox" name="candidate[<?php echo esc_attr($key); ?>][excluded]" value="1" <?php checked($excluded); ?> onchange="this.closest('.sd53-item').classList.toggle('excluded', this.checked)"> Exclude from next post</label>
                                                 <label style="color:#b45309; font-weight:700; cursor:pointer;">
                                                     <input type="radio" name="pinned_lead_post" value="<?php echo esc_attr($key); ?>" <?php checked($pinned); ?> onchange="document.querySelectorAll('.sd53-item').forEach(el=>el.classList.remove('is-pinned')); this.closest('.sd53-item').classList.add('is-pinned');"> 
@@ -1769,6 +1853,7 @@ function social_render_settings_page() {
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
+                                </div>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -2087,7 +2172,7 @@ function social_render_settings_page() {
             sdPersistClosedPostboxes();
         });
 
-        // Initialize drag-and-drop sortable
+        // Initialize drag-and-drop sortable for postboxes
         if ($.fn.sortable) {
             $('#social_settings_sortable, #social_wb_main_sortable').sortable({
                 handle: '.postbox-header',
@@ -2103,6 +2188,30 @@ function social_render_settings_page() {
                         localStorage.setItem(pageKey + '_order', JSON.stringify(order));
                     } catch (err) {}
                 }
+            });
+
+            // Initialize candidate cards drag-and-drop sortable
+            if ($('#sd53_candidates_list').length) {
+                $('#sd53_candidates_list').sortable({
+                    items: '> .sd53-item',
+                    handle: '.sd53-drag-handle',
+                    cancel: 'input, textarea, button, a, select, label',
+                    placeholder: 'sd53-item-sortable-placeholder',
+                    forcePlaceholderSize: true,
+                    opacity: 0.85,
+                    cursor: 'grabbing',
+                    tolerance: 'pointer',
+                    axis: 'y',
+                    update: function() {
+                        sdUpdateCandidateOrderNumbers();
+                    }
+                });
+            }
+        }
+
+        function sdUpdateCandidateOrderNumbers() {
+            $('#sd53_candidates_list .sd53-item').each(function(index) {
+                $(this).find('.sd53-order-num').text(index + 1);
             });
         }
 

@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.16
+Stable tag: 5.8.17
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,12 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.17 =
+* Scheduled Publishing from Actions & Preview & Drag-and-Drop Manual Post Reordering:
+  1. Scheduled Publishing from Actions & Preview: Added full future-publication scheduling directly from the Actions & Preview Workbench (in addition to "Save as Draft" and "Publish Immediately"). Includes a site-timezone datetime picker, WordPress `future` post status handling, automated cron scheduling (`publish_future_post`), and sideloaded media/featured thumbnail preservation.
+  2. Drag-and-Drop Manual Post Reordering: Added interactive jQuery UI drag-and-drop sequencing for candidate update cards on the Actions & Preview page. Features dedicated grab handles with live dynamic ordering badges (`#1`, `#2`, etc.) that preserve custom editorial story sequences when saving, scheduling, drafting, or publishing digests.
+  3. Seamless Cutoff & Staging State Integrity: Preserves scheduled date/time selections in workbench state, accurately advances cutoff timestamps upon future post creation to prevent duplicate ingestion, and provides direct "Edit Scheduled Post in WordPress" quick links in admin notices.
 
 = 5.8.16 =
 * Custom Lightbox Removal, Responsive Lightbox & Gallery Integration & Native WordPress Lightbox Fallback:

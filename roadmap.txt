@@ -7,6 +7,38 @@ Social Digest - Feature Roadmap & Release Status
    - Optional webhook/ActivityPub hook to notify federated networks when a digest referencing their updates is published.
 2. Automated Weekly Archive Digest View [Publishing]:
    - Dedicated weekly/monthly archive rollup view grouping published digests with summary metrics.
+3. Cron vs. Manual Staging Collision Warning [UX & Reliability]:
+   - Add warning banner when cron schedule is active while a manual draft is uncommitted.
+4. Refresh Confirmation Dialog [UX & Staging]:
+   - Add browser confirmation prompt before refreshing next-run workbench if unsaved notes or exclusions exist.
+
+0. Release v5.8.17 Scheduled Publishing & Drag-and-Drop Post Reordering (Completed in v5.8.17)
+-----------------------------------------------------------------------------------------
+[x] Scheduled Publishing from Actions & Preview (v5.8.17): Added the ability to schedule digests for future publication directly from the Actions & Preview menu with site-timezone date/time selection, WordPress `future` post status handling, and scheduled cron execution (`publish_future_post`).
+[x] Drag-and-Drop Manual Post Reordering in Workbench (v5.8.17): Added interactive jQuery UI drag-and-drop sequencing for candidate update cards on the Actions & Preview page, complete with grab handles, dynamic order numbering (#1, #2, ...), and full persistence of custom editorial story sequences across saved, scheduled, drafted, and published digests.
+[x] Cutoff & Scheduling State Preservation (v5.8.17): Retains scheduled datetime across workbench updates, advances network cutoff timestamps on future post creation to prevent duplicate ingestion, and provides direct "Edit Scheduled Post in WordPress" links in admin notices.
+
+0. Release v5.8.16 Custom Lightbox Removal & Native WP Lightbox Fallback (Completed in v5.8.16)
+-----------------------------------------------------------------------------------------------
+[x] Custom Lightbox Removal (v5.8.16): Completely eliminated custom modal JavaScript, custom modal overlay DOM elements, custom touch/keyboard listeners, and inline modal styling, resolving mobile Android Chrome touch conflicts.
+[x] Native Respect for Responsive Lightbox & Gallery (v5.8.16): Ensures Social Digest defers to Responsive Lightbox & Gallery (or any third-party lightbox plugin) with identical effects (Swipebox, prettyPhoto, etc.) as the rest of the site.
+[x] Native WordPress Lightbox Fallback (v5.8.16): Falls back seamlessly to WordPress core's native image lightbox (Interactivity API, WP 6.4+) when no third-party lightbox plugin is present.
+[x] Direct File Fallback for Classic Environments (v5.8.16): Gracefully opens full-resolution image links directly in classic/older WordPress installations.
+
+0. Release v5.8.15 Conditional Loading Bypass & Direct prettyPhoto Binding (Completed in v5.8.15)
+-------------------------------------------------------------------------------------------------
+[x] Responsive Lightbox Conditional Loading Bypass (v5.8.15): Guaranteed Responsive Lightbox asset enqueuing even when site has conditional loading enabled.
+[x] Direct prettyPhoto and Swipebox Initialization (v5.8.15): Directly initialized site-wide prettyPhoto and Swipebox handlers on Social Digest posts.
+
+0. Release v5.8.14 Semantic Figure Anchors & Event Re-Triggering (Completed in v5.8.14)
+---------------------------------------------------------------------------------------
+[x] Semantic Figure Anchor Wrapping (v5.8.14): Restructured gallery rendering to nest clickable anchors inside `<figure>` tags around `<img>`.
+[x] Native Responsive Lightbox Event Re-Triggering (v5.8.14): Re-triggered `doResponsiveLightbox` upon retroactive image discovery.
+
+0. Release v5.8.13 Retroactive Lightbox Auto-Discovery & High-Res Source Discovery (Completed in v5.8.13)
+---------------------------------------------------------------------------------------------------------
+[x] Retroactive Discovery for Legacy Posts (v5.8.13): Automatically scans for and upgrades unlinked gallery images in legacy digest posts.
+[x] Automatic High-Resolution Source Discovery (v5.8.13): Extracts highest-resolution candidate from `srcset` for crisp modal viewing.
 
 0. Release v5.8.12 Clean Modern Social Post Card Styling (Completed in v5.8.12)
 ---------------------------------------------------------------------------------
