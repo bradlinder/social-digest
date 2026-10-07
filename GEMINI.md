@@ -11,6 +11,7 @@
 
 ## Scope, Stability & Anti-Bloat Discipline
 - **Strict Scope Control**: Make sure that any changes do not break existing functionality of the plugin or introduce new code or features that were not asked for.
+- **No Unsolicited Icons or Graphics**: Never add icons, dashicons, images, SVGs, or graphics to buttons, form controls, or UI elements unless explicitly requested by the user. Keep button and control labels clean, simple, and text-only by default.
 - **Clarification First**: Let the user know and request clarification if you need more details on any ambiguous requirement before beginning code execution.
 - **Minimal Surface-Area Modifications**: Keep changes strictly targeted to the specific request. Avoid opportunistic refactoring, unsolicited feature additions, or rewriting stable working code.
 - **AST Syntax Verification**: Always run `node scripts/verify-all.cjs` after editing any PHP files to ensure zero fatal syntax or parsing errors.

@@ -10,6 +10,13 @@ Social Digest - Feature Roadmap & Release Status
    - Decompose `includes/feed-builder.php` (~1,050 lines) into ingestion, candidate scoring/filtering, and digest HTML assembly modules.
    - Decompose `includes/api-clients.php` (~760 lines) into dedicated Bluesky (AT Protocol) and Mastodon (REST) client modules with shared HTTP retry/backoff utilities.
 
+0. Release v5.8.20 Workbench Toolbar Streamlining & Text-Only Button Clean-up (Completed in v5.8.20)
+------------------------------------------------------------------------------------------------------
+[x] Inline Horizontal Publication Actions (v5.8.20): Positioned WordPress post publication actions (Save as Draft, Schedule for Later, Publish Immediately) inline alongside the preview and reset buttons rather than in a separate container beneath them.
+[x] Clean Text-Only Button Labels (v5.8.20): Removed all dashicons and graphical icons from the workbench buttons, maintaining clean, native text labels.
+[x] Reduced Toolbar Clutter (v5.8.20): Removed redundant descriptive helper text above the action row to keep the workbench compact and focused.
+[x] Strict Project Rule (v5.8.20): Established an explicit, permanent rule in AGENTS.md and GEMINI.md prohibiting unrequested icons or graphics on buttons and UI elements.
+
 0. Release v5.8.19 Harmonized Publication Action Bar & Scheduling Popover (Completed in v5.8.19)
 -------------------------------------------------------------------------------------------------
 [x] Harmonized Post Creation Toolbar (v5.8.19): Cleanly separated staging actions (Fetch, Save Staged Changes, Discard/Reset) from WordPress post creation actions (Save as Draft, Schedule for Later, Publish Immediately) into a dedicated, visually unified action container.
