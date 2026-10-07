@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.21
+Stable tag: 5.8.22
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,13 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.22 =
+* In-Flow Expandable Scheduling Drawer (Drop-Down Method):
+  1. Expandable Drop-Down Drawer: Replaced the absolute floating popover with an in-flow expandable drop-down drawer directly inside the Prepare Next Digest Run workbench box.
+  2. Immune to Element Obstruction: Because the drawer expands in normal document flow, the postbox naturally expands in height and pushes the Articles for Next Run box and all lower elements downward, making it physically impossible for any lower element to cover or obscure it.
+  3. Responsive Controls & Timezone Details: Features date/time picker, site timezone context, quick-offset buttons (+1 Hour, Tomorrow 9am), explicit confirmation, and cancel/close controls that wrap gracefully across mobile and desktop screens.
+  4. Clean State & Keyboard Dismissal: Toggles cleanly on the "Schedule for Later" button, auto-focuses the datetime input on open, and can be instantly dismissed via Cancel, Close, or the Escape key.
 
 = 5.8.21 =
 * Scheduling Popover Stacking Context & Z-Index Fix:

@@ -1728,7 +1728,7 @@ function social_render_settings_page() {
                 <div class="meta-box-sortables ui-sortable" id="social_wb_main_sortable">
 
                     <!-- TOP QUICK ACTIONS WORKBENCH -->
-                    <div class="postbox" id="social_wb_box_quick_actions" style="border-left: 5px solid #2271b1; position: relative; z-index: 100;">
+                    <div class="postbox" id="social_wb_box_quick_actions" style="border-left: 5px solid #2271b1;">
                     <div class="postbox-header">
                         <h2 class="hndle">
                             <span class="dashicons dashicons-admin-generic" style="color:#2271b1; margin-right:4px;"></span>
@@ -1736,7 +1736,7 @@ function social_render_settings_page() {
                         </h2>
                         <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
                     </div>
-                    <div class="inside" style="padding-top:12px; overflow:visible;">
+                    <div class="inside" style="padding-top:12px;">
                         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                             <!-- STAGING & WORKBENCH ACTIONS -->
                             <button class="button button-primary" name="sd53_fetch" value="1"<?php echo $fetch_confirm_attr; ?>>
@@ -1757,51 +1757,53 @@ function social_render_settings_page() {
                                 Save as Draft
                             </button>
 
-                            <div style="position:relative; display:inline-block; z-index:1001;">
-                                <button type="button" class="button" id="sd_schedule_toggle_btn" onclick="sdToggleSchedulePopover(event)" aria-expanded="false">
-                                    Schedule for Later
-                                </button>
-
-                                <!-- SCHEDULE POPOVER FLYOUT -->
-                                <div id="sd_schedule_popover" style="display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:1002; background:#fff; border:1px solid #c3c4c7; box-shadow:0 8px 24px rgba(0,0,0,0.15); border-radius:4px; padding:14px; width:300px; max-width:calc(100vw - 40px); box-sizing:border-box;">
-                                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
-                                        <span style="font-weight:600; font-size:13px; color:#1e293b;">
-                                            Schedule Publication
-                                        </span>
-                                        <button type="button" onclick="sdCloseSchedulePopover()" style="border:none; background:none; cursor:pointer; color:#787c82; font-size:18px; line-height:1; padding:0 4px;" title="Close">&times;</button>
-                                    </div>
-
-                                    <div style="font-size:11px; color:#475569; margin-bottom:10px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:3px; padding:6px 8px; line-height:1.4;">
-                                        Site Timezone: <?php echo esc_html($site_tz->getName()); ?> (<?php echo esc_html(wp_date('T, g:i A', time(), $site_tz)); ?>)
-                                    </div>
-
-                                    <div style="margin-bottom:10px;">
-                                        <label for="sd53_schedule_datetime" style="display:block; font-size:12px; font-weight:600; color:#334155; margin-bottom:4px;">Date &amp; Time:</label>
-                                        <?php 
-                                        $default_sched_val = !empty($state['schedule_datetime']) 
-                                            ? $state['schedule_datetime'] 
-                                            : wp_date('Y-m-d\TH:i', time() + 3600, $site_tz); 
-                                        ?>
-                                        <input type="datetime-local" id="sd53_schedule_datetime" name="sd53_schedule_datetime" value="<?php echo esc_attr($default_sched_val); ?>" style="width:100%; font-size:13px; padding:5px 8px; border:1px solid #8c8f94; border-radius:3px; box-sizing:border-box;" />
-                                    </div>
-
-                                    <div style="display:flex; gap:6px; margin-bottom:12px;">
-                                        <button type="button" class="button button-small" onclick="sdSetScheduleOffset(1)" style="flex:1; text-align:center;">+1 Hour</button>
-                                        <button type="button" class="button button-small" onclick="sdSetScheduleTomorrowMorning()" style="flex:1; text-align:center;">Tomorrow 9am</button>
-                                    </div>
-
-                                    <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center; border-top:1px solid #e2e8f0; padding-top:10px;">
-                                        <button type="button" class="button" onclick="sdCloseSchedulePopover()">Cancel</button>
-                                        <button type="submit" class="button button-primary" name="sd53_schedule" value="1" onclick="return confirm('Schedule this digest for future publication at the selected date and time?');">
-                                            Confirm &amp; Schedule
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                            <button type="button" class="button" id="sd_schedule_toggle_btn" onclick="sdToggleScheduleDrawer(event)" aria-expanded="false">
+                                Schedule for Later
+                            </button>
 
                             <button class="button button-primary" name="sd53_publish" value="1" onclick="return confirm('Publish this digest immediately?')">
                                 Publish Immediately
                             </button>
+                        </div>
+
+                        <!-- DROP-DOWN DRAWER FOR SCHEDULING (IN-FLOW EXPANDABLE PANEL) -->
+                        <div id="sd_schedule_drawer" style="display:none; margin-top:14px; padding:14px 16px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
+                                <span style="font-weight:600; font-size:13px; color:#1e293b;">
+                                    Schedule Digest Publication
+                                </span>
+                                <button type="button" class="button button-small" onclick="sdCloseScheduleDrawer()">Close</button>
+                            </div>
+
+                            <div style="font-size:12px; color:#475569; margin-bottom:12px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:4px; padding:8px 12px; line-height:1.4;">
+                                Site Timezone: <strong><?php echo esc_html($site_tz->getName()); ?></strong> (<?php echo esc_html(wp_date('T, g:i A', time(), $site_tz)); ?>)
+                            </div>
+
+                            <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end;">
+                                <div style="flex:1; min-width:220px;">
+                                    <label for="sd53_schedule_datetime" style="display:block; font-size:12px; font-weight:600; color:#334155; margin-bottom:4px;">
+                                        Date &amp; Time:
+                                    </label>
+                                    <?php 
+                                    $default_sched_val = !empty($state['schedule_datetime']) 
+                                        ? $state['schedule_datetime'] 
+                                        : wp_date('Y-m-d\TH:i', time() + 3600, $site_tz); 
+                                    ?>
+                                    <input type="datetime-local" id="sd53_schedule_datetime" name="sd53_schedule_datetime" value="<?php echo esc_attr($default_sched_val); ?>" style="width:100%; font-size:13px; padding:6px 10px; border:1px solid #8c8f94; border-radius:4px; box-sizing:border-box;" />
+                                </div>
+
+                                <div style="display:flex; gap:6px;">
+                                    <button type="button" class="button" onclick="sdSetScheduleOffset(1)">+1 Hour</button>
+                                    <button type="button" class="button" onclick="sdSetScheduleTomorrowMorning()">Tomorrow 9am</button>
+                                </div>
+
+                                <div style="display:flex; gap:8px; margin-left:auto;">
+                                    <button type="button" class="button" onclick="sdCloseScheduleDrawer()">Cancel</button>
+                                    <button type="submit" class="button button-primary" name="sd53_schedule" value="1" onclick="return confirm('Schedule this digest for future publication at the selected date and time?');">
+                                        Confirm &amp; Schedule
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2151,35 +2153,37 @@ function social_render_settings_page() {
         if (mastoRow) mastoRow.style.display = (mode === 'mastodon' || mode === 'both') ? 'table-row' : 'none';
     }
 
-    function sdToggleSchedulePopover(e) {
+    function sdToggleScheduleDrawer(e) {
         if (e) {
             e.preventDefault();
             e.stopPropagation();
         }
-        var popover = document.getElementById('sd_schedule_popover');
+        var drawer = document.getElementById('sd_schedule_drawer');
         var btn = document.getElementById('sd_schedule_toggle_btn');
-        var parentBox = document.getElementById('social_wb_box_quick_actions');
-        if (!popover || !btn) return;
-        var isVisible = (popover.style.display !== 'none');
+        if (!drawer || !btn) return;
+        var isVisible = (drawer.style.display !== 'none');
         if (isVisible) {
-            sdCloseSchedulePopover();
+            sdCloseScheduleDrawer();
         } else {
-            popover.style.display = 'block';
+            drawer.style.display = 'block';
             btn.setAttribute('aria-expanded', 'true');
-            if (parentBox) {
-                parentBox.style.zIndex = '1000';
-            }
+            btn.style.borderColor = '#2271b1';
+            btn.style.backgroundColor = '#f0f6fc';
+            btn.style.color = '#135e96';
+            var input = document.getElementById('sd53_schedule_datetime');
+            if (input) input.focus();
         }
     }
 
-    function sdCloseSchedulePopover() {
-        var popover = document.getElementById('sd_schedule_popover');
+    function sdCloseScheduleDrawer() {
+        var drawer = document.getElementById('sd_schedule_drawer');
         var btn = document.getElementById('sd_schedule_toggle_btn');
-        var parentBox = document.getElementById('social_wb_box_quick_actions');
-        if (popover) popover.style.display = 'none';
-        if (btn) btn.setAttribute('aria-expanded', 'false');
-        if (parentBox) {
-            parentBox.style.zIndex = '100';
+        if (drawer) drawer.style.display = 'none';
+        if (btn) {
+            btn.setAttribute('aria-expanded', 'false');
+            btn.style.borderColor = '';
+            btn.style.backgroundColor = '';
+            btn.style.color = '';
         }
     }
 
@@ -2211,15 +2215,10 @@ function social_render_settings_page() {
     }
 
     jQuery(document).ready(function($) {
-        // Outside-click and Escape handlers for schedule popover
-        $(document).on('click', function(e) {
-            if (!$(e.target).closest('#sd_schedule_popover, #sd_schedule_toggle_btn').length) {
-                sdCloseSchedulePopover();
-            }
-        });
+        // Escape key handler for schedule drawer
         $(document).on('keydown', function(e) {
             if (e.key === 'Escape' || e.keyCode === 27) {
-                sdCloseSchedulePopover();
+                sdCloseScheduleDrawer();
             }
         });
         var pageKey = 'sd_postbox_' + ($('#social_settings_sortable').length ? 'settings' : 'workbench');

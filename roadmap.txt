@@ -10,6 +10,12 @@ Social Digest - Feature Roadmap & Release Status
    - Decompose `includes/feed-builder.php` (~1,050 lines) into ingestion, candidate scoring/filtering, and digest HTML assembly modules.
    - Decompose `includes/api-clients.php` (~760 lines) into dedicated Bluesky (AT Protocol) and Mastodon (REST) client modules with shared HTTP retry/backoff utilities.
 
+0. Release v5.8.22 In-Flow Expandable Scheduling Drawer (Drop-Down Method) (Completed in v5.8.22)
+---------------------------------------------------------------------------------------------------
+[x] In-Flow Expandable Scheduling Drawer (v5.8.22): Replaced the absolute floating popover with an in-flow expandable drop-down drawer within `#social_wb_box_quick_actions`.
+[x] Immune to Element Obstruction (v5.8.22): Pushes lower postboxes (`Articles for Next Run`) downward in normal document layout, eliminating any possibility of overlapping, clipping, or obscured controls.
+[x] Responsive Controls & Keyboard Dismissal (v5.8.22): Clean layout with date/time picker, site timezone context, quick offsets (+1 Hour, Tomorrow 9am), cancel/close actions, and Escape key dismissal.
+
 0. Release v5.8.21 Scheduling Popover Stacking Context & Z-Index Elevation (Completed in v5.8.21)
 --------------------------------------------------------------------------------------------------
 [x] Stacking Context Elevation (v5.8.21): Added positioned stacking context and z-index elevation to `#social_wb_box_quick_actions` so the scheduling popover flyout renders smoothly on top of sibling postboxes.
