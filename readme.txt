@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.20
+Stable tag: 5.8.21
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,12 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.21 =
+* Scheduling Popover Stacking Context & Z-Index Fix:
+  1. Stacking Context Elevation: Added explicit positioned stacking context and z-index elevation to the Prepare Next Digest Run workbench box (`#social_wb_box_quick_actions`) so the popover dropdown renders cleanly over sibling postbox cards instead of being obscured.
+  2. Dynamic Z-Index Activation: Dynamically elevates the container's z-index to 1000 whenever the scheduling popover is open, resetting gracefully upon outside click or Escape key dismissal.
+  3. Seamless Overflow Rendering: Ensured `.inside` container styles preserve `overflow: visible` so popover borders, datetime controls, and confirmation buttons remain fully accessible.
 
 = 5.8.20 =
 * Workbench Toolbar Streamlining & Text-Only Button Clean-up:

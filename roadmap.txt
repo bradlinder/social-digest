@@ -10,6 +10,12 @@ Social Digest - Feature Roadmap & Release Status
    - Decompose `includes/feed-builder.php` (~1,050 lines) into ingestion, candidate scoring/filtering, and digest HTML assembly modules.
    - Decompose `includes/api-clients.php` (~760 lines) into dedicated Bluesky (AT Protocol) and Mastodon (REST) client modules with shared HTTP retry/backoff utilities.
 
+0. Release v5.8.21 Scheduling Popover Stacking Context & Z-Index Elevation (Completed in v5.8.21)
+--------------------------------------------------------------------------------------------------
+[x] Stacking Context Elevation (v5.8.21): Added positioned stacking context and z-index elevation to `#social_wb_box_quick_actions` so the scheduling popover flyout renders smoothly on top of sibling postboxes.
+[x] Dynamic Z-Index Switching (v5.8.21): Dynamically elevates container z-index to 1000 upon opening and restores to 100 upon dismissal via outside click or Escape key.
+[x] Overflow Visibility Assurance (v5.8.21): Configured `.inside` postbox container style to preserve `overflow: visible`, guaranteeing that flyout inputs and buttons are not clipped or obscured by adjacent content.
+
 0. Release v5.8.20 Workbench Toolbar Streamlining & Text-Only Button Clean-up (Completed in v5.8.20)
 ------------------------------------------------------------------------------------------------------
 [x] Inline Horizontal Publication Actions (v5.8.20): Positioned WordPress post publication actions (Save as Draft, Schedule for Later, Publish Immediately) inline alongside the preview and reset buttons rather than in a separate container beneath them.

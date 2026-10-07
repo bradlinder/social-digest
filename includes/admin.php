@@ -1728,7 +1728,7 @@ function social_render_settings_page() {
                 <div class="meta-box-sortables ui-sortable" id="social_wb_main_sortable">
 
                     <!-- TOP QUICK ACTIONS WORKBENCH -->
-                    <div class="postbox" id="social_wb_box_quick_actions" style="border-left: 5px solid #2271b1;">
+                    <div class="postbox" id="social_wb_box_quick_actions" style="border-left: 5px solid #2271b1; position: relative; z-index: 100;">
                     <div class="postbox-header">
                         <h2 class="hndle">
                             <span class="dashicons dashicons-admin-generic" style="color:#2271b1; margin-right:4px;"></span>
@@ -1736,7 +1736,7 @@ function social_render_settings_page() {
                         </h2>
                         <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
                     </div>
-                    <div class="inside" style="padding-top:12px;">
+                    <div class="inside" style="padding-top:12px; overflow:visible;">
                         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                             <!-- STAGING & WORKBENCH ACTIONS -->
                             <button class="button button-primary" name="sd53_fetch" value="1"<?php echo $fetch_confirm_attr; ?>>
@@ -1757,13 +1757,13 @@ function social_render_settings_page() {
                                 Save as Draft
                             </button>
 
-                            <div style="position:relative; display:inline-block;">
+                            <div style="position:relative; display:inline-block; z-index:1001;">
                                 <button type="button" class="button" id="sd_schedule_toggle_btn" onclick="sdToggleSchedulePopover(event)" aria-expanded="false">
                                     Schedule for Later
                                 </button>
 
                                 <!-- SCHEDULE POPOVER FLYOUT -->
-                                <div id="sd_schedule_popover" style="display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:1000; background:#fff; border:1px solid #c3c4c7; box-shadow:0 8px 24px rgba(0,0,0,0.15); border-radius:4px; padding:14px; width:300px; max-width:calc(100vw - 40px); box-sizing:border-box;">
+                                <div id="sd_schedule_popover" style="display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:1002; background:#fff; border:1px solid #c3c4c7; box-shadow:0 8px 24px rgba(0,0,0,0.15); border-radius:4px; padding:14px; width:300px; max-width:calc(100vw - 40px); box-sizing:border-box;">
                                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
                                         <span style="font-weight:600; font-size:13px; color:#1e293b;">
                                             Schedule Publication
@@ -2158,6 +2158,7 @@ function social_render_settings_page() {
         }
         var popover = document.getElementById('sd_schedule_popover');
         var btn = document.getElementById('sd_schedule_toggle_btn');
+        var parentBox = document.getElementById('social_wb_box_quick_actions');
         if (!popover || !btn) return;
         var isVisible = (popover.style.display !== 'none');
         if (isVisible) {
@@ -2165,14 +2166,21 @@ function social_render_settings_page() {
         } else {
             popover.style.display = 'block';
             btn.setAttribute('aria-expanded', 'true');
+            if (parentBox) {
+                parentBox.style.zIndex = '1000';
+            }
         }
     }
 
     function sdCloseSchedulePopover() {
         var popover = document.getElementById('sd_schedule_popover');
         var btn = document.getElementById('sd_schedule_toggle_btn');
+        var parentBox = document.getElementById('social_wb_box_quick_actions');
         if (popover) popover.style.display = 'none';
         if (btn) btn.setAttribute('aria-expanded', 'false');
+        if (parentBox) {
+            parentBox.style.zIndex = '100';
+        }
     }
 
     function sdPadZero(n) {
