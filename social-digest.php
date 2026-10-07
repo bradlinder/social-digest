@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, stock media sideloading, local asset caching, and RSS-only syndication.
- * Version: 5.8.17
+ * Version: 5.8.19
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) exit;
 
 // Plugin constants
 if (!defined('SOCIAL_DIGEST_VERSION')) {
-    define('SOCIAL_DIGEST_VERSION', '5.8.17');
+    define('SOCIAL_DIGEST_VERSION', '5.8.19');
 }
 if (!defined('SOCIAL_DIGEST_FILE')) {
     define('SOCIAL_DIGEST_FILE', __FILE__);
@@ -143,294 +143,71 @@ add_action('social_digest_cron', __NAMESPACE__ . '\social_run_digest_import');
 // 3. ASSETS & FILTERS
 // ==========================================
 
-add_action('wp_head', function() {
-    if (is_singular('post')) {
-        $opts = get_option('social_digest_options', []);
-        $dark_mode_mode = $opts['dark_mode_mode'] ?? 'auto';
-        ?>
-        <style id="social-digest-embed-styles">
-        /* Social Digest Native Card Base Styling (Light Mode Default) */
-        div.social-post.social-card {
-            margin-left: auto !important;
-            margin-right: auto !important;
-            max-width: 600px !important;
-            box-sizing: border-box !important;
-            overflow-wrap: anywhere !important;
-            word-break: break-word !important;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 18px;
-            box-shadow: none;
-            color: #1e293b;
-            transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-        }
-        div.social-post.social-card a {
-            color: #0284c7;
-            text-decoration: none;
-            transition: opacity 0.15s ease;
-        }
-        div.social-post.social-card a:hover {
-            opacity: 0.85;
-            text-decoration: underline;
-        }
-        div.social-post .social-avatar {
-            border-radius: 50%;
-            object-fit: cover;
-        }
-        div.social-post .social-follow-link:hover {
-            text-decoration: underline !important;
-            opacity: 0.85;
-        }
-        div.social-post .social-badge:hover {
-            text-decoration: none !important;
-            filter: brightness(0.96);
-        }
-        div.social-post .social-link-card {
-            display: block !important;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            overflow: hidden;
-            margin: 12px 0;
-            max-width: 500px;
-            background: #f8fafc;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-            text-decoration: none !important;
-            color: inherit !important;
-            cursor: pointer;
-            transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        }
-        div.social-post .social-link-card:hover {
-            border-color: #cbd5e1;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
-            text-decoration: none !important;
-        }
-        div.social-post .social-link-card-body {
-            display: block !important;
-            padding: 10px 14px;
-        }
-        div.social-post .social-link-card-title {
-            display: block !important;
-            font-weight: 700 !important;
-            font-size: 14px !important;
-            margin-bottom: 4px;
-            color: #0f172a;
-            line-height: 1.35;
-            transition: color 0.15s ease;
-        }
-        div.social-post .social-link-card:hover .social-link-card-title {
-            text-decoration: underline !important;
-            color: #0284c7;
-        }
-        div.social-post .social-link-card-desc {
-            display: block !important;
-            font-weight: 400 !important;
-            font-size: 12.5px !important;
-            color: #475569;
-            line-height: 1.45;
-            margin-bottom: 6px;
-        }
-        div.social-post .social-link-card-domain {
-            display: flex !important;
-            align-items: center;
-            gap: 5px;
-            font-size: 12px !important;
-            color: #64748b;
-            font-weight: 400 !important;
-            margin-top: 4px;
-        }
-
-        /* Lightbox Image Hover & Triggers */
-        div.social-post .social-lightbox-trigger {
-            display: inline-block;
-            cursor: zoom-in;
-            transition: opacity 0.15s ease, filter 0.15s ease;
-        }
-        div.social-post .social-lightbox-trigger:hover {
-            opacity: 0.92;
-            filter: brightness(1.04);
-        }
-        @media (max-width: 480px) {
-            div.social-post .social-card-footer {
-                flex-direction: column;
-                align-items: flex-start !important;
-            }
-        }
-
-        <?php if ($dark_mode_mode === 'auto' || $dark_mode_mode === 'dark'): ?>
-        /* =========================================================================
-           Dark Mode Styles: High-contrast pure white typography & theme matching
-           ========================================================================= */
-        div.social-post.social-card.is-dark,
-        div.social-post.social-card[data-social-theme="dark"],
-        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]),
-        .dark-theme div.social-post.social-card:not(.is-light):not([data-social-theme="light"]),
-        .dark-mode div.social-post.social-card:not(.is-light):not([data-social-theme="light"]),
-        body.dark-mode div.social-post.social-card:not(.is-light):not([data-social-theme="light"]),
-        [data-theme="dark"] div.social-post.social-card:not(.is-light):not([data-social-theme="light"]),
-        [data-bs-theme="dark"] div.social-post.social-card:not(.is-light):not([data-social-theme="light"]),
-        [data-color-scheme="dark"] div.social-post.social-card:not(.is-light):not([data-social-theme="light"]),
-        .is-dark-theme div.social-post.social-card:not(.is-light):not([data-social-theme="light"]),
-        .theme-dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]),
-        .night-mode div.social-post.social-card:not(.is-light):not([data-social-theme="light"])
-        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card'; ?> {
-            background: #0f172a !important;
-            border: 1px solid #334155 !important;
-            color: #ffffff !important;
-            box-shadow: none !important;
-        }
-
-        /* Body & Content Text in Dark Mode (Crisp pure white #ffffff) */
-        div.social-post.social-card.is-dark .social-card-body,
-        div.social-post.social-card.is-dark .social-card-body p,
-        div.social-post.social-card[data-social-theme="dark"] .social-card-body,
-        div.social-post.social-card[data-social-theme="dark"] .social-card-body p,
-        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body,
-        .dark-theme div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body,
-        .dark-mode div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body,
-        [data-theme="dark"] div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body,
-        [data-bs-theme="dark"] div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body
-        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-card-body, div.social-post.social-card .social-card-body p'; ?> {
-            color: #ffffff !important;
-        }
-
-        /* Author Name in Dark Mode (Pure white #ffffff) */
-        div.social-post.social-card.is-dark .social-author-name,
-        div.social-post.social-card[data-social-theme="dark"] .social-author-name,
-        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-name,
-        .dark-theme div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-name,
-        .dark-mode div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-name,
-        [data-theme="dark"] div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-name,
-        [data-bs-theme="dark"] div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-name
-        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-author-name'; ?> {
-            color: #ffffff !important;
-        }
-
-        /* Author Handles, Timestamps & Footer Metadata in Dark Mode (High-contrast slate-200 #e2e8f0) */
-        div.social-post.social-card.is-dark .social-author-handles,
-        div.social-post.social-card.is-dark .social-author-handles a,
-        div.social-post.social-card.is-dark .social-identity a,
-        div.social-post.social-card.is-dark .social-timestamp,
-        div.social-post.social-card.is-dark .social-card-footer,
-        div.social-post.social-card.is-dark .social-identity-sep,
-        div.social-post.social-card[data-social-theme="dark"] .social-author-handles,
-        div.social-post.social-card[data-social-theme="dark"] .social-author-handles a,
-        div.social-post.social-card[data-social-theme="dark"] .social-identity a,
-        div.social-post.social-card[data-social-theme="dark"] .social-timestamp,
-        div.social-post.social-card[data-social-theme="dark"] .social-card-footer,
-        div.social-post.social-card[data-social-theme="dark"] .social-identity-sep,
-        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-handles,
-        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-handles a,
-        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-identity a,
-        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-timestamp,
-        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-footer,
-        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-identity-sep
-        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-author-handles, div.social-post.social-card .social-author-handles a, div.social-post.social-card .social-identity a, div.social-post.social-card .social-timestamp, div.social-post.social-card .social-card-footer, div.social-post.social-card .social-identity-sep'; ?> {
-            color: #e2e8f0 !important;
-        }
-
-        /* Links in Dark Mode (Vibrant sky-blue #38bdf8) */
-        div.social-post.social-card.is-dark a,
-        div.social-post.social-card[data-social-theme="dark"] a,
-        div.social-post.social-card.is-dark .social-card-body a,
-        div.social-post.social-card[data-social-theme="dark"] .social-card-body a,
-        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) a,
-        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body a
-        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card a, div.social-post.social-card .social-card-body a'; ?> {
-            color: #38bdf8 !important;
-        }
-
-        /* Borders & Headers in Dark Mode */
-        div.social-post.social-card.is-dark .social-card-header,
-        div.social-post.social-card[data-social-theme="dark"] .social-card-header,
-        div.social-post.social-card.is-dark .social-card-footer,
-        div.social-post.social-card[data-social-theme="dark"] .social-card-footer,
-        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-header,
-        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-footer
-        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-card-header, div.social-post.social-card .social-card-footer'; ?> {
-            border-color: #334155 !important;
-        }
-
-        /* Nested Link Preview Cards in Dark Mode */
-        div.social-post.social-card.is-dark .social-link-card,
-        div.social-post.social-card[data-social-theme="dark"] .social-link-card,
-        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-link-card
-        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-link-card'; ?> {
-            background: #1e293b !important;
-            border-color: #334155 !important;
-        }
-        div.social-post.social-card.is-dark .social-link-card:hover,
-        div.social-post.social-card[data-social-theme="dark"] .social-link-card:hover,
-        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-link-card:hover
-        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-link-card:hover'; ?> {
-            border-color: #475569 !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
-        }
-        div.social-post.social-card.is-dark .social-link-card .social-link-card-domain,
-        div.social-post.social-card[data-social-theme="dark"] .social-link-card .social-link-card-domain {
-            color: #cbd5e1 !important;
-        }
-        div.social-post.social-card.is-dark .social-link-card .social-link-card-title,
-        div.social-post.social-card[data-social-theme="dark"] .social-link-card .social-link-card-title {
-            color: #38bdf8 !important;
-        }
-        div.social-post.social-card.is-dark .social-link-card:hover .social-link-card-title,
-        div.social-post.social-card[data-social-theme="dark"] .social-link-card:hover .social-link-card-title {
-            text-decoration: underline !important;
-            color: #7dd3fc !important;
-        }
-        div.social-post.social-card.is-dark .social-link-card .social-link-card-desc,
-        div.social-post.social-card[data-social-theme="dark"] .social-link-card .social-link-card-desc {
-            color: #ffffff !important;
-        }
-
-        /* Thread Replies in Dark Mode */
-        div.social-post.social-card.is-dark .social-thread-collapse,
-        div.social-post.social-card[data-social-theme="dark"] .social-thread-collapse,
-        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-thread-collapse
-        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-thread-collapse'; ?> {
-            border-top-color: #334155 !important;
-        }
-        div.social-post.social-card.is-dark .social-thread-replies,
-        div.social-post.social-card[data-social-theme="dark"] .social-thread-replies,
-        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-thread-replies
-        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-thread-replies'; ?> {
-            border-left-color: #38bdf8 !important;
-        }
-        div.social-post.social-card.is-dark .social-thread-reply-item,
-        div.social-post.social-card[data-social-theme="dark"] .social-thread-reply-item,
-        .dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-thread-reply-item
-        <?php if ($dark_mode_mode === 'dark') echo ', div.social-post.social-card .social-thread-reply-item'; ?> {
-            color: #ffffff !important;
-        }
-
-        /* Badges & Stat Pills in Dark Mode */
-        div.social-post.social-card.is-dark .social-badge.bsky-badge,
-        div.social-post.social-card[data-social-theme="dark"] .social-badge.bsky-badge {
-            background: #082f49 !important;
-            border-color: #0284c7 !important;
-            color: #7dd3fc !important;
-        }
-        div.social-post.social-card.is-dark .social-badge.masto-badge,
-        div.social-post.social-card[data-social-theme="dark"] .social-badge.masto-badge {
-            background: #2e1065 !important;
-            border-color: #7e22ce !important;
-            color: #d8b4fe !important;
-        }
-        div.social-post.social-card.is-dark .social-stat-pill,
-        div.social-post.social-card[data-social-theme="dark"] .social-stat-pill {
-            background: #1e293b !important;
-            color: #ffffff !important;
-            border: 1px solid #334155 !important;
-        }
-        <?php endif; ?>
-        </style>
-        <?php
+add_action('wp_enqueue_scripts', function() {
+    if (!is_singular('post')) {
+        return;
     }
 
-    // Fediverse Attribution Meta Tag (<meta name="fediverse:creator" content="@user@instance.social">)
-    if (is_singular('post')) {
+    $opts = get_option('social_digest_options', []);
+    $dark_mode_mode = $opts['dark_mode_mode'] ?? 'auto';
+
+    // 1. Native Embed Stylesheet with cache busting
+    wp_enqueue_style(
+        'social-digest-embed',
+        plugins_url('assets/css/embed.css', __FILE__),
+        [],
+        SOCIAL_DIGEST_VERSION
+    );
+
+    // If site forced dark mode is selected in settings, add inline override
+    if ($dark_mode_mode === 'dark') {
+        wp_add_inline_style(
+            'social-digest-embed',
+            'div.social-post.social-card { background: #0f172a !important; border-color: #334155 !important; color: #ffffff !important; }'
+        );
+    }
+
+    // 2. Mobile Deep Linking Handler
+    if (empty($opts['mobile_deep_links']) === false || !isset($opts['mobile_deep_links'])) {
+        wp_enqueue_script(
+            'social-digest-deep-links',
+            plugins_url('assets/js/deep-links.js', __FILE__),
+            [],
+            SOCIAL_DIGEST_VERSION,
+            true
+        );
+    }
+
+    // 3. Smart Theme Adapter
+    wp_enqueue_script(
+        'social-digest-smart-theme',
+        plugins_url('assets/js/smart-theme.js', __FILE__),
+        [],
+        SOCIAL_DIGEST_VERSION,
+        true
+    );
+    wp_localize_script('social-digest-smart-theme', 'sdThemeConfig', [
+        'mode' => $dark_mode_mode
+    ]);
+
+    // 4. Gallery Lightbox Connector
+    $action = $opts['gallery_click_action'] ?? 'lightbox';
+    if ($action === 'lightbox') {
+        wp_enqueue_script(
+            'social-digest-gallery',
+            plugins_url('assets/js/gallery-lightbox.js', __FILE__),
+            ['jquery'],
+            SOCIAL_DIGEST_VERSION,
+            true
+        );
+    }
+});
+
+// Fediverse Attribution Meta Tag (<meta name="fediverse:creator" content="@user@instance.social">)
+add_action('wp_head', function() {
+    if (!is_singular('post')) {
+        return;
+    }
         global $post;
         $opts = get_option('social_digest_options', []);
         $creator_handle = trim($opts['fediverse_creator'] ?? '');
@@ -469,7 +246,6 @@ add_action('wp_head', function() {
                 echo '<meta name="fediverse:creator" content="' . esc_attr($creator_handle) . '" />' . "\n";
             }
         }
-    }
 });
 
 add_action('admin_enqueue_scripts', function($hook) {
@@ -480,6 +256,32 @@ add_action('admin_enqueue_scripts', function($hook) {
         wp_enqueue_editor();
         wp_enqueue_script('postbox');
         wp_enqueue_script('jquery-ui-sortable');
+
+        // Enqueue preview assets for workbench live preview
+        wp_enqueue_style(
+            'social-digest-embed',
+            plugins_url('assets/css/embed.css', __FILE__),
+            [],
+            SOCIAL_DIGEST_VERSION
+        );
+        wp_enqueue_script(
+            'social-digest-smart-theme',
+            plugins_url('assets/js/smart-theme.js', __FILE__),
+            [],
+            SOCIAL_DIGEST_VERSION,
+            true
+        );
+        $opts = get_option('social_digest_options', []);
+        wp_localize_script('social-digest-smart-theme', 'sdThemeConfig', [
+            'mode' => $opts['dark_mode_mode'] ?? 'auto'
+        ]);
+        wp_enqueue_script(
+            'social-digest-deep-links',
+            plugins_url('assets/js/deep-links.js', __FILE__),
+            [],
+            SOCIAL_DIGEST_VERSION,
+            true
+        );
     }
 });
 
@@ -512,207 +314,7 @@ add_action('pre_get_posts', function($query) {
     }
 });
 
-/**
- * Smart Mobile App Deep-Linking Handler
- * On mobile devices, clicking a Bluesky or Mastodon badge launches the installed app.
- * If the native app is not installed, it cleanly opens the web URL in the browser without requiring extra buttons.
- */
-function social_digest_render_smart_deep_links_script() {
-    $opts = get_option('social_digest_options', []);
-    if (isset($opts['mobile_deep_links']) && empty($opts['mobile_deep_links'])) {
-        return;
-    }
-    ?>
-    <script id="social-digest-smart-deep-links">
-    (function() {
-        function initSocialDeepLinks() {
-            document.addEventListener('click', function(e) {
-                var badge = e.target.closest('a.social-badge[data-app-url]');
-                if (!badge) return;
 
-                var appUrl = badge.getAttribute('data-app-url');
-                var webUrl = badge.getAttribute('href');
-                if (!appUrl) return;
-
-                // Only intercept on mobile / tablet touch devices
-                var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
-                if (!isMobile) return;
-
-                e.preventDefault();
-
-                var appOpened = false;
-                var onVisibilityChange = function() {
-                    if (document.hidden || document.webkitHidden) {
-                        appOpened = true;
-                    }
-                };
-                var onBlurOrHide = function() {
-                    appOpened = true;
-                };
-
-                document.addEventListener('visibilitychange', onVisibilityChange, { once: true });
-                window.addEventListener('pagehide', onBlurOrHide, { once: true });
-                window.addEventListener('blur', onBlurOrHide, { once: true });
-
-                var start = Date.now();
-
-                // Attempt to launch native app via custom URI scheme
-                window.location.href = appUrl;
-
-                // Fallback: If device has not switched focus to native app, open browser URL
-                setTimeout(function() {
-                    document.removeEventListener('visibilitychange', onVisibilityChange);
-                    window.removeEventListener('pagehide', onBlurOrHide);
-                    window.removeEventListener('blur', onBlurOrHide);
-
-                    if (!appOpened && (Date.now() - start < 2000)) {
-                        window.open(webUrl, '_blank', 'noopener,noreferrer');
-                    }
-                }, 800);
-            });
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initSocialDeepLinks);
-        } else {
-            initSocialDeepLinks();
-        }
-    })();
-    </script>
-    <?php
-}
-add_action('wp_footer', 'SocialDigest\\social_digest_render_smart_deep_links_script');
-
-/**
- * Smart Theme & Preference Adaptor for Social Digest Native Cards
- * Dynamically resolves website light/dark themes, body background luminance, and user preferences.
- * Ensures cards never display dark-mode styles on a light website (or light styles on a dark website),
- * and live-adapts to theme toggle buttons across popular WordPress themes.
- */
-function social_digest_render_smart_theme_script() {
-    $opts = get_option('social_digest_options', []);
-    $mode = $opts['dark_mode_mode'] ?? 'auto';
-    ?>
-    <script id="social-digest-theme-adapter">
-    (function() {
-        var forcedMode = <?php echo json_encode($mode); ?>;
-
-        function getLuminance(rgbStr) {
-            if (!rgbStr || rgbStr === 'transparent' || rgbStr.indexOf('rgba(0, 0, 0, 0)') === 0) return null;
-            var match = rgbStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
-            if (!match) return null;
-            var r = parseInt(match[1], 10) / 255;
-            var g = parseInt(match[2], 10) / 255;
-            var b = parseInt(match[3], 10) / 255;
-            return (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
-        }
-
-        function detectSiteTheme() {
-            if (forcedMode === 'dark') return 'dark';
-            if (forcedMode === 'light') return 'light';
-
-            var docEl = document.documentElement;
-            var body = document.body || docEl;
-
-            // 1. Check explicit dark selectors on html/body
-            var darkSelectors = [
-                '.dark', '.dark-theme', '.dark-mode', '.theme-dark', '.is-dark-theme', '.night-mode',
-                '[data-theme="dark"]', '[data-bs-theme="dark"]', '[data-color-scheme="dark"]', '[data-theme-mode="dark"]',
-                '[data-theme*="dark"]', '[class*="dark-theme"]', '[class*="theme-dark"]'
-            ];
-            for (var i = 0; i < darkSelectors.length; i++) {
-                try {
-                    if (docEl.matches(darkSelectors[i]) || (body && body.matches(darkSelectors[i]))) {
-                        return 'dark';
-                    }
-                } catch(e) {}
-            }
-
-            // 2. Check explicit light selectors on html/body
-            var lightSelectors = [
-                '.light', '.light-theme', '.light-mode', '.theme-light', '.is-light-theme', '.day-mode',
-                '[data-theme="light"]', '[data-bs-theme="light"]', '[data-color-scheme="light"]', '[data-theme-mode="light"]'
-            ];
-            for (var j = 0; j < lightSelectors.length; j++) {
-                try {
-                    if (docEl.matches(lightSelectors[j]) || (body && body.matches(lightSelectors[j]))) {
-                        return 'light';
-                    }
-                } catch(e) {}
-            }
-
-            // 3. Computed background luminance check of body / article / container
-            var elementsToCheck = [
-                body,
-                docEl,
-                document.querySelector('main'),
-                document.querySelector('article'),
-                document.querySelector('.entry-content'),
-                document.querySelector('.post-content')
-            ];
-
-            for (var k = 0; k < elementsToCheck.length; k++) {
-                var el = elementsToCheck[k];
-                if (!el) continue;
-                try {
-                    var bg = window.getComputedStyle(el).backgroundColor;
-                    var lum = getLuminance(bg);
-                    if (lum !== null) {
-                        // Luminance < 0.35 represents a dark background; >= 0.35 represents a light background
-                        return (lum < 0.35) ? 'dark' : 'light';
-                    }
-                } catch(e) {}
-            }
-
-            // 4. Default to 'light' for websites (prevents dark cards on standard white WordPress themes)
-            return 'light';
-        }
-
-        function updateSocialCardsTheme() {
-            var theme = detectSiteTheme();
-            var cards = document.querySelectorAll('div.social-post.social-card');
-            for (var i = 0; i < cards.length; i++) {
-                var card = cards[i];
-                card.setAttribute('data-social-theme', theme);
-                if (theme === 'dark') {
-                    card.classList.add('is-dark');
-                    card.classList.remove('is-light');
-                } else {
-                    card.classList.add('is-light');
-                    card.classList.remove('is-dark');
-                }
-            }
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', updateSocialCardsTheme);
-        } else {
-            updateSocialCardsTheme();
-        }
-        window.addEventListener('load', updateSocialCardsTheme);
-
-        // Listen for system preference changes
-        if (window.matchMedia) {
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateSocialCardsTheme);
-        }
-
-        // MutationObserver to adapt dynamically to site dark-mode toggle buttons
-        if (window.MutationObserver) {
-            var observer = new MutationObserver(function() {
-                updateSocialCardsTheme();
-            });
-            if (document.documentElement) {
-                observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme', 'data-bs-theme', 'data-color-scheme', 'style'] });
-            }
-            if (document.body) {
-                observer.observe(document.body, { attributes: true, attributeFilter: ['class', 'data-theme', 'data-bs-theme', 'data-color-scheme', 'style'] });
-            }
-        }
-    })();
-    </script>
-    <?php
-}
-add_action('wp_footer', 'SocialDigest\\social_digest_render_smart_theme_script');
 
 /**
  * Detect whether a third-party lightbox plugin is installed and active on the site.
@@ -798,111 +400,7 @@ function social_digest_enqueue_native_lightbox() {
 }
 add_action('wp_enqueue_scripts', 'SocialDigest\\social_digest_enqueue_native_lightbox', 25);
 
-/**
- * Gallery Image Link Harmonization & Native Lightbox Connector
- * - If a lightbox plugin like Responsive Lightbox is active, lets it handle the image links directly.
- * - Otherwise, connects gallery images to the native WordPress lightbox (or allows default image navigation).
- * - Upgrades unlinked gallery images from legacy digest posts to standard gallery links.
- * - ZERO custom modal markup, ZERO custom overlay.
- */
-function social_digest_render_gallery_lightbox_script() {
-    $opts = get_option('social_digest_options', []);
-    $action = $opts['gallery_click_action'] ?? 'lightbox';
-    if ($action !== 'lightbox') {
-        return;
-    }
-    ?>
-    <script id="social-digest-gallery-lightbox">
-    (function() {
-        function setupGalleryImages() {
-            // Upgrade any unlinked gallery images in legacy posts so lightbox plugins or native fallback can inspect them
-            var posts = document.querySelectorAll('.social-post');
-            posts.forEach(function(post, pIdx) {
-                var imgs = post.querySelectorAll('.social-embed-images img, .social-embed-media img');
-                if (!imgs.length) return;
 
-                var autoGroup = 'lightbox-gallery-auto-' + pIdx;
-                imgs.forEach(function(img) {
-                    var parentAnchor = img.closest('a');
-                    var alt = img.getAttribute('alt') || '';
-                    if (parentAnchor) {
-                        if (!parentAnchor.getAttribute('data-rel')) {
-                            parentAnchor.setAttribute('data-rel', autoGroup);
-                            parentAnchor.setAttribute('rel', autoGroup);
-                            parentAnchor.classList.add('social-lightbox-trigger', 'rl-gallery-link');
-                            parentAnchor.setAttribute('data-rl_title', alt);
-                            parentAnchor.setAttribute('data-rl_caption', alt);
-                        }
-                    } else {
-                        var wrap = document.createElement('a');
-                        wrap.className = 'social-lightbox-trigger rl-gallery-link';
-                        wrap.setAttribute('data-rel', autoGroup);
-                        wrap.setAttribute('rel', autoGroup);
-                        wrap.setAttribute('title', alt || 'View image');
-                        wrap.setAttribute('data-rl_title', alt);
-                        wrap.setAttribute('data-rl_caption', alt);
-                        var bestSrc = img.currentSrc || img.src || '';
-                        var srcset = img.getAttribute('srcset');
-                        if (srcset) {
-                            var parts = srcset.split(',');
-                            var maxW = 0;
-                            parts.forEach(function(part) {
-                                var pair = part.trim().split(/\s+/);
-                                if (pair.length >= 2) {
-                                    var w = parseInt(pair[1], 10);
-                                    if (w > maxW) {
-                                        maxW = w;
-                                        bestSrc = pair[0];
-                                    }
-                                }
-                            });
-                        }
-                        wrap.href = bestSrc;
-                        wrap.style.cssText = 'display:block; width:100%; height:100%; text-decoration:none; cursor:zoom-in;';
-                        if (img.parentNode) {
-                            img.parentNode.insertBefore(wrap, img);
-                            wrap.appendChild(img);
-                        }
-                    }
-                });
-            });
-
-            // If Responsive Lightbox is active, trigger its doResponsiveLightbox event to ensure
-            // dynamically discovered or legacy anchors are bound to the site-wide effect
-            if (window.jQuery && window.rlArgs) {
-                try {
-                    window.jQuery(document).trigger({
-                        type: 'doResponsiveLightbox',
-                        script: window.rlArgs.script,
-                        selector: window.rlArgs.selector || 'lightbox',
-                        args: window.rlArgs
-                    });
-                    if (window.rlArgs.customEvents) {
-                        window.jQuery(document).trigger(window.rlArgs.customEvents);
-                    }
-                } catch(e) {}
-            }
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', setupGalleryImages);
-        } else {
-            setupGalleryImages();
-        }
-        window.addEventListener('load', setupGalleryImages);
-        setTimeout(setupGalleryImages, 250);
-    })();
-    </script>
-    <?php
-}
-add_action('wp_footer', 'SocialDigest\\social_digest_render_gallery_lightbox_script');
-add_action('admin_footer', function() {
-    $screen = function_exists('get_current_screen') ? get_current_screen() : null;
-    if ($screen && strpos($screen->id, 'social-digest') !== false) {
-        social_digest_render_smart_theme_script();
-        social_digest_render_smart_deep_links_script();
-    }
-});
 
 // ==========================================
 // 4. CORE MODULE LOADERS
@@ -911,6 +409,9 @@ add_action('admin_footer', function() {
 $includes_path = SOCIAL_DIGEST_PATH . 'includes/';
 $module_files  = [
     'helpers'      => $includes_path . 'helpers.php',
+    'cards'        => $includes_path . 'cards.php',
+    'tags'         => $includes_path . 'tags.php',
+    'media'        => $includes_path . 'media.php',
     'api-clients'  => $includes_path . 'api-clients.php',
     'feed-builder' => $includes_path . 'feed-builder.php',
     'admin'        => $includes_path . 'admin.php',

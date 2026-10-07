@@ -1737,26 +1737,89 @@ function social_render_settings_page() {
                         <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
                     </div>
                     <div class="inside">
-                        <p style="margin-top:0">Fetch a preview of what the next digest will contain. Exclude articles, pin a lead story, add commentary, or temporarily override framing before publishing.</p>
-                        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                            <button class="button button-primary" name="sd53_fetch" value="1"<?php echo $fetch_confirm_attr; ?>>Fetch / Refresh Next Run</button>
-                            <button class="button" name="sd53_save" value="1">Save Next-Run Changes</button>
-                            <button class="button" name="sd53_reset" value="1" onclick="return confirm('Discard all changes?')">Reset Next Run</button>
-                            <button class="button" name="sd53_save_draft" value="1" onclick="return confirm('Save this staged digest as a WordPress Draft post?')"><span class="dashicons dashicons-edit" style="vertical-align:text-bottom; margin-right:2px; font-size:16px;"></span> Save as Draft</button>
-                            
-                            <div style="display:inline-flex; align-items:center; gap:6px; background:#f0f6fc; padding:3px 10px; border-radius:4px; border:1px solid #c8d8ec;">
-                                <span class="dashicons dashicons-calendar-alt" style="color:#2271b1; font-size:16px; width:16px; height:16px;"></span>
-                                <label for="sd53_schedule_datetime" style="font-size:12px; font-weight:600; color:#1d2327;">Schedule for:</label>
-                                <?php 
-                                $default_sched_val = !empty($state['schedule_datetime']) 
-                                    ? $state['schedule_datetime'] 
-                                    : wp_date('Y-m-d\TH:i', time() + 3600, $site_tz); 
-                                ?>
-                                <input type="datetime-local" id="sd53_schedule_datetime" name="sd53_schedule_datetime" style="font-size:12px; padding:2px 6px; height:28px;" value="<?php echo esc_attr($default_sched_val); ?>" />
-                                <button class="button" name="sd53_schedule" value="1" onclick="return confirm('Schedule this digest for future publication at the selected date and time?');" style="color:#2271b1; font-weight:600;"><span class="dashicons dashicons-clock" style="vertical-align:text-bottom; margin-right:2px; font-size:15px;"></span> Schedule Post</button>
+                        <p style="margin-top:0; color:#50575e; font-size:13px;">Fetch a preview of what the next digest will contain. Exclude articles, pin a lead story, add commentary, or temporarily override framing before publishing.</p>
+                        
+                        <!-- STAGING & WORKBENCH ACTIONS -->
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px;">
+                            <button class="button button-primary" name="sd53_fetch" value="1"<?php echo $fetch_confirm_attr; ?>>
+                                <span class="dashicons dashicons-update" style="vertical-align:text-bottom; margin-right:3px;"></span> Fetch / Refresh Next Run
+                            </button>
+                            <button class="button" name="sd53_save" value="1">
+                                <span class="dashicons dashicons-saved" style="vertical-align:text-bottom; margin-right:3px;"></span> Save Next-Run Changes
+                            </button>
+                            <button class="button" name="sd53_reset" value="1" onclick="return confirm('Discard all changes?')">
+                                <span class="dashicons dashicons-trash" style="vertical-align:text-bottom; margin-right:3px;"></span> Reset Next Run
+                            </button>
+                        </div>
+
+                        <!-- WORDPRESS PUBLICATION ACTIONS -->
+                        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; padding:12px 14px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:6px;">
+                                <div style="display:flex; align-items:center; gap:6px;">
+                                    <span class="dashicons dashicons-admin-post" style="color:#2271b1; font-size:16px; width:16px; height:16px;"></span>
+                                    <span style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#334155;">WordPress Post Publication</span>
+                                </div>
+                                <span style="font-size:11px; color:#64748b;">Convert current staged run into a WordPress post</span>
                             </div>
 
-                            <button class="button button-primary" name="sd53_publish" value="1" onclick="return confirm('Publish this digest immediately?')">Publish Next Run</button>
+                            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                                <!-- ACTION 1: SAVE DRAFT -->
+                                <button class="button" name="sd53_save_draft" value="1" onclick="return confirm('Save this staged digest as a WordPress Draft post?')" style="height:32px; display:inline-flex; align-items:center;">
+                                    <span class="dashicons dashicons-edit" style="vertical-align:middle; margin-right:4px; font-size:16px;"></span> Save as Draft
+                                </button>
+
+                                <!-- ACTION 2: SCHEDULE (POPOVER) -->
+                                <div style="position:relative; display:inline-block;">
+                                    <button type="button" class="button" id="sd_schedule_toggle_btn" onclick="sdToggleSchedulePopover(event)" aria-expanded="false" style="height:32px; display:inline-flex; align-items:center; gap:4px;">
+                                        <span class="dashicons dashicons-calendar-alt" style="vertical-align:middle; font-size:16px; width:16px; height:16px;"></span>
+                                        <span>Schedule for Later</span>
+                                        <span class="dashicons dashicons-arrow-down-alt2" id="sd_schedule_caret" style="font-size:11px; width:11px; height:11px; margin-left:2px; vertical-align:middle;"></span>
+                                    </button>
+
+                                    <!-- SCHEDULE POPOVER FLYOUT -->
+                                    <div id="sd_schedule_popover" style="display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:1000; background:#fff; border:1px solid #c3c4c7; box-shadow:0 8px 24px rgba(0,0,0,0.15); border-radius:6px; padding:14px; width:310px; max-width:calc(100vw - 40px); box-sizing:border-box;">
+                                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
+                                            <span style="font-weight:700; font-size:13px; color:#1e293b; display:flex; align-items:center; gap:6px;">
+                                                <span class="dashicons dashicons-clock" style="color:#2271b1; font-size:16px; width:16px; height:16px;"></span>
+                                                Schedule Publication
+                                            </span>
+                                            <button type="button" onclick="sdCloseSchedulePopover()" style="border:none; background:none; cursor:pointer; color:#94a3b8; font-size:18px; line-height:1; padding:0 4px;" title="Close">&times;</button>
+                                        </div>
+
+                                        <div style="font-size:11px; color:#475569; margin-bottom:10px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:4px; padding:6px 8px; line-height:1.4;">
+                                            <strong>Site Timezone:</strong> <?php echo esc_html($site_tz->getName()); ?> (<?php echo esc_html(wp_date('T, g:i A', time(), $site_tz)); ?>)
+                                        </div>
+
+                                        <div style="margin-bottom:10px;">
+                                            <label for="sd53_schedule_datetime" style="display:block; font-size:12px; font-weight:600; color:#334155; margin-bottom:4px;">Date &amp; Time:</label>
+                                            <?php 
+                                            $default_sched_val = !empty($state['schedule_datetime']) 
+                                                ? $state['schedule_datetime'] 
+                                                : wp_date('Y-m-d\TH:i', time() + 3600, $site_tz); 
+                                            ?>
+                                            <input type="datetime-local" id="sd53_schedule_datetime" name="sd53_schedule_datetime" value="<?php echo esc_attr($default_sched_val); ?>" style="width:100%; font-size:13px; padding:5px 8px; border:1px solid #8c8f94; border-radius:4px; box-sizing:border-box;" />
+                                        </div>
+
+                                        <div style="display:flex; gap:6px; margin-bottom:12px;">
+                                            <button type="button" class="button button-small" onclick="sdSetScheduleOffset(1)" style="flex:1; text-align:center; font-size:11px;">+1 Hour</button>
+                                            <button type="button" class="button button-small" onclick="sdSetScheduleTomorrowMorning()" style="flex:1; text-align:center; font-size:11px;">Tomorrow 9am</button>
+                                        </div>
+
+                                        <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center; border-top:1px solid #e2e8f0; padding-top:10px;">
+                                            <button type="button" class="button" onclick="sdCloseSchedulePopover()">Cancel</button>
+                                            <button type="submit" class="button button-primary" name="sd53_schedule" value="1" onclick="return confirm('Schedule this digest for future publication at the selected date and time?');" style="display:inline-flex; align-items:center; gap:4px;">
+                                                <span class="dashicons dashicons-clock" style="font-size:14px; width:14px; height:14px; vertical-align:middle;"></span>
+                                                Confirm &amp; Schedule
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ACTION 3: PUBLISH IMMEDIATELY -->
+                                <button class="button button-primary" name="sd53_publish" value="1" onclick="return confirm('Publish this digest immediately?')" style="height:32px; display:inline-flex; align-items:center;">
+                                    <span class="dashicons dashicons-cloud-upload" style="vertical-align:middle; margin-right:4px; font-size:16px;"></span> Publish Immediately
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2106,7 +2169,69 @@ function social_render_settings_page() {
         if (mastoRow) mastoRow.style.display = (mode === 'mastodon' || mode === 'both') ? 'table-row' : 'none';
     }
 
+    function sdToggleSchedulePopover(e) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        var popover = document.getElementById('sd_schedule_popover');
+        var btn = document.getElementById('sd_schedule_toggle_btn');
+        if (!popover || !btn) return;
+        var isVisible = (popover.style.display !== 'none');
+        if (isVisible) {
+            sdCloseSchedulePopover();
+        } else {
+            popover.style.display = 'block';
+            btn.setAttribute('aria-expanded', 'true');
+        }
+    }
+
+    function sdCloseSchedulePopover() {
+        var popover = document.getElementById('sd_schedule_popover');
+        var btn = document.getElementById('sd_schedule_toggle_btn');
+        if (popover) popover.style.display = 'none';
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
+
+    function sdPadZero(n) {
+        return (n < 10 ? '0' : '') + n;
+    }
+
+    function sdFormatDateLocal(d) {
+        return d.getFullYear() + '-' +
+            sdPadZero(d.getMonth() + 1) + '-' +
+            sdPadZero(d.getDate()) + 'T' +
+            sdPadZero(d.getHours()) + ':' +
+            sdPadZero(d.getMinutes());
+    }
+
+    function sdSetScheduleOffset(hours) {
+        var d = new Date();
+        d.setHours(d.getHours() + hours);
+        var input = document.getElementById('sd53_schedule_datetime');
+        if (input) input.value = sdFormatDateLocal(d);
+    }
+
+    function sdSetScheduleTomorrowMorning() {
+        var d = new Date();
+        d.setDate(d.getDate() + 1);
+        d.setHours(9, 0, 0, 0);
+        var input = document.getElementById('sd53_schedule_datetime');
+        if (input) input.value = sdFormatDateLocal(d);
+    }
+
     jQuery(document).ready(function($) {
+        // Outside-click and Escape handlers for schedule popover
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#sd_schedule_popover, #sd_schedule_toggle_btn').length) {
+                sdCloseSchedulePopover();
+            }
+        });
+        $(document).on('keydown', function(e) {
+            if (e.key === 'Escape' || e.keyCode === 27) {
+                sdCloseSchedulePopover();
+            }
+        });
         var pageKey = 'sd_postbox_' + ($('#social_settings_sortable').length ? 'settings' : 'workbench');
 
         // Restore saved closed/expanded states from localStorage

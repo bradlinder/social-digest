@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.17
+Stable tag: 5.8.19
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,19 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.19 =
+* WordPress Publication Action Bar Harmonization & Interactive Scheduling Popover:
+  1. Harmonized Post Creation Toolbar: Cleanly separated staging actions (Fetch, Save Staged Changes, Discard/Reset) from actual WordPress publication actions (Save as Draft, Schedule for Later, Publish Immediately) into a dedicated, visually unified action container.
+  2. Interactive Scheduling Popover: Replaced the permanently visible inline datetime picker with a clean, toggleable popover flyout. Displays active WordPress site timezone, date/time picker, quick-offset shortcuts (+1 Hour, Tomorrow 9am), explicit confirmation, and automatic click-away/Escape dismissal.
+  3. Consistent Button Weights & Visual Alignment: Standardized button heights, alignment, and dashicons across all three publication actions, eliminating awkward wrapping and visual clutter.
+
+= 5.8.18 =
+* Architectural Modularization, Dedicated Domain Submodules & Frontend Asset Decoupling:
+  1. Helper Utilities Domain Decomposition: Split the monolithic `helpers.php` (previously ~1,700 lines) into dedicated, single-responsibility submodules: `cards.php` (OpenGraph scraping and link card builders), `tags.php` (custom title override rules, camel-case splitting, frequency weighting, and tag ranking), and `media.php` (image sideloading, MIME validation, srcset generation, and duplicate avatar cleanup), reducing `helpers.php` to a clean, focused general utility module.
+  2. Frontend Asset Extraction & Cache-Busting Enqueuing: Decoupled ~500 lines of inline styles and scripts from `social-digest.php` into static, dedicated asset files: `assets/css/embed.css` (native card styling, responsive layout, and dark mode rules), `assets/js/smart-theme.js` (dynamic theme luminance and theme change adapter), `assets/js/deep-links.js` (mobile app deep-linking), and `assets/js/gallery-lightbox.js` (gallery link harmonization). All assets are now enqueued via standard `wp_enqueue_style` and `wp_enqueue_script` hooks with automatic version-based cache busting.
+  3. Dynamic AST Syntax Verification: Upgraded `scripts/verify-all.cjs` to dynamically discover and validate all PHP files in root and `includes/`, guaranteeing zero AST syntax errors across all existing and new submodules.
+  4. Streamlined Preview Hub & Automatic Changelog Parser: Replaced ~1,000 lines of manually duplicated changelog arrays in `src/changelogData.ts` with an automated runtime parser that extracts release history directly from `readme.txt`, ensuring 100% sync fidelity and saving tokens on every future point release.
 
 = 5.8.17 =
 * Scheduled Publishing from Actions & Preview & Drag-and-Drop Manual Post Reordering:

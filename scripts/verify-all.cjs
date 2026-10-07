@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const phpParser = require('php-parser');
 
 const parser = new phpParser.Engine({
@@ -6,13 +7,31 @@ const parser = new phpParser.Engine({
   ast: { withPositions: true }
 });
 
-const files = [
-  'social-digest.php',
-  'includes/helpers.php',
-  'includes/api-clients.php',
-  'includes/feed-builder.php',
-  'includes/admin.php'
-];
+function findPhpFiles(dir) {
+  let results = [];
+  if (!fs.existsSync(dir)) return results;
+  const list = fs.readdirSync(dir);
+  for (const item of list) {
+    if (item.startsWith('.') || item === 'node_modules' || item === 'vendor') continue;
+    const fullPath = path.join(dir, item);
+    const stat = fs.statSync(fullPath);
+    if (stat.isDirectory()) {
+      results = results.concat(findPhpFiles(fullPath));
+    } else if (item.endsWith('.php') && !item.endsWith('.bak')) {
+      results.push(fullPath);
+    }
+  }
+  return results;
+}
+
+const files = [];
+if (fs.existsSync('social-digest.php')) {
+  files.push('social-digest.php');
+}
+files.push(...findPhpFiles('includes'));
+
+console.log(`Discovered ${files.length} PHP file(s) for AST verification:`);
+files.forEach(f => console.log(` - ${f}`));
 
 let allPassed = true;
 
@@ -30,5 +49,6 @@ for (const file of files) {
 if (!allPassed) {
   process.exit(1);
 } else {
-  console.log('All PHP files passed AST syntax validation with 0 errors.');
+  console.log(`All ${files.length} PHP files passed AST syntax validation with 0 errors.`);
 }
+

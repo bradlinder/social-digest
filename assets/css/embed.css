@@ -1,0 +1,265 @@
+/* =========================================================================
+   Social Digest Native Card Base Styling (Light Mode Default)
+   ========================================================================= */
+div.social-post.social-card {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    max-width: 600px !important;
+    box-sizing: border-box !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: none;
+    color: #1e293b;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+div.social-post.social-card a {
+    color: #0284c7;
+    text-decoration: none;
+    transition: opacity 0.15s ease;
+}
+div.social-post.social-card a:hover {
+    opacity: 0.85;
+    text-decoration: underline;
+}
+div.social-post .social-avatar {
+    border-radius: 50%;
+    object-fit: cover;
+}
+div.social-post .social-follow-link:hover {
+    text-decoration: underline !important;
+    opacity: 0.85;
+}
+div.social-post .social-badge:hover {
+    text-decoration: none !important;
+    filter: brightness(0.96);
+}
+div.social-post .social-link-card {
+    display: block !important;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 12px 0;
+    max-width: 500px;
+    background: #f8fafc;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    text-decoration: none !important;
+    color: inherit !important;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+div.social-post .social-link-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+    text-decoration: none !important;
+}
+div.social-post .social-link-card-body {
+    display: block !important;
+    padding: 10px 14px;
+}
+div.social-post .social-link-card-title {
+    display: block !important;
+    font-weight: 700 !important;
+    font-size: 14px !important;
+    margin-bottom: 4px;
+    color: #0f172a;
+    line-height: 1.35;
+    transition: color 0.15s ease;
+}
+div.social-post .social-link-card:hover .social-link-card-title {
+    text-decoration: underline !important;
+    color: #0284c7;
+}
+div.social-post .social-link-card-desc {
+    display: block !important;
+    font-weight: 400 !important;
+    font-size: 12.5px !important;
+    color: #475569;
+    line-height: 1.45;
+    margin-bottom: 6px;
+}
+div.social-post .social-link-card-domain {
+    display: flex !important;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px !important;
+    color: #64748b;
+    font-weight: 400 !important;
+    margin-top: 4px;
+}
+
+/* Lightbox Image Hover & Triggers */
+div.social-post .social-lightbox-trigger {
+    display: inline-block;
+    cursor: zoom-in;
+    transition: opacity 0.15s ease, filter 0.15s ease;
+}
+div.social-post .social-lightbox-trigger:hover {
+    opacity: 0.92;
+    filter: brightness(1.04);
+}
+@media (max-width: 480px) {
+    div.social-post .social-card-footer {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+}
+
+/* =========================================================================
+   Dark Mode Styles: High-contrast pure white typography & theme matching
+   ========================================================================= */
+div.social-post.social-card.is-dark,
+div.social-post.social-card[data-social-theme="dark"],
+.dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]),
+.dark-theme div.social-post.social-card:not(.is-light):not([data-social-theme="light"]),
+.dark-mode div.social-post.social-card:not(.is-light):not([data-social-theme="light"]),
+body.dark-mode div.social-post.social-card:not(.is-light):not([data-social-theme="light"]),
+[data-theme="dark"] div.social-post.social-card:not(.is-light):not([data-social-theme="light"]),
+[data-bs-theme="dark"] div.social-post.social-card:not(.is-light):not([data-social-theme="light"]),
+[data-color-scheme="dark"] div.social-post.social-card:not(.is-light):not([data-social-theme="light"]),
+.is-dark-theme div.social-post.social-card:not(.is-light):not([data-social-theme="light"]),
+.theme-dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]),
+.night-mode div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) {
+    background: #0f172a !important;
+    border: 1px solid #334155 !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+}
+
+/* Body & Content Text in Dark Mode (Crisp pure white #ffffff) */
+div.social-post.social-card.is-dark .social-card-body,
+div.social-post.social-card.is-dark .social-card-body p,
+div.social-post.social-card[data-social-theme="dark"] .social-card-body,
+div.social-post.social-card[data-social-theme="dark"] .social-card-body p,
+.dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body,
+.dark-theme div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body,
+.dark-mode div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body,
+[data-theme="dark"] div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body,
+[data-bs-theme="dark"] div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body {
+    color: #ffffff !important;
+}
+
+/* Author Name in Dark Mode (Pure white #ffffff) */
+div.social-post.social-card.is-dark .social-author-name,
+div.social-post.social-card[data-social-theme="dark"] .social-author-name,
+.dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-name,
+.dark-theme div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-name,
+.dark-mode div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-name,
+[data-theme="dark"] div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-name,
+[data-bs-theme="dark"] div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-name {
+    color: #ffffff !important;
+}
+
+/* Author Handles, Timestamps & Footer Metadata in Dark Mode (High-contrast slate-200 #e2e8f0) */
+div.social-post.social-card.is-dark .social-author-handles,
+div.social-post.social-card.is-dark .social-author-handles a,
+div.social-post.social-card.is-dark .social-identity a,
+div.social-post.social-card.is-dark .social-timestamp,
+div.social-post.social-card.is-dark .social-card-footer,
+div.social-post.social-card.is-dark .social-identity-sep,
+div.social-post.social-card[data-social-theme="dark"] .social-author-handles,
+div.social-post.social-card[data-social-theme="dark"] .social-author-handles a,
+div.social-post.social-card[data-social-theme="dark"] .social-identity a,
+div.social-post.social-card[data-social-theme="dark"] .social-timestamp,
+div.social-post.social-card[data-social-theme="dark"] .social-card-footer,
+div.social-post.social-card[data-social-theme="dark"] .social-identity-sep,
+.dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-handles,
+.dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-author-handles a,
+.dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-identity a,
+.dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-timestamp,
+.dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-footer,
+.dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-identity-sep {
+    color: #e2e8f0 !important;
+}
+
+/* Links in Dark Mode (Vibrant sky-blue #38bdf8) */
+div.social-post.social-card.is-dark a,
+div.social-post.social-card[data-social-theme="dark"] a,
+div.social-post.social-card.is-dark .social-card-body a,
+div.social-post.social-card[data-social-theme="dark"] .social-card-body a,
+.dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) a,
+.dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-body a {
+    color: #38bdf8 !important;
+}
+
+/* Borders & Headers in Dark Mode */
+div.social-post.social-card.is-dark .social-card-header,
+div.social-post.social-card[data-social-theme="dark"] .social-card-header,
+div.social-post.social-card.is-dark .social-card-footer,
+div.social-post.social-card[data-social-theme="dark"] .social-card-footer,
+.dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-header,
+.dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-card-footer {
+    border-color: #334155 !important;
+}
+
+/* Nested Link Preview Cards in Dark Mode */
+div.social-post.social-card.is-dark .social-link-card,
+div.social-post.social-card[data-social-theme="dark"] .social-link-card,
+.dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-link-card {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+}
+div.social-post.social-card.is-dark .social-link-card:hover,
+div.social-post.social-card[data-social-theme="dark"] .social-link-card:hover,
+.dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-link-card:hover {
+    border-color: #475569 !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+}
+div.social-post.social-card.is-dark .social-link-card .social-link-card-domain,
+div.social-post.social-card[data-social-theme="dark"] .social-link-card .social-link-card-domain {
+    color: #cbd5e1 !important;
+}
+div.social-post.social-card.is-dark .social-link-card .social-link-card-title,
+div.social-post.social-card[data-social-theme="dark"] .social-link-card .social-link-card-title {
+    color: #38bdf8 !important;
+}
+div.social-post.social-card.is-dark .social-link-card:hover .social-link-card-title,
+div.social-post.social-card[data-social-theme="dark"] .social-link-card:hover .social-link-card-title {
+    text-decoration: underline !important;
+    color: #7dd3fc !important;
+}
+div.social-post.social-card.is-dark .social-link-card .social-link-card-desc,
+div.social-post.social-card[data-social-theme="dark"] .social-link-card .social-link-card-desc {
+    color: #ffffff !important;
+}
+
+/* Thread Replies in Dark Mode */
+div.social-post.social-card.is-dark .social-thread-collapse,
+div.social-post.social-card[data-social-theme="dark"] .social-thread-collapse,
+.dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-thread-collapse {
+    border-top-color: #334155 !important;
+}
+div.social-post.social-card.is-dark .social-thread-replies,
+div.social-post.social-card[data-social-theme="dark"] .social-thread-replies,
+.dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-thread-replies {
+    border-left-color: #38bdf8 !important;
+}
+div.social-post.social-card.is-dark .social-thread-reply-item,
+div.social-post.social-card[data-social-theme="dark"] .social-thread-reply-item,
+.dark div.social-post.social-card:not(.is-light):not([data-social-theme="light"]) .social-thread-reply-item {
+    color: #ffffff !important;
+}
+
+/* Badges & Stat Pills in Dark Mode */
+div.social-post.social-card.is-dark .social-badge.bsky-badge,
+div.social-post.social-card[data-social-theme="dark"] .social-badge.bsky-badge {
+    background: #082f49 !important;
+    border-color: #0284c7 !important;
+    color: #7dd3fc !important;
+}
+div.social-post.social-card.is-dark .social-badge.masto-badge,
+div.social-post.social-card[data-social-theme="dark"] .social-badge.masto-badge {
+    background: #2e1065 !important;
+    border-color: #7e22ce !important;
+    color: #d8b4fe !important;
+}
+div.social-post.social-card.is-dark .social-stat-pill,
+div.social-post.social-card[data-social-theme="dark"] .social-stat-pill {
+    background: #1e293b !important;
+    color: #ffffff !important;
+    border: 1px solid #334155 !important;
+}

@@ -10,9 +10,16 @@ import { PLUGIN_META, CHANGELOG_DATA } from './changelogData';
 import socialDigestCode from '../social-digest.php?raw';
 import readmeTextCode from '../readme.txt?raw';
 import helpersCode from '../includes/helpers.php?raw';
+import cardsCode from '../includes/cards.php?raw';
+import tagsCode from '../includes/tags.php?raw';
+import mediaCode from '../includes/media.php?raw';
 import apiClientsCode from '../includes/api-clients.php?raw';
 import feedBuilderCode from '../includes/feed-builder.php?raw';
 import adminCode from '../includes/admin.php?raw';
+import embedCssCode from '../assets/css/embed.css?raw';
+import smartThemeJsCode from '../assets/js/smart-theme.js?raw';
+import deepLinksJsCode from '../assets/js/deep-links.js?raw';
+import galleryLightboxJsCode from '../assets/js/gallery-lightbox.js?raw';
 
 export default function App() {
   const [copiedZip, setCopiedZip] = useState(false);
@@ -29,8 +36,17 @@ export default function App() {
       // social-digest/
       //   ├── social-digest.php
       //   ├── readme.txt
+      //   ├── assets/
+      //   │   ├── css/embed.css
+      //   │   └── js/
+      //   │       ├── smart-theme.js
+      //   │       ├── deep-links.js
+      //   │       └── gallery-lightbox.js
       //   └── includes/
       //       ├── helpers.php
+      //       ├── cards.php
+      //       ├── tags.php
+      //       ├── media.php
       //       ├── api-clients.php
       //       ├── feed-builder.php
       //       └── admin.php
@@ -42,9 +58,26 @@ export default function App() {
         const includesFolder = pluginFolder.folder('includes');
         if (includesFolder) {
           includesFolder.file('helpers.php', helpersCode);
+          includesFolder.file('cards.php', cardsCode);
+          includesFolder.file('tags.php', tagsCode);
+          includesFolder.file('media.php', mediaCode);
           includesFolder.file('api-clients.php', apiClientsCode);
           includesFolder.file('feed-builder.php', feedBuilderCode);
           includesFolder.file('admin.php', adminCode);
+        }
+
+        const assetsFolder = pluginFolder.folder('assets');
+        if (assetsFolder) {
+          const cssFolder = assetsFolder.folder('css');
+          if (cssFolder) {
+            cssFolder.file('embed.css', embedCssCode);
+          }
+          const jsFolder = assetsFolder.folder('js');
+          if (jsFolder) {
+            jsFolder.file('smart-theme.js', smartThemeJsCode);
+            jsFolder.file('deep-links.js', deepLinksJsCode);
+            jsFolder.file('gallery-lightbox.js', galleryLightboxJsCode);
+          }
         }
       }
 

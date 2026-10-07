@@ -3,14 +3,25 @@ Social Digest - Feature Roadmap & Release Status
 
 🎯 Immediate Recommended Next Steps (To Do List)
 ------------------------------------------------
-1. Fediverse Interaction Reply Syndication [Decentralization]:
-   - Optional webhook/ActivityPub hook to notify federated networks when a digest referencing their updates is published.
-2. Automated Weekly Archive Digest View [Publishing]:
-   - Dedicated weekly/monthly archive rollup view grouping published digests with summary metrics.
-3. Cron vs. Manual Staging Collision Warning [UX & Reliability]:
-   - Add warning banner when cron schedule is active while a manual draft is uncommitted.
-4. Refresh Confirmation Dialog [UX & Staging]:
-   - Add browser confirmation prompt before refreshing next-run workbench if unsaved notes or exclusions exist.
+1. Phase 4: Admin Panel Architecture & Tab Modularization [Refactoring & Modularization]:
+   - Decompose monolithic `includes/admin.php` (~2,230 lines) by moving static admin CSS and JS into dedicated asset files (`assets/css/admin.css`, `assets/js/admin.js`).
+   - Extract individual tab views into clean, isolated partials under `includes/admin/` (`tab-settings.php`, `tab-workbench.php`, `tab-display.php`, `tab-logs.php`, `tab-diagnostics.php`, `tab-tools.php`) with explicit parameters.
+2. Phase 5: Feed Builder & API Clients Decomposition [Refactoring & Modularization]:
+   - Decompose `includes/feed-builder.php` (~1,050 lines) into ingestion, candidate scoring/filtering, and digest HTML assembly modules.
+   - Decompose `includes/api-clients.php` (~760 lines) into dedicated Bluesky (AT Protocol) and Mastodon (REST) client modules with shared HTTP retry/backoff utilities.
+
+0. Release v5.8.19 Harmonized Publication Action Bar & Scheduling Popover (Completed in v5.8.19)
+-------------------------------------------------------------------------------------------------
+[x] Harmonized Post Creation Toolbar (v5.8.19): Cleanly separated staging actions (Fetch, Save Staged Changes, Discard/Reset) from WordPress post creation actions (Save as Draft, Schedule for Later, Publish Immediately) into a dedicated, visually unified action container.
+[x] Interactive Scheduling Popover (v5.8.19): Replaced the permanently visible inline datetime picker with a clean, toggleable popover flyout featuring WordPress site timezone context, quick presets (+1 Hour, Tomorrow 9am), explicit confirmation, and automatic click-away/Escape dismissal.
+[x] Consistent Button Hierarchy & Alignment (v5.8.19): Standardized button heights, alignment, and dashicons across all three publication actions, eliminating awkward wrapping and visual clutter.
+
+0. Release v5.8.18 Architectural Modularization, Domain Submodules & Asset Decoupling (Completed in v5.8.18)
+------------------------------------------------------------------------------------------------------------
+[x] Domain Decomposition of Helpers (v5.8.18): Separated `includes/helpers.php` into single-responsibility submodules: `cards.php` (OpenGraph scraping & cards), `tags.php` (custom overrides, title splitting, tag frequency weighting), and `media.php` (image sideloading, MIME validation, srcset generation, duplicate avatar cleanup).
+[x] Frontend Asset Decoupling & Enqueuing (v5.8.18): Moved ~500 lines of inline `<style>` and `<script>` tags from `social-digest.php` to static assets (`assets/css/embed.css`, `assets/js/smart-theme.js`, `assets/js/deep-links.js`, `assets/js/gallery-lightbox.js`), registering and enqueuing them with automatic version-based cache busting.
+[x] Dynamic AST Verification (v5.8.18): Upgraded `scripts/verify-all.cjs` to dynamically discover and validate all PHP files across `social-digest.php` and `includes/`, preventing silent syntax regressions.
+[x] Streamlined Preview Hub & Automatic Changelog (v5.8.18): Replaced ~1,000 lines of static changelog arrays with a runtime parser in `src/changelogData.ts`, eliminating manual duplicate updates and saving build tokens.
 
 0. Release v5.8.17 Scheduled Publishing & Drag-and-Drop Post Reordering (Completed in v5.8.17)
 -----------------------------------------------------------------------------------------
