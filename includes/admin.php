@@ -1852,8 +1852,7 @@ function social_render_settings_page() {
                                 </div>
 
                                 <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:6px 12px; margin-bottom:12px; font-size:12px; color:#475569; display:flex; align-items:center; gap:6px;">
-                                    <span class="dashicons dashicons-move" style="color:#0284c7;"></span>
-                                    <span><strong>Custom Story Sequencing:</strong> Drag and drop candidate cards by their handle (<code>#1</code>, <code>#2</code>, etc.) to reorder the story sequence. Your custom order is preserved when saving, scheduling, or publishing.</span>
+                                    <span><strong>Custom Story Sequencing:</strong> Change position numbers directly (recommended for mobile) or drag and drop cards by their handle on desktop. Your custom order is preserved when saving, scheduling, or publishing.</span>
                                 </div>
 
                                 <div id="sd53_candidates_list" class="sd53-candidates-sortable">
@@ -1868,10 +1867,19 @@ function social_render_settings_page() {
                                     <div class="sd53-item <?php echo $excluded ? 'excluded' : ''; ?> <?php echo $pinned ? 'is-pinned' : ''; ?> <?php echo $is_featured_thumb ? 'is-featured-thumb' : ''; ?>" id="sd53_<?php echo esc_attr($key); ?>" style="transition: all 0.2s ease;">
                                         <input type="hidden" name="candidate_order[]" value="<?php echo esc_attr($key); ?>" />
                                         <div class="sd53-item-head">
-                                            <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
-                                                <div class="sd53-drag-handle" title="Drag to reorder story sequence" style="cursor:grab; color:#64748b; display:inline-flex; align-items:center; padding:2px 6px; border-radius:3px; background:#e2e8f0; border:1px solid #cbd5e1; user-select:none;">
-                                                    <span class="dashicons dashicons-menu" style="font-size:15px; width:15px; height:15px; vertical-align:middle; color:#475569;"></span>
-                                                    <span style="font-size:11px; font-weight:700; margin-left:3px; color:#334155;">#<span class="sd53-order-num"><?php echo esc_html($i + 1); ?></span></span>
+                                            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                                                <div style="display:inline-flex; align-items:center; gap:6px;">
+                                                    <label style="font-size:11px; font-weight:700; color:#334155; display:inline-flex; align-items:center; gap:4px;">
+                                                        <span>Order:</span>
+                                                        <select class="sd53-order-select" data-card-key="<?php echo esc_attr($key); ?>" style="font-size:12px; font-weight:700; padding:1px 6px; height:26px; min-height:26px; line-height:24px; border-radius:3px; border:1px solid #cbd5e1; background:#ffffff; color:#1e293b; cursor:pointer;" title="Change story position in digest">
+                                                            <?php for ($pos = 1; $pos <= count($candidates); $pos++): ?>
+                                                                <option value="<?php echo esc_attr($pos); ?>" <?php selected($pos, $i + 1); ?>>#<?php echo esc_html($pos); ?></option>
+                                                            <?php endfor; ?>
+                                                        </select>
+                                                    </label>
+                                                    <div class="sd53-drag-handle" title="Drag to reorder on desktop" style="cursor:grab; color:#475569; display:inline-flex; align-items:center; padding:2px 7px; border-radius:3px; background:#e2e8f0; border:1px solid #cbd5e1; user-select:none; font-size:11px; font-weight:600;">
+                                                        <span>Drag #<span class="sd53-order-num"><?php echo esc_html($i + 1); ?></span></span>
+                                                    </div>
                                                 </div>
                                                 <label style="font-weight:600;"><input type="checkbox" name="candidate[<?php echo esc_attr($key); ?>][excluded]" value="1" <?php checked($excluded); ?> onchange="this.closest('.sd53-item').classList.toggle('excluded', this.checked)"> Exclude from next post</label>
                                                 <label style="color:#b45309; font-weight:700; cursor:pointer;">
@@ -2324,10 +2332,49 @@ function social_render_settings_page() {
         }
 
         function sdUpdateCandidateOrderNumbers() {
-            $('#sd53_candidates_list .sd53-item').each(function(index) {
-                $(this).find('.sd53-order-num').text(index + 1);
+            var $items = $('#sd53_candidates_list .sd53-item');
+            $items.each(function(index) {
+                var pos = index + 1;
+                $(this).find('.sd53-order-num').text(pos);
+                var $sel = $(this).find('.sd53-order-select');
+                if ($sel.length && parseInt($sel.val(), 10) !== pos) {
+                    $sel.val(pos);
+                }
             });
         }
+
+        // Mobile-friendly numeric position change listener
+        $(document).on('change', '.sd53-order-select', function() {
+            var $select = $(this);
+            var targetPos = parseInt($select.val(), 10);
+            var $card = $select.closest('.sd53-item');
+            var $container = $('#sd53_candidates_list');
+            var $allItems = $container.children('.sd53-item');
+            var currentPos = $allItems.index($card) + 1;
+
+            if (isNaN(targetPos) || targetPos === currentPos) {
+                return;
+            }
+
+            $card.detach();
+            var $remaining = $container.children('.sd53-item');
+
+            if (targetPos <= 1) {
+                $container.prepend($card);
+            } else if (targetPos > $remaining.length) {
+                $container.append($card);
+            } else {
+                $remaining.eq(targetPos - 2).after($card);
+            }
+
+            sdUpdateCandidateOrderNumbers();
+
+            // Subtle highlight feedback on moved card
+            $card.css('background-color', '#f0f9ff');
+            setTimeout(function() {
+                $card.css('background-color', '');
+            }, 600);
+        });
 
         // Real-time listener on Footer textarea
         $('#sd_workbench_footer_override').on('input change keyup', sdCheckFramingOverrideAutoState);

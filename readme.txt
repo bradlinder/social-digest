@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.22
+Stable tag: 5.8.23
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -15,12 +15,20 @@ Social Digest is a WordPress plugin that automates the aggregation and publicati
 
 == Changelog ==
 
+= 5.8.23 =
+* Mobile-Friendly Hybrid Story Sequencing (Numeric Position Selectors & Desktop Drag-and-Drop):
+  1. Mobile-Friendly Numeric Position Selectors: Added native order number dropdown selectors (#1, #2, etc.) to each candidate card header in the Next Run workbench, allowing mobile users on phones and tablets to instantly change story sequences via native device picker sheets without fighting page scrolling or dragging tall cards.
+  2. Cohesive Desktop Drag-and-Drop: Preserved jQuery UI Sortable for desktop mouse users with a dedicated, text-only grab handle (`Drag #1`).
+  3. Real-Time Bidirectional Synchronization: Selecting a new position immediately moves the card in the DOM and re-indexes all other card selectors and drag badges; conversely, dragging cards on desktop automatically synchronizes all numeric selector values.
+  4. Clean Text-Only UI Discipline: Eliminated icon and dashicon dependencies from candidate sequencing controls in strict adherence to the project's zero unsolicited icons rule.
+
 = 5.8.22 =
-* In-Flow Expandable Scheduling Drawer (Drop-Down Method):
-  1. Expandable Drop-Down Drawer: Replaced the absolute floating popover with an in-flow expandable drop-down drawer directly inside the Prepare Next Digest Run workbench box.
-  2. Immune to Element Obstruction: Because the drawer expands in normal document flow, the postbox naturally expands in height and pushes the Articles for Next Run box and all lower elements downward, making it physically impossible for any lower element to cover or obscure it.
-  3. Responsive Controls & Timezone Details: Features date/time picker, site timezone context, quick-offset buttons (+1 Hour, Tomorrow 9am), explicit confirmation, and cancel/close controls that wrap gracefully across mobile and desktop screens.
-  4. Clean State & Keyboard Dismissal: Toggles cleanly on the "Schedule for Later" button, auto-focuses the datetime input on open, and can be instantly dismissed via Cancel, Close, or the Escape key.
+* Stable Release - In-Flow Expandable Scheduling Drawer (Drop-Down Method):
+  1. Official Stable Release: Formally verified and designated as the official stable production release of Social Digest.
+  2. In-Flow Expandable Scheduling Drawer: Replaced the absolute floating popover with an in-flow expandable drop-down drawer directly inside the Prepare Next Digest Run workbench box.
+  3. Immune to Element Obstruction: Because the drawer expands in normal document flow, the postbox naturally expands in height and pushes the Articles for Next Run box and all lower elements downward, making it physically impossible for any lower element to cover or obscure it.
+  4. Responsive Controls & Timezone Details: Features date/time picker, site timezone context, quick-offset buttons (+1 Hour, Tomorrow 9am), explicit confirmation, and cancel/close controls that wrap gracefully across mobile and desktop screens.
+  5. Clean State & Keyboard Dismissal: Toggles cleanly on the "Schedule for Later" button, auto-focuses the datetime input on open, and can be instantly dismissed via Cancel, Close, or the Escape key.
 
 = 5.8.21 =
 * Scheduling Popover Stacking Context & Z-Index Fix:

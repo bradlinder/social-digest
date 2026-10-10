@@ -10,8 +10,16 @@ Social Digest - Feature Roadmap & Release Status
    - Decompose `includes/feed-builder.php` (~1,050 lines) into ingestion, candidate scoring/filtering, and digest HTML assembly modules.
    - Decompose `includes/api-clients.php` (~760 lines) into dedicated Bluesky (AT Protocol) and Mastodon (REST) client modules with shared HTTP retry/backoff utilities.
 
-0. Release v5.8.22 In-Flow Expandable Scheduling Drawer (Drop-Down Method) (Completed in v5.8.22)
----------------------------------------------------------------------------------------------------
+0. Release v5.8.23 Mobile-Friendly Hybrid Story Sequencing (Completed in v5.8.23)
+----------------------------------------------------------------------------------
+[x] Mobile-Friendly Position Selectors (v5.8.23): Added native order number dropdown selectors (#1, #2, etc.) to each candidate card header in the Next Run workbench, enabling instant reordering on mobile without fighting page scrolling or dragging tall cards.
+[x] Cohesive Desktop Drag-and-Drop (v5.8.23): Retained jQuery UI Sortable with a dedicated, text-only grab handle (`Drag #1`) for desktop mouse interaction.
+[x] Bidirectional DOM Synchronization (v5.8.23): Selecting a new position moves the card in the DOM and syncs all cards' selectors and drag badges; dragging cards on desktop automatically synchronizes all numeric selector values.
+[x] Clean Text-Only UI Discipline (v5.8.23): Removed dashicon dependencies from candidate sequencing controls in strict adherence to the project's zero unsolicited icons rule.
+
+0. Release v5.8.22 [Stable Production Release] In-Flow Expandable Scheduling Drawer (Drop-Down Method) (Completed in v5.8.22)
+---------------------------------------------------------------------------------------------------------------------------
+[x] Stable Release Designation (v5.8.22): Formally verified and designated as the official stable production release of Social Digest.
 [x] In-Flow Expandable Scheduling Drawer (v5.8.22): Replaced the absolute floating popover with an in-flow expandable drop-down drawer within `#social_wb_box_quick_actions`.
 [x] Immune to Element Obstruction (v5.8.22): Pushes lower postboxes (`Articles for Next Run`) downward in normal document layout, eliminating any possibility of overlapping, clipping, or obscured controls.
 [x] Responsive Controls & Keyboard Dismissal (v5.8.22): Clean layout with date/time picker, site timezone context, quick offsets (+1 Hour, Tomorrow 9am), cancel/close actions, and Escape key dismissal.

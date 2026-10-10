@@ -124,8 +124,8 @@ export default function App() {
           <div>
             <div className="flex items-center space-x-2">
               <h1 className="text-base font-bold tracking-tight text-white">{PLUGIN_META.name}</h1>
-              <span className="bg-blue-500/20 border border-blue-500/40 text-blue-400 text-xs px-2 py-0.5 rounded-full font-mono font-semibold">
-                v{PLUGIN_META.version}
+              <span className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs px-2.5 py-0.5 rounded-full font-mono font-semibold">
+                v{PLUGIN_META.version} (Stable)
               </span>
             </div>
             <p className="text-xs text-slate-400">Official WordPress Plugin Release &amp; Changelog Hub</p>
@@ -162,8 +162,8 @@ export default function App() {
               </div>
               <div className="text-2xl font-bold text-white font-mono flex items-center space-x-2 mt-1">
                 <span>v{PLUGIN_META.version}</span>
-                <span className="text-xs bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded font-sans font-normal">
-                  Production Ready
+                <span className="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded font-sans font-medium">
+                  Stable Release
                 </span>
               </div>
               <div className="mt-3 text-xs text-slate-400 space-y-1">
@@ -573,8 +573,8 @@ export default function App() {
                       v{entry.version}
                     </span>
                     {entry.isLatest && (
-                      <span className="bg-blue-600 text-white text-[11px] font-semibold px-2 py-0.5 rounded-full">
-                        Current Active
+                      <span className="bg-emerald-600 text-white text-[11px] font-semibold px-2 py-0.5 rounded-full">
+                        Stable Release
                       </span>
                     )}
                     {entry.isBeta && (
