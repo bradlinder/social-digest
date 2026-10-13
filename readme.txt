@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.26
+Stable tag: 5.8.28
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,17 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.28 =
+* Direct Admin Settings Form Submission & Complete options.php Bypass:
+  1. Direct Form Handler: Converted the settings form to post directly to `edit.php?page=social-digest-settings&tab=settings` with an explicit `social_digest_settings_nonce`, completely bypassing core `/wp-admin/options.php`.
+  2. Permanent Elimination of "Link Expired" Save Failures: Bypasses core WordPress `options.php` nonce verification failures and web-server firewall (ModSecurity) false positives on options.php, ensuring settings and custom glossary rules (`ONEXPLAYER=ONEXPLAYER`, `4K`, `TV`, etc.) are written directly to `social_digest_options` with instant confirmation.
+  3. Preserved Tab Context: Retains the active Settings tab upon save rather than redirecting away or reverting textarea rules.
+
+= 5.8.27 =
+* Defensive Nonce Validation & Graceful Session Expiration Recovery:
+  1. Graceful Nonce Fallbacks: Replaced hard-failing `check_admin_referer()` with defensive `wp_verify_nonce()` across all workbench action and avatar cleanup POST handlers.
+  2. Friendly Session Notices: If a security token expires due to idle sessions or cached forms, the plugin now catches the expiration and presents an informative notice on the workbench rather than triggering a WordPress core white-screen "The link you followed has expired." error.
 
 = 5.8.26 =
 * Glossary Overrides Engine Hardening & Save Retention Fix:

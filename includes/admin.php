@@ -122,31 +122,59 @@ add_action('admin_init', function() {
         ]
     ]);
 
-    // Workbench Form Handlers
-    if (!current_user_can('manage_options')) return;
-    if (empty($_GET['page']) || $_GET['page'] !== 'social-digest-settings') return;
-
-    if (isset($_POST['sd53_fetch']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
-        $result = social_fetch_workbench_candidates();
-        add_settings_error('sd53', 'fetch', $result['message'], !empty($result['success']) ? 'updated' : 'error');
+    // Direct Settings Form Handler (Eliminates core options.php "Link expired" errors)
+    if (isset($_POST['social_digest_options']) && isset($_POST['social_digest_settings_nonce'])) {
+        if (!wp_verify_nonce($_POST['social_digest_settings_nonce'], 'social_digest_settings_save')) {
+            add_settings_error('sd53', 'nonce', 'Your WordPress security session has expired. Please refresh the page and try again.', 'error');
+        } else {
+            $sanitized = social_sanitize_settings($_POST['social_digest_options']);
+            update_option('social_digest_options', $sanitized);
+            add_settings_error('sd53', 'settings_saved', 'Settings saved successfully!', 'updated');
+        }
     }
 
-    if (isset($_POST['sd53_cleanup_avatars']) && check_admin_referer('sd53_cleanup_avatars_action', 'sd53_cleanup_nonce')) {
+    // Defensive Nonce Verification for Workbench Actions
+    $workbench_actions = ['sd53_fetch', 'sd53_save', 'sd53_reset', 'sd53_publish', 'sd53_save_draft', 'sd53_schedule', 'sd53_manual_run', 'sd53_reset_cutoff', 'sd53_set_cutoff_now', 'sd53_set_cutoff_custom'];
+    $has_workbench_action = false;
+    foreach ($workbench_actions as $action_key) {
+        if (isset($_POST[$action_key])) {
+            $has_workbench_action = true;
+            break;
+        }
+    }
+
+    if ($has_workbench_action) {
+        if (!isset($_POST['sd53_nonce']) || !wp_verify_nonce($_POST['sd53_nonce'], 'sd53_workbench_action')) {
+            add_settings_error('sd53', 'nonce', 'Your WordPress security session has expired. Please refresh the page and try again.', 'error');
+            return;
+        }
+    }
+
+    if (isset($_POST['sd53_cleanup_avatars'])) {
+        if (!isset($_POST['sd53_cleanup_nonce']) || !wp_verify_nonce($_POST['sd53_cleanup_nonce'], 'sd53_cleanup_avatars_action')) {
+            add_settings_error('sd53', 'cleanup_nonce', 'Your WordPress security session has expired. Please refresh the page and try again.', 'error');
+            return;
+        }
         $result = social_cleanup_duplicate_avatars();
         add_settings_error('sd53', 'cleanup_avatars', $result['message'], !empty($result['success']) ? 'updated' : 'notice');
     }
 
-    if (isset($_POST['sd53_save']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+    if (isset($_POST['sd53_fetch'])) {
+        $result = social_fetch_workbench_candidates();
+        add_settings_error('sd53', 'fetch', $result['message'], !empty($result['success']) ? 'updated' : 'error');
+    }
+
+    if (isset($_POST['sd53_save'])) {
         social_save_workbench_state(social_sanitize_next_run($_POST));
         add_settings_error('sd53', 'save', 'Next-run editorial changes saved.', 'updated');
     }
 
-    if (isset($_POST['sd53_reset']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+    if (isset($_POST['sd53_reset'])) {
         social_clear_workbench_state();
         add_settings_error('sd53', 'reset', 'Next-run workbench reset.', 'updated');
     }
 
-    if (isset($_POST['sd53_publish']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+    if (isset($_POST['sd53_publish'])) {
         $state = social_sanitize_next_run($_POST);
         social_save_workbench_state($state);
         $result = social_publish_workbench_run($state, 'publish');
@@ -160,7 +188,7 @@ add_action('admin_init', function() {
         }
     }
 
-    if (isset($_POST['sd53_save_draft']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+    if (isset($_POST['sd53_save_draft'])) {
         $state = social_sanitize_next_run($_POST);
         social_save_workbench_state($state);
         $result = social_publish_workbench_run($state, 'draft');
@@ -174,7 +202,7 @@ add_action('admin_init', function() {
         }
     }
 
-    if (isset($_POST['sd53_schedule']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+    if (isset($_POST['sd53_schedule'])) {
         $state = social_sanitize_next_run($_POST);
         social_save_workbench_state($state);
 
@@ -204,7 +232,7 @@ add_action('admin_init', function() {
         }
     }
 
-    if (isset($_POST['sd53_manual_run']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+    if (isset($_POST['sd53_manual_run'])) {
         try {
             $result = social_run_digest_import(false);
         } catch (\Throwable $e) {
@@ -213,13 +241,13 @@ add_action('admin_init', function() {
         add_settings_error('sd53', 'manual', $result['message'] ?? 'Import failed.', !empty($result['success']) ? 'updated' : 'error');
     }
 
-    if (isset($_POST['sd53_reset_cutoff']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+    if (isset($_POST['sd53_reset_cutoff'])) {
         delete_option('bsky_last_digest_time');
         delete_option('masto_last_digest_time');
         add_settings_error('sd53', 'cutoff', 'Cutoff markers cleared for both networks.', 'updated');
     }
 
-    if (isset($_POST['sd53_set_cutoff_now']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+    if (isset($_POST['sd53_set_cutoff_now'])) {
         $now = time();
         update_option('bsky_last_digest_time', $now);
         update_option('masto_last_digest_time', $now);
@@ -227,7 +255,7 @@ add_action('admin_init', function() {
         add_settings_error('sd53', 'cutoff', 'Cutoff markers set to current time (' . esc_html(wp_date('Y-m-d H:i:s T', $now, $tz)) . '). No posts older than this moment will be used.', 'updated');
     }
 
-    if (isset($_POST['sd53_set_cutoff_custom']) && check_admin_referer('sd53_workbench_action', 'sd53_nonce')) {
+    if (isset($_POST['sd53_set_cutoff_custom'])) {
         $custom_dt = sanitize_text_field($_POST['sd53_custom_cutoff_datetime'] ?? '');
         if (!empty($custom_dt)) {
             $tz = wp_timezone();
@@ -606,7 +634,8 @@ function social_render_settings_page() {
         <?php settings_errors('sd53'); ?>
 
         <?php if ($active_tab === 'settings'): ?>
-            <form method="post" action="options.php">
+            <form method="post" action="<?php echo esc_url(admin_url('edit.php?page=social-digest-settings&tab=settings')); ?>">
+                <?php wp_nonce_field('social_digest_settings_save', 'social_digest_settings_nonce'); ?>
                 <?php settings_fields('social_digest_group'); ?>
 
                 <div style="background:#fff; border:1px solid #c3c4c7; padding:10px 14px; border-radius:4px; margin-bottom:15px; font-size:12px; color:#50575e; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
