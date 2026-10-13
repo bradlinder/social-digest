@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.23
+Stable tag: 5.8.25
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,18 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.25 =
+* Custom Glossary Substring Vocabulary Matching Pass & Baseline Testing State Maintained:
+  1. Maintained Unmodified Engine Defaults: Kept default baseline rules un-hardcoded so you can continue testing new plugin versions against original baseline hashtag formats as requested.
+  2. Custom Glossary Substring Matching Pass (Pass 1.5): Added intelligent sub-phrase matching to custom override rules. When custom glossary terms like `Apple TV`, `TV`, `4K`, `Apple`, or `ONEXPLAYER` are saved in settings, the engine dynamically recognizes those terms inside smushed compound hashtags (e.g. `#AppleTV4K`, `#AppleK`, `#Samsung4KTV`) and divides them cleanly at word boundaries.
+  3. Longest-Match Phrase Prioritization: Automatically prioritizes multi-word rules (`Apple TV`) ahead of single-word rules (`TV` or `Apple`) to guarantee exact casing and natural spacing.
+
+= 5.8.24 =
+* Option Sanitization Defense & Alphanumeric Acronym Engine Hardening:
+  1. Option Sanitization Defense: Hardened `social_sanitize_settings()` so custom tag title override rules are preserved defensively when omitted or unsubmitted in settings forms, preventing unintended overwrites.
+  2. Comma & Newline Resilient Deduplication: Enhanced `social_dedupe_override_rules()` to seamlessly handle comma-separated or multi-line custom rule inputs while deduplicating entries case-insensitively.
+  3. TV & Alphanumeric Acronym Protection: Added `TV` to the master uppercase acronym whitelist and protected alphanumeric terms (`4K`, `8K`, `2K`, `5G`, `4G`, `3D`) from premature letter-number boundary splitting so compound tags like `#AppleTV4K` format automatically into `Apple TV 4K`.
 
 = 5.8.23 =
 * Mobile-Friendly Hybrid Story Sequencing (Numeric Position Selectors & Desktop Drag-and-Drop):

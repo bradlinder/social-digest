@@ -76,7 +76,7 @@ function social_dedupe_override_rules($str) {
         return '';
     }
 
-    $lines = preg_split('/[\r\n]+/', trim((string)$str));
+    $lines = preg_split('/[\r\n,]+/', trim((string)$str));
     $clean_lines = [];
     $seen_keys = [];
 
@@ -94,8 +94,9 @@ function social_dedupe_override_rules($str) {
             $key = str_replace([' ', '_', '-'], '', ltrim(trim($k), '#'));
         }
 
-        if (!isset($seen_keys[$key])) {
-            $seen_keys[$key] = true;
+        $key_norm = mb_strtolower($key);
+        if (!isset($seen_keys[$key_norm])) {
+            $seen_keys[$key_norm] = true;
             $clean_lines[] = $trimmed;
         }
     }
@@ -164,6 +165,95 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
                     if ($k !== '' && mb_strtolower(str_replace([' ', '_', '-'], '', $t)) === mb_strtolower(str_replace([' ', '_', '-'], '', $k))) {
                         return $v;
                     }
+                }
+            }
+        }
+
+        // Pass 1.5: Vocabulary Substring Matching for Custom Glossary Terms (e.g. "Apple TV", "4K", "TV" inside smushed tags like #AppleTV4K, #Samsung4KTV, #AppleK)
+        $vocab_rules = [];
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '' || strpos($line, '#') === 0) continue;
+            $k = $line; $v = $line;
+            if (strpos($line, '=') !== false) {
+                list($rk, $rv) = explode('=', $line, 2);
+                $k = ltrim(trim($rk), '#');
+                $v = trim($rv);
+            } else {
+                $k = ltrim($line, '#');
+                $v = $line;
+            }
+            if (substr($k, -1) === '*') continue; // Skip wildcards in substring pass
+            $norm_key = mb_strtolower(str_replace([' ', '_', '-'], '', $k));
+            if ($norm_key !== '') {
+                $vocab_rules[] = [
+                    'key' => $norm_key,
+                    'val' => $v,
+                    'len' => mb_strlen($norm_key),
+                ];
+            }
+        }
+
+        if (!empty($vocab_rules)) {
+            // Sort by key length descending so longer multi-word phrases ("Apple TV") match before ("TV" or "Apple")
+            usort($vocab_rules, function($a, $b) {
+                return $b['len'] - $a['len'];
+            });
+
+            $t_no_space = str_replace([' ', '_', '-'], '', $t);
+            $t_lower_no_space = mb_strtolower($t_no_space);
+
+            $has_match = false;
+            foreach ($vocab_rules as $rule) {
+                if (strpos($t_lower_no_space, $rule['key']) !== false) {
+                    $has_match = true;
+                    break;
+                }
+            }
+
+            if ($has_match) {
+                $current_tag = $t_no_space;
+                foreach ($vocab_rules as $rule) {
+                    if ($current_tag === '') break;
+                    $norm_curr = mb_strtolower($current_tag);
+                    $pos = strpos($norm_curr, $rule['key']);
+                    if ($pos !== false) {
+                        $before = substr($current_tag, 0, $pos);
+                        $after = substr($current_tag, $pos + strlen($rule['key']));
+                        $segs = [];
+                        if ($before !== '') $segs[] = $before;
+                        $segs[] = ' ' . $rule['val'] . ' ';
+                        if ($after !== '') $segs[] = $after;
+                        $current_tag = implode('', $segs);
+                    }
+                }
+
+                $raw_tokens = array_filter(array_map('trim', explode(' ', $current_tag)));
+                $formatted_tokens = [];
+                $rule_words = [];
+                foreach ($vocab_rules as $rule) {
+                    foreach (array_filter(array_map('trim', explode(' ', $rule['val']))) as $rw) {
+                        $rule_words[mb_strtolower($rw)] = $rw;
+                    }
+                }
+
+                foreach ($raw_tokens as $tok) {
+                    $lower_tok = mb_strtolower($tok);
+                    if (isset($rule_words[$lower_tok])) {
+                        $formatted_tokens[] = $rule_words[$lower_tok];
+                    } else {
+                        // Apply CamelCase splitting for un-matched tokens
+                        $split_tok = preg_replace('/([a-z0-9])([A-Z])/u', '$1 $2', $tok);
+                        $sub_toks = explode(' ', $split_tok);
+                        foreach ($sub_toks as $st) {
+                            $st = trim($st);
+                            if ($st === '') continue;
+                            $formatted_tokens[] = mb_convert_case($st, MB_CASE_TITLE, "UTF-8");
+                        }
+                    }
+                }
+                if (!empty($formatted_tokens)) {
+                    return trim(implode(' ', $formatted_tokens));
                 }
             }
         }

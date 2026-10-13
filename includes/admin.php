@@ -365,8 +365,11 @@ function social_sanitize_settings($input) {
     $allowed_strategies = ['first', 'popularity', 'random'];
     $output['title_tag_selection_strategy'] = in_array($input['title_tag_selection_strategy'] ?? '', $allowed_strategies, true) ? $input['title_tag_selection_strategy'] : 'first';
 
-    $raw_overrides = $input['title_tag_custom_overrides'] ?? '';
-    $output['title_tag_custom_overrides'] = sanitize_textarea_field(social_dedupe_override_rules($raw_overrides));
+    if (isset($input['title_tag_custom_overrides'])) {
+        $output['title_tag_custom_overrides'] = sanitize_textarea_field(social_dedupe_override_rules($input['title_tag_custom_overrides']));
+    } else {
+        $output['title_tag_custom_overrides'] = $existing_opts['title_tag_custom_overrides'] ?? '';
+    }
 
     if (isset($input['overrides_snapshot'])) {
         $decoded = json_decode(stripslashes((string)$input['overrides_snapshot']), true);
