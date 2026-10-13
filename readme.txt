@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.28
+Stable tag: 5.8.29
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,13 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.29 =
+* Social Card & Parsing Hardening Bugfixes:
+  1. KSES HTML Whitelist: Expanded `wp_kses_allowed_html` filter to preserve `<details>`, `<summary>`, `<video>`, `data-nosnippet`, and lightbox data attributes in `wp_kses_post()`.
+  2. Workbench Auto-Refresh Fix: Corrected regex matching condition in `social_render_settings_page()` that previously caused Workbench overrides to re-fetch on page loads.
+  3. Keyword Extraction Fix: Added missing `$text` subject variable in `preg_match_all()` inside `social_extract_topic_keywords_from_posts()`.
+  4. Helper Utilities Hardening: Prevented trailing sentence punctuation from being included inside auto-linked URLs in `social_clean_body_text()`, and preserved `@mention` links when stripping trailing links in `social_clean_mastodon_html()`.
 
 = 5.8.28 =
 * Direct Admin Settings Form Submission & Complete options.php Bypass:

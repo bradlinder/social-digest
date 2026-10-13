@@ -3,7 +3,7 @@
  * Plugin Name: Social Digest
  * Plugin URI: https://github.com/BradLinder/social-digest
  * Description: Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, next-run workbench, dry-run simulation, stock media sideloading, local asset caching, and RSS-only syndication.
- * Version: 5.8.28
+ * Version: 5.8.29
  * Author: Brad Linder
  * Author URI: https://github.com/BradLinder
  * License: GPLv2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) exit;
 
 // Plugin constants
 if (!defined('SOCIAL_DIGEST_VERSION')) {
-    define('SOCIAL_DIGEST_VERSION', '5.8.28');
+    define('SOCIAL_DIGEST_VERSION', '5.8.29');
 }
 if (!defined('SOCIAL_DIGEST_FILE')) {
     define('SOCIAL_DIGEST_FILE', __FILE__);
@@ -42,6 +42,58 @@ add_filter('kses_allowed_protocols', function($protocols) {
     }
     return $protocols;
 });
+
+// Whitelist social card HTML elements and data attributes in wp_kses_post()
+add_filter('wp_kses_allowed_html', function($tags, $context) {
+    if ($context !== 'post' || !is_array($tags)) {
+        return $tags;
+    }
+
+    $tags['details'] = [
+        'class'          => true,
+        'style'          => true,
+        'open'           => true,
+        'data-nosnippet' => true,
+    ];
+    $tags['summary'] = [
+        'class' => true,
+        'style' => true,
+    ];
+    $tags['video'] = [
+        'src'         => true,
+        'poster'      => true,
+        'autoplay'    => true,
+        'loop'        => true,
+        'muted'       => true,
+        'playsinline' => true,
+        'controls'    => true,
+        'width'       => true,
+        'height'      => true,
+        'style'       => true,
+        'class'       => true,
+    ];
+
+    $extra_attrs = [
+        'data-nosnippet'   => true,
+        'data-app-url'     => true,
+        'data-post-url'    => true,
+        'data-primary-tag' => true,
+        'data-rel'         => true,
+        'data-title'       => true,
+        'data-rl_title'    => true,
+        'data-rl_caption'  => true,
+        'onclick'          => true,
+    ];
+
+    foreach (['div', 'span', 'section', 'figure', 'a'] as $el) {
+        if (!isset($tags[$el]) || !is_array($tags[$el])) {
+            $tags[$el] = [];
+        }
+        $tags[$el] = array_merge($tags[$el], $extra_attrs);
+    }
+
+    return $tags;
+}, 10, 2);
 
 // ==========================================
 // 1. UNINSTALLATION & LIFECYCLE HOOKS

@@ -56,6 +56,15 @@ function social_collapse_thread_posts($eligible, $opts) {
                         $found_parent = $p_idx;
                         break;
                     }
+                    if (!empty($threads[$p_idx])) {
+                        foreach ($threads[$p_idx] as $child_item) {
+                            $c_uri = $child_item['post_uri'] ?? '';
+                            if ($c_uri !== '' && ($c_uri === $parent_uri || $c_uri === $root_uri)) {
+                                $found_parent = $p_idx;
+                                break 2;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -391,7 +400,7 @@ function social_fetch_workbench_candidates() {
         if ($first_f) {
             $post_tags_list[] = [$first_f];
         }
-        foreach ($featured_post_tags as $f_t) {
+        foreach (array_slice($featured_post_tags, 0, $max_tags_per_post) as $f_t) {
             $all_imported_tags[] = $f_t;
         }
     }
@@ -403,8 +412,8 @@ function social_fetch_workbench_candidates() {
         }
         $valid_tags = social_dedupe_cased_tags(array_filter($item_raw_tags, function($t) { return mb_strlen($t) >= $min_tag_length; }));
 
-        // Include all hashtags from every post for WordPress tags
-        foreach ($valid_tags as $vt) {
+        // Respect max_tags_per_post for WordPress tags
+        foreach (array_slice($valid_tags, 0, $max_tags_per_post) as $vt) {
             $all_imported_tags[] = $vt;
         }
 
@@ -586,6 +595,7 @@ function social_sanitize_next_run($input) {
     // Always synchronize and refresh preview tags from active included candidates
     $custom_overrides = $opts['title_tag_custom_overrides'] ?? '';
     $min_tag_len = max(1, (int)($opts['min_tag_length'] ?? 3));
+    $max_tags_per_post = max(1, (int)($opts['max_tags_per_post'] ?? 2));
     $max_tot_tags = max(1, (int)($opts['max_total_tags'] ?? 8));
     $all_imported_tags = [];
     foreach ($out['candidates'] as $cand) {
@@ -594,11 +604,11 @@ function social_sanitize_next_run($input) {
         if (preg_match_all('/(?<![&\w])#(?!\d+;)([\p{L}\p{N}_]*[\p{L}_][\p{L}\p{N}_\-]*)/u', ($cand['full_text'] ?? '') . ' ' . ($cand['text'] ?? ''), $cm)) {
             $c_tags = array_merge($c_tags, $cm[1]);
         }
-        foreach ($c_tags as $ct) {
-            $clean_ct = trim(ltrim($ct, '#'));
-            if (mb_strlen($clean_ct) >= $min_tag_len) {
-                $all_imported_tags[] = $clean_ct;
-            }
+        $cand_valid = social_dedupe_cased_tags(array_filter($c_tags, function($t) use ($min_tag_len) {
+            return mb_strlen(trim(ltrim($t, '#'))) >= $min_tag_len;
+        }));
+        foreach (array_slice($cand_valid, 0, $max_tags_per_post) as $ct) {
+            $all_imported_tags[] = trim(ltrim($ct, '#'));
         }
     }
     $tag_map = [];
@@ -735,27 +745,6 @@ function social_publish_workbench_run($state, $force_status = null, $schedule_ti
             return ['success' => false, 'message' => "Threshold not met: {$built['count']} selected article(s); minimum required is {$min}."];
         }
 
-        global $wpdb;
-        $raw_title = !empty($state['title_override']) ? $state['title_override'] : ($state['preview']['title'] ?? 'Social Digest');
-        $title = sanitize_text_field($raw_title);
-        $base_title = preg_replace('/\s+/', ' ', $title);
-        $base_title = preg_replace('/^\s*[:\-–|]\s*/u', '', $base_title);
-        $base_title = preg_replace('/\s*[:\-–|]\s*$/u', '', $base_title);
-        $base_title = trim($base_title);
-        $today = wp_date('Y-m-d', time(), wp_timezone());
-        $count_today = (int)$wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(ID) FROM {$wpdb->posts} WHERE post_title LIKE %s AND post_date LIKE %s AND post_status IN ('publish','draft','pending','future')",
-            $wpdb->esc_like($base_title) . '%', $today . '%'
-        ));
-        if ($count_today > 0) {
-            $suffix_tpl = trim((string)($opts['same_day_suffix_tpl'] ?? ' (Part {part})'));
-            if ($suffix_tpl !== '') {
-                $part_num = (string)($count_today + 1);
-                $rendered_suffix = str_replace(['{part}', '{count}', '{number}'], $part_num, $suffix_tpl);
-                $title = $base_title . ' ' . ltrim($rendered_suffix);
-            }
-        }
-
         $author_id = absint($opts['post_author'] ?? get_current_user_id());
         if ($author_id === 0) {
             $author_id = get_current_user_id();
@@ -773,6 +762,40 @@ function social_publish_workbench_run($state, $force_status = null, $schedule_ti
             }
             $post_date_local = wp_date('Y-m-d H:i:s', $schedule_ts, $site_tz);
             $post_date_gmt   = gmdate('Y-m-d H:i:s', $schedule_ts);
+        }
+
+        global $wpdb;
+        $raw_title = !empty($state['title_override']) ? $state['title_override'] : ($state['preview']['title'] ?? 'Social Digest');
+        $title = sanitize_text_field($raw_title);
+        $base_title = preg_replace('/\s+/', ' ', $title);
+        $base_title = preg_replace('/^\s*[:\-–|]\s*/u', '', $base_title);
+        $base_title = preg_replace('/\s*[:\-–|]\s*$/u', '', $base_title);
+        $base_title = trim($base_title);
+
+        $target_day = ($status_to_use === 'future' && $schedule_ts > 0)
+            ? wp_date('Y-m-d', $schedule_ts, $site_tz)
+            : wp_date('Y-m-d', time(), $site_tz);
+
+        $tpl_raw = (string)($opts['title_template'] ?? 'Social Digest {hashtags}');
+        $tpl_prefix = trim((string)preg_replace('/\{.*$/', '', $tpl_raw));
+        if ($tpl_prefix === '') {
+            $tpl_prefix = 'Social Digest';
+        }
+
+        $count_today = (int)$wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(DISTINCT p.ID) FROM {$wpdb->posts} p LEFT JOIN {$wpdb->postmeta} pm ON (p.ID = pm.post_id AND pm.meta_key = '_social_digest_created') WHERE p.post_type = 'post' AND p.post_date LIKE %s AND p.post_status IN ('publish','draft','pending','future') AND (pm.meta_value IS NOT NULL OR p.post_title LIKE %s)",
+            $target_day . '%',
+            $wpdb->esc_like($tpl_prefix) . '%'
+        ));
+        if ($count_today > 0) {
+            $suffix_tpl = trim((string)($opts['same_day_suffix_tpl'] ?? ' (Part {part})'));
+            if ($suffix_tpl !== '') {
+                $part_num = (string)($count_today + 1);
+                $rendered_suffix = str_replace(['{part}', '{count}', '{number}'], $part_num, $suffix_tpl);
+                if (stripos($base_title, trim($rendered_suffix)) === false) {
+                    $title = $base_title . ' ' . ltrim($rendered_suffix);
+                }
+            }
         }
 
         // Generate post excerpt
@@ -865,6 +888,7 @@ function social_publish_workbench_run($state, $force_status = null, $schedule_ti
         if (is_wp_error($post_id)) {
             return ['success' => false, 'message' => 'Post creation failed: ' . $post_id->get_error_message()];
         }
+        update_post_meta($post_id, '_social_digest_created', 1);
         if (!empty($opts['rss_only_mode'])) {
             update_post_meta($post_id, '_social_digest_rss_only', 1);
         }
@@ -904,8 +928,6 @@ function social_publish_workbench_run($state, $force_status = null, $schedule_ti
             update_option('masto_last_digest_time', $new_masto);
         }
 
-        // Cleanly clear workbench state on successful creation to prevent stale re-curation
-        social_clear_workbench_state();
 
         // Sideload post media attachments and/or cache local assets into Media Library
         $sideload_all = !empty($opts['sideload_all_media']);
@@ -1023,6 +1045,7 @@ function social_publish_workbench_run($state, $force_status = null, $schedule_ti
             ? "{$status_label} (ID: {$post_id}) for " . esc_html(wp_date('Y-m-d H:i:s T', $schedule_ts, $site_tz)) . " with {$built['count']} selected article(s)."
             : "{$status_label} (ID: {$post_id}) with {$built['count']} selected article(s).";
 
+        social_clear_workbench_state();
         return ['success' => true, 'post_id' => $post_id, 'status' => $status_to_use, 'message' => $return_msg];
     } catch (\Throwable $e) {
         return ['success' => false, 'message' => 'Fatal runtime error publishing digest: ' . $e->getMessage()];
@@ -1040,12 +1063,23 @@ function social_run_digest_import($is_dry_run = false) {
     $state = $state_res['state'] ?? [];
     $active_cands = array_filter((array)($state['candidates'] ?? []), function($c) { return empty($c['excluded']); });
     if (empty($active_cands)) {
-        // Advance cutoffs even if active queue is empty so fetched items are cleared from backlog
-        $new_bsky = (int)($state['cutoffs']['bsky'] ?? 0);
-        $new_masto = (int)($state['cutoffs']['masto'] ?? 0);
-        if ($new_bsky > 0) update_option('bsky_last_digest_time', $new_bsky);
-        if ($new_masto > 0) update_option('masto_last_digest_time', $new_masto);
-        return ['success' => false, 'message' => 'No new active posts found since the active cutoff timestamp. Cutoffs advanced and queue cleared.'];
+        if (!$is_dry_run) {
+            $new_bsky = (int)($state['cutoffs']['bsky'] ?? 0);
+            $new_masto = (int)($state['cutoffs']['masto'] ?? 0);
+            if ($new_bsky > 0) update_option('bsky_last_digest_time', $new_bsky);
+            if ($new_masto > 0) update_option('masto_last_digest_time', $new_masto);
+        }
+        return ['success' => false, 'message' => 'No new active posts found since the active cutoff timestamp.'];
+    }
+    if ($is_dry_run) {
+        $built = social_build_workbench_content($state);
+        return [
+            'success' => !empty($built['success']),
+            'dry_run' => true,
+            'count'   => $built['count'] ?? count($active_cands),
+            'title'   => $state['preview']['title'] ?? '',
+            'message' => 'Dry-run simulation complete: ' . count($active_cands) . ' candidate post(s) ready.'
+        ];
     }
     return social_publish_workbench_run($state);
 }

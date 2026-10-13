@@ -42,9 +42,11 @@ function social_clean_body_text($raw_text, $has_card = false, $card_url = '', $l
 
     // Link any remaining bare http(s):// or www. URLs that weren't converted yet
     $escaped = preg_replace_callback('/\b(https?:\/\/[^\s<"\'\)]+|www\.[^\s<"\'\)]+)/i', function($m) {
-        $u = $m[1];
+        $raw_u = $m[1];
+        $u = rtrim($raw_u, '.,;:!?');
+        $trailing = substr($raw_u, strlen($u));
         $href = (strpos($u, 'www.') === 0) ? 'https://' . $u : $u;
-        return '<a href="' . esc_url($href) . '" target="_blank" rel="noopener">' . $u . '</a>';
+        return '<a href="' . esc_url($href) . '" target="_blank" rel="noopener">' . $u . '</a>' . $trailing;
     }, $escaped);
 
     // Restore placeholders
@@ -68,8 +70,8 @@ function social_clean_mastodon_html($html, $has_card = false, $card_url = '') {
     $html = preg_replace('/(\w)&;(\w)/', "$1'$2", $html);
 
     if ($has_card) {
-        // Strip trailing anchor link if it's the last element before closing </p>
-        $html = preg_replace('/(?:\s*[:\-–]\s*|\s*)<a[^>]+href=["\'][^"\']*["\'][^>]*>.*?<\/a>\s*(<\/p>\s*)$/isu', '$1', $html);
+        // Strip trailing external anchor link if it's the last element before closing </p>, preserving @mentions
+        $html = preg_replace('/(?:\s*[:\-–]\s*|\s*)<a(?![^>]*\bclass=["\'][^"\']*\b(?:mention|u-url)\b)[^>]+href=["\'][^"\']*["\'][^>]*>.*?<\/a>\s*(<\/p>\s*)$/isu', '$1', $html);
     }
 
     // Add target="_blank" and rel="noopener" to remaining links cleanly

@@ -153,8 +153,8 @@ function social_extract_media_descriptors_from_content($content) {
     $descriptors = [];
     $custom_overrides = '';
     $opts = get_option('social_digest_options', []);
-    if (!empty($opts['tag_custom_overrides'])) {
-        $custom_overrides = (string)$opts['tag_custom_overrides'];
+    if (!empty($opts['title_tag_custom_overrides'])) {
+        $custom_overrides = (string)$opts['title_tag_custom_overrides'];
     }
 
     // Split content by social-post card boundaries
@@ -178,9 +178,15 @@ function social_extract_media_descriptors_from_content($content) {
             $author_handle = trim($hm[1]);
         }
 
-        // 2. Extract Hashtags from Card
+        // 2. Extract Hashtags from Card (checking data-primary-tag first since inline hashtags are stripped)
         $card_tags = [];
-        if (preg_match_all('/<a[^>]*class=["\'][^"\']*hashtag[^"\']*["\'][^>]*>(?:#|#?<span>)?(.*?)(?:<\/span>)?<\/a>/isu', $card, $anchor_matches)) {
+        if (preg_match('/data-primary-tag=["\']([^"\']+)["\']/i', $card, $pt_match)) {
+            $clean_pt = trim(ltrim($pt_match[1], '#'));
+            if ($clean_pt !== '' && !is_numeric($clean_pt)) {
+                $card_tags[] = $clean_pt;
+            }
+        }
+        if (empty($card_tags) && preg_match_all('/<a[^>]*class=["\'][^"\']*hashtag[^"\']*["\'][^>]*>(?:#|#?<span>)?(.*?)(?:<\/span>)?<\/a>/isu', $card, $anchor_matches)) {
             foreach ($anchor_matches[1] as $raw_tag) {
                 $clean_t = trim(wp_strip_all_tags(ltrim($raw_tag, '#')));
                 if ($clean_t !== '' && !is_numeric($clean_t)) {

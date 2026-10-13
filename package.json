@@ -1,6 +1,6 @@
 {
   "name": "social-digest-wordpress",
-  "version": "5.8.28",
+  "version": "5.8.29",
   "type": "module",
   "scripts": {
     "dev": "vite",

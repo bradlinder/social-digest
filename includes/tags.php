@@ -388,7 +388,7 @@ function social_extract_topic_keywords_from_posts($items) {
         }
 
         // Single Capitalized Brand/Product Words if needed
-        if (preg_match_all('/\b([A-Z][a-zA-Z0-9]{3,})\b/u', $s_matches)) {
+        if (preg_match_all('/\b([A-Z][a-zA-Z0-9]{3,})\b/u', $text, $s_matches)) {
             foreach ($s_matches[1] as $sm) {
                 if (!in_array(mb_strtolower($sm), $stop_words)) {
                     $phrases[] = $sm;

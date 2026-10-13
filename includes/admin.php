@@ -1729,7 +1729,7 @@ function social_render_settings_page() {
         <?php elseif ($active_tab === 'workbench'): ?>
             <?php 
             $state = social_workbench_state();
-            if (!empty($state) && (empty($state['version']) || $state['version'] !== SOCIAL_DIGEST_VERSION || strpos($state['title_override'] ?? '', ': ') === 0 || preg_match('/minipc|snapdragonx|eliteminipc|^[a-z]/i', $state['title_override'] ?? ''))) {
+            if (!empty($state) && (empty($state['version']) || $state['version'] !== SOCIAL_DIGEST_VERSION)) {
                 $auto_refreshed = social_fetch_workbench_candidates();
                 if (!empty($auto_refreshed['state'])) {
                     $state = $auto_refreshed['state'];

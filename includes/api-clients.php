@@ -86,7 +86,8 @@ function social_render_native_card($item, $opts = []) {
     }
 
     // Build the Native Card HTML
-    $html = '<div class="social-post social-card" style="border:1px solid #e2e8f0; border-radius:12px; padding:18px; margin:26px auto; background:#ffffff; box-shadow:none; max-width:600px; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif;">';
+    $primary_tag_attr = !empty($item['extra_tags'][0]) ? ' data-primary-tag="' . esc_attr($item['extra_tags'][0]) . '"' : '';
+    $html = '<div class="social-post social-card"' . $primary_tag_attr . ' style="border:1px solid #e2e8f0; border-radius:12px; padding:18px; margin:26px auto; background:#ffffff; box-shadow:none; max-width:600px; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif;">';
     if ($repost_html) {
         $html .= $repost_html;
     }
