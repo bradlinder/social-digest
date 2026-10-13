@@ -1244,12 +1244,8 @@ function social_render_settings_page() {
 
                                 function sdCleanOverrideString(str) {
                                     if (!str || typeof str !== 'string') return '';
-                                    var s = str.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-                                    if (s.indexOf('\n') === -1 && s.indexOf('rn') !== -1) {
-                                        s = s.replace(/([a-zA-Z0-9*=\-_#])rn([a-zA-Z0-9*=\-_#])/g, '$1\n$2');
-                                        s = s.replace(/rnrnrn|rnrn|rn/g, '\n');
-                                    }
-                                    s = s.replace(/\\r\\n|\\n|\\r/g, '\n');
+                                    var s = str.replace(/\\r\\n|\\n|\\r/g, '\n');
+                                    s = s.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
                                     return s;
                                 }
 
@@ -1268,9 +1264,12 @@ function social_render_settings_page() {
                                             var parts = trimmed.split('=');
                                             key = parts[0].trim().replace(/^#/, '').replace(/[\s_\-]/g, '');
                                         }
-                                        if (!seenKeys[key]) {
-                                            seenKeys[key] = true;
+                                        var keyNorm = key.toLowerCase();
+                                        if (seenKeys[keyNorm] === undefined) {
+                                            seenKeys[keyNorm] = cleanRules.length;
                                             cleanRules.push(trimmed);
+                                        } else if (trimmed.indexOf('=') !== -1 && cleanRules[seenKeys[keyNorm]].indexOf('=') === -1) {
+                                            cleanRules[seenKeys[keyNorm]] = trimmed;
                                         }
                                     }
                                     return cleanRules;

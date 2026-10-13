@@ -40,7 +40,7 @@ function social_get_cached_tag_weights() {
 }
 
 /**
- * Normalizes line endings in tag override strings and repairs any corrupted 'rn' newline artifacts.
+ * Normalizes line endings in tag override strings and repairs escaped newlines.
  *
  * @param string $str Raw tag overrides string.
  * @return string Cleaned string with standard \n line breaks.
@@ -48,17 +48,11 @@ function social_get_cached_tag_weights() {
 function social_normalize_overrides_newlines($str) {
     if (!is_string($str) || $str === '') return '';
     
+    // Handle escaped literal newline text (\r\n or \n)
+    $str = str_replace(['\\r\\n', '\\n', '\\r'], "\n", $str);
+    
     // Convert standard Windows and Mac line breaks
     $str = str_replace(["\r\n", "\r"], "\n", $str);
-    
-    // Repair corrupted strings where \r\n was stripped to literal 'rn'
-    if (strpos($str, "\n") === false && strpos($str, 'rn') !== false) {
-        $str = preg_replace('/(?<=[a-zA-Z0-9*=\-_#])rn(?=[a-zA-Z0-9*=\-_#])/u', "\n", $str);
-        $str = str_replace(['rnrnrn', 'rnrn', 'rn'], "\n", $str);
-    }
-    
-    // Handle literal escaped newline text
-    $str = str_replace(['\\r\\n', '\\n', '\\r'], "\n", $str);
     
     return $str;
 }
@@ -76,7 +70,7 @@ function social_dedupe_override_rules($str) {
         return '';
     }
 
-    $lines = preg_split('/[\r\n,]+/', trim((string)$str));
+    $lines = preg_split('/[\r\n]+/', trim((string)$str));
     $clean_lines = [];
     $seen_keys = [];
 
@@ -96,8 +90,10 @@ function social_dedupe_override_rules($str) {
 
         $key_norm = mb_strtolower($key);
         if (!isset($seen_keys[$key_norm])) {
-            $seen_keys[$key_norm] = true;
+            $seen_keys[$key_norm] = count($clean_lines);
             $clean_lines[] = $trimmed;
+        } elseif (strpos($trimmed, '=') !== false && strpos($clean_lines[$seen_keys[$key_norm]], '=') === false) {
+            $clean_lines[$seen_keys[$key_norm]] = $trimmed;
         }
     }
 
@@ -338,7 +334,7 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
     $processed_phrases = [];
 
     $upper_acronyms = [
-        'AI', 'PC', 'PCS', 'VR', 'X', 'X1', 'X2', 'X3', '3D', '2K', '4K', '8K',
+        'AI', 'TV', 'PC', 'PCS', 'VR', 'X', 'X1', 'X2', 'X3', '3D', '2K', '4K', '8K',
         '5G', '4G', 'US', 'UK', 'EU', 'OLED', 'AMOLED', 'RAM', 'CPU', 'GPU',
         'S10', 'S11', 'S12', 'S24', 'QN10', 'OS', 'UI', 'HD', 'QPR', 'QPR1',
         'QPR2', 'QPR3', 'CX', 'XPS', 'GTX', 'RTX', 'RX', 'SOC', 'NPU', 'SSD'

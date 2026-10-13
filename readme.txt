@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.25
+Stable tag: 5.8.26
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,13 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.26 =
+* Glossary Overrides Engine Hardening & Save Retention Fix:
+  1. Fixed Rule Truncation Bug: Removed flawed newline repair logic in `social_normalize_overrides_newlines()` and `sdCleanOverrideString()` that replaced literal `rn` characters in words (e.g. `Modern`, `Pattern`, `Warning`, `Western`, `Learn`, `Firmware`) with line breaks or truncated terms.
+  2. Comma-Resilient Rule Splitting: Updated `social_dedupe_override_rules()` to split custom rules strictly on line breaks rather than commas, preserving multi-word rules and key-value entries containing commas.
+  3. Precedence for Explicit Mappings: Enhanced rule deduplication in both PHP and JavaScript so explicit mapping rules (e.g. `ONEXPLAYER=ONEXPLAYER`) take precedence over simple brand prefix rules.
+  4. Acronym Formatting: Added `TV` to the master uppercase acronym whitelist so hashtags like `#AppleTV4K` format cleanly as `Apple TV 4K`.
 
 = 5.8.25 =
 * Custom Glossary Substring Vocabulary Matching Pass & Baseline Testing State Maintained:
