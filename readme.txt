@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.29
+Stable tag: 5.8.30
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,11 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.30 =
+* Social Engagement Stats Toggle:
+  1. Configurable Engagement Counters: Added an admin setting toggle ("Show social engagement stats") allowing users to choose whether to display like, favorite, and boost counters on social platform badges or keep badges clean and text-only.
+  2. Native Card Rendering: Respects user preference in `social_render_native_card()`, omitting stat pills when disabled to prevent frozen-in-time metrics.
 
 = 5.8.29 =
 * Social Card & Parsing Hardening Bugfixes:

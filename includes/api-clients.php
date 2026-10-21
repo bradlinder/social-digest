@@ -147,12 +147,13 @@ function social_render_native_card($item, $opts = []) {
 
     // Platform action badges with live engagement counters and smart mobile deep-linking
     $enable_deep_links = !isset($opts['mobile_deep_links']) || !empty($opts['mobile_deep_links']);
+    $show_engagement   = !isset($opts['show_engagement_stats']) || !empty($opts['show_engagement_stats']);
     $badges = [];
     if ($has_bsky) {
         $bsky_data = $links['bsky'];
         $b_url = esc_url($bsky_data['url'] ?? '');
         $b_likes = absint($bsky_data['likes'] ?? 0);
-        $like_str = ($b_likes > 0) ? ' <span class="social-stat-pill" style="font-size:11px; background:#eff6ff; color:#1d4ed8; padding:1px 6px; border-radius:9999px; margin-left:3px;">❤️ ' . $b_likes . '</span>' : '';
+        $like_str = ($show_engagement && $b_likes > 0) ? ' <span class="social-stat-pill" style="font-size:11px; background:#eff6ff; color:#1d4ed8; padding:1px 6px; border-radius:9999px; margin-left:3px;">❤️ ' . $b_likes . '</span>' : '';
         $b_deep_attr = '';
         if ($enable_deep_links && preg_match('/bsky\.app\/profile\/([^\/]+)\/post\/([^\/]+)/i', $b_url, $bm)) {
             $b_deep_url = 'bsky://profile/' . $bm[1] . '/post/' . $bm[2];
@@ -166,8 +167,8 @@ function social_render_native_card($item, $opts = []) {
         $m_favs = absint($masto_data['favs'] ?? 0);
         $m_boosts = absint($masto_data['boosts'] ?? 0);
         $m_stats = [];
-        if ($m_favs > 0) $m_stats[] = '⭐ ' . $m_favs;
-        if ($m_boosts > 0) $m_stats[] = '🔁 ' . $m_boosts;
+        if ($show_engagement && $m_favs > 0) $m_stats[] = '⭐ ' . $m_favs;
+        if ($show_engagement && $m_boosts > 0) $m_stats[] = '🔁 ' . $m_boosts;
         $m_stat_str = $m_stats ? ' <span class="social-stat-pill" style="font-size:11px; background:#faf5ff; color:#6b21a8; padding:1px 6px; border-radius:9999px; margin-left:3px;">' . implode(' · ', $m_stats) . '</span>' : '';
         $m_deep_attr = '';
         if ($enable_deep_links && !empty($m_url)) {

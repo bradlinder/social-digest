@@ -95,6 +95,7 @@ add_action('admin_init', function() {
             'collapse_threads'       => 1,
             'thread_default_state'   => 'collapsed',
             'mobile_deep_links'      => 1,
+            'show_engagement_stats'  => 1,
             'include_reposts'        => 0,
             'exclude_titles'         => 0,
             'exclude_self_syndicated'=> 1,
@@ -377,6 +378,7 @@ function social_sanitize_settings($input) {
     $allowed_thread_states         = ['collapsed', 'expanded'];
     $output['thread_default_state']= in_array($input['thread_default_state'] ?? '', $allowed_thread_states, true) ? $input['thread_default_state'] : 'collapsed';
     $output['mobile_deep_links']   = !empty($input['mobile_deep_links']) ? 1 : 0;
+    $output['show_engagement_stats'] = !empty($input['show_engagement_stats']) ? 1 : 0;
     $output['include_reposts']     = !empty($input['include_reposts']) ? 1 : 0;
     $output['exclude_titles']      = !empty($input['exclude_titles']) ? 1 : 0;
     $output['exclude_self_syndicated'] = !empty($input['exclude_self_syndicated']) ? 1 : 0;
@@ -788,7 +790,8 @@ function social_render_settings_page() {
                                                          </select>
                                                          <p class="description" style="margin:2px 0 0 0; font-size:11px;">Controls whether unified thread cards render with follow-up replies initially expanded or collapsed within the post.</p>
                                                      </div>
-                                                     <label><input type="checkbox" name="social_digest_options[mobile_deep_links]" value="1" <?php checked(!isset($opts['mobile_deep_links']) || !empty($opts['mobile_deep_links'])); ?> /> Enable smart mobile app deep-linking (opens native Bluesky or Mastodon app if installed; falls back to browser without extra buttons)</label>
+                                                     <label><input type="checkbox" name="social_digest_options[mobile_deep_links]" value="1" <?php checked(!isset($opts['mobile_deep_links']) || !empty($opts['mobile_deep_links'])); ?> /> Enable smart mobile app deep-linking (opens native Bluesky or Mastodon app if installed; falls back to browser without extra buttons)</label><br>
+                                                     <label><input type="checkbox" name="social_digest_options[show_engagement_stats]" value="1" <?php checked(!isset($opts['show_engagement_stats']) || !empty($opts['show_engagement_stats'])); ?> /> Show social engagement stats (like, favorite, and boost counters on platform action badges)</label>
                                                 </td>
                                             </tr>
                                             <tr>
