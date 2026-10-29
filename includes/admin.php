@@ -1059,8 +1059,10 @@ function social_render_settings_page() {
                                                             
                                                             <!-- Lightweight Search Box -->
                                                             <div style="display: flex; align-items: center; gap: 4px; background: #fff; border: 1px solid #ccd0d4; border-radius: 4px; padding: 2px 6px;">
-                                                                <span class="dashicons dashicons-search" style="font-size: 16px; width: 16px; height: 16px; color: #64748b; line-height: 1.3;"></span>
-                                                                <input type="search" id="sd_overrides_search" placeholder="Find in rules (e.g. XPS)..." style="border: none; background: transparent; font-size: 11px; padding: 1px 4px; width: 140px; outline: none; box-shadow: none;" oninput="sdSearchOverrides(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();sdSearchNextOverride();}">
+                                                                <button type="button" onclick="sdTriggerOverrideSearch()" style="background: none; border: none; padding: 0; margin: 0; cursor: pointer; display: flex; align-items: center; color: #64748b;" title="Search in rules (Enter)">
+                                                                    <span class="dashicons dashicons-search" style="font-size: 16px; width: 16px; height: 16px; line-height: 1.3;"></span>
+                                                                </button>
+                                                                <input type="search" id="sd_overrides_search" placeholder="Find in rules (e.g. XPS)..." style="border: none; background: transparent; font-size: 11px; padding: 1px 4px; width: 140px; outline: none; box-shadow: none;" oninput="if(!this.value){sdClearSearch();}" onkeydown="if(event.key==='Enter'){event.preventDefault();sdTriggerOverrideSearch();}">
                                                                 <span id="sd_search_count" style="font-size: 10px; color: #0284c7; font-weight: 600; min-width: 14px; text-align: center;"></span>
                                                                 <button type="button" class="button button-small" style="height: 20px; line-height: 18px; padding: 0 4px; font-size: 10px;" onclick="sdSearchNextOverride()" title="Find Next Match (Enter)">↓</button>
                                                             </div>
@@ -1271,8 +1273,32 @@ function social_render_settings_page() {
                                 <script>
                                 var sdSearchMatches = [];
                                 var sdCurrentMatchIdx = -1;
+                                var sdLastSearchQuery = '';
                                 var sdSnapshot = <?php echo json_encode(!empty($snap['content']) ? $snap : null); ?>;
                                 var sdSnapshotNonce = <?php echo json_encode(wp_create_nonce('sd_snapshot_action')); ?>;
+
+                                function sdClearSearch() {
+                                    sdSearchMatches = [];
+                                    sdCurrentMatchIdx = -1;
+                                    sdLastSearchQuery = '';
+                                    var countEl = document.getElementById('sd_search_count');
+                                    if (countEl) countEl.textContent = '';
+                                }
+
+                                function sdTriggerOverrideSearch() {
+                                    var searchEl = document.getElementById('sd_overrides_search');
+                                    if (!searchEl) return;
+                                    var query = (searchEl.value || '').trim();
+                                    if (!query) {
+                                        sdClearSearch();
+                                        return;
+                                    }
+                                    if (query.toLowerCase() === sdLastSearchQuery.toLowerCase() && sdSearchMatches.length > 0) {
+                                        sdSearchNextOverride();
+                                    } else {
+                                        sdSearchOverrides(query);
+                                    }
+                                }
 
                                 function sdCleanOverrideString(str) {
                                     if (!str || typeof str !== 'string') return '';
@@ -1365,6 +1391,7 @@ function social_render_settings_page() {
                                     var countEl = document.getElementById('sd_search_count');
                                     sdSearchMatches = [];
                                     sdCurrentMatchIdx = -1;
+                                    sdLastSearchQuery = query;
 
                                     if (!query || !textarea) {
                                         if (countEl) countEl.textContent = '';
@@ -1389,7 +1416,16 @@ function social_render_settings_page() {
                                 }
 
                                 function sdSearchNextOverride() {
-                                    if (sdSearchMatches.length === 0) return;
+                                    var searchEl = document.getElementById('sd_overrides_search');
+                                    var query = searchEl ? (searchEl.value || '').trim() : '';
+                                    if (!query) {
+                                        sdClearSearch();
+                                        return;
+                                    }
+                                    if (query.toLowerCase() !== sdLastSearchQuery.toLowerCase() || sdSearchMatches.length === 0) {
+                                        sdSearchOverrides(query);
+                                        return;
+                                    }
                                     sdCurrentMatchIdx = (sdCurrentMatchIdx + 1) % sdSearchMatches.length;
                                     sdHighlightCurrentMatch();
                                     var countEl = document.getElementById('sd_search_count');
@@ -1482,6 +1518,7 @@ function social_render_settings_page() {
                                     var textarea = document.getElementById('sd_title_tag_custom_overrides');
                                     if (textarea) {
                                         textarea.value = '';
+                                        sdClearSearch();
                                         sdUpdateLineCount();
                                         try {
                                             textarea.dispatchEvent(new Event('change', { bubbles: true }));
