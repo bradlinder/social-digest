@@ -6,7 +6,10 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sync": "python sync.py",
+    "sync:push": "python sync.py --push",
+    "sync:pull": "python sync.py --pull"
   },
   "dependencies": {
     "jszip": "^3.10.2",

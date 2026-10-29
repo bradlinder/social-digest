@@ -22,3 +22,5 @@ bun.lock
 *.sublime-workspace
 *.swp
 *~
+__pycache__/
+*.pyc
