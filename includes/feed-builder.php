@@ -823,8 +823,8 @@ function social_publish_workbench_run($state, $force_status = null, $schedule_ti
             $max_items = isset($opts['excerpt_max_items']) ? absint($opts['excerpt_max_items']) : 1;
             $append_ellipsis = !empty($opts['excerpt_append_ellipsis']);
             $append_remaining = !empty($opts['excerpt_append_remaining']);
-            $singular_tpl = $opts['excerpt_remaining_singular'] ?? '[+{count} more item inside]';
-            $plural_tpl = $opts['excerpt_remaining_plural'] ?? '[+{count} more items inside]';
+            $singular_tpl = (!empty($opts['excerpt_remaining_singular']) && strpos($opts['excerpt_remaining_singular'], '[+') === false) ? $opts['excerpt_remaining_singular'] : '[plus {count} more news item in this roundup]';
+            $plural_tpl = (!empty($opts['excerpt_remaining_plural']) && strpos($opts['excerpt_remaining_plural'], '[+') === false) ? $opts['excerpt_remaining_plural'] : '[plus {count} more news items in this roundup]';
             $post_excerpt = social_build_first_lines_excerpt($state['candidates'] ?? [], $delim, $max_items, $append_ellipsis, $append_remaining, $singular_tpl, $plural_tpl);
         }
 

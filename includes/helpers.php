@@ -204,8 +204,8 @@ function social_build_first_lines_excerpt($candidates, $delimiter = ' // ', $max
     if ($append_remaining && $max_items > 0) {
         $remaining = max(0, $total_eligible - $count);
         if ($remaining > 0) {
-            $s_tpl = ($singular_tpl !== '') ? $singular_tpl : '[+{count} more item inside]';
-            $p_tpl = ($plural_tpl !== '') ? $plural_tpl : '[+{count} more items inside]';
+            $s_tpl = ($singular_tpl !== '' && strpos($singular_tpl, '[+') === false) ? $singular_tpl : '[plus {count} more news item in this roundup]';
+            $p_tpl = ($plural_tpl !== '' && strpos($plural_tpl, '[+') === false) ? $plural_tpl : '[plus {count} more news items in this roundup]';
             $tpl   = ($remaining === 1) ? $s_tpl : $p_tpl;
             $rem_text = str_ireplace('{count}', (string)$remaining, $tpl);
             $rem_text = trim($rem_text);

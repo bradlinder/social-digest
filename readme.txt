@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.33
+Stable tag: 5.8.35
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,14 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.35 =
+* Excerpt Prepopulated Default Language Update:
+  1. Default Language: Configured the prepopulated default language templates to `[plus {count} more news item in this roundup]` for singular and `[plus {count} more news items in this roundup]` for plural.
+
+= 5.8.34 =
+* Excerpt Prepopulated Default Language Refinement:
+  1. Item vs. Items Default Suffix: Updated the prepopulated default language templates so the singular version says "item" (`[+{count} more item]`) and the plural version says "items" (`[+{count} more items]`), keeping teaser text clean, succinct, and natural.
 
 = 5.8.33 =
 * Excerpt Teaser Suffix & Workbench Editor:

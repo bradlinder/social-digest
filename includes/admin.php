@@ -116,8 +116,8 @@ add_action('admin_init', function() {
             'excerpt_max_items'            => 1,
             'excerpt_append_ellipsis'      => 1,
             'excerpt_append_remaining'     => 1,
-            'excerpt_remaining_singular'   => '[+{count} more item inside]',
-            'excerpt_remaining_plural'     => '[+{count} more items inside]',
+            'excerpt_remaining_singular'   => '[plus {count} more news item in this roundup]',
+            'excerpt_remaining_plural'     => '[plus {count} more news items in this roundup]',
             'nosnippet_header'               => 1,
             'nosnippet_footer'               => 1,
             'allow_snippet_on_custom_header' => 0,
@@ -453,8 +453,8 @@ function social_sanitize_settings($input) {
     $output['excerpt_delimiter']            = in_array($input['excerpt_delimiter'] ?? '', $allowed_excerpt_delims, true) ? $input['excerpt_delimiter'] : 'slash';
     $output['excerpt_custom_delimiter']     = sanitize_text_field($input['excerpt_custom_delimiter'] ?? ' // ');
     $output['excerpt_max_items']            = isset($input['excerpt_max_items']) ? absint($input['excerpt_max_items']) : 1;
-    $output['excerpt_remaining_singular']   = sanitize_text_field($input['excerpt_remaining_singular'] ?? '[+{count} more item inside]');
-    $output['excerpt_remaining_plural']     = sanitize_text_field($input['excerpt_remaining_plural'] ?? '[+{count} more items inside]');
+    $output['excerpt_remaining_singular']   = sanitize_text_field($input['excerpt_remaining_singular'] ?? '[plus {count} more news item in this roundup]');
+    $output['excerpt_remaining_plural']     = sanitize_text_field($input['excerpt_remaining_plural'] ?? '[plus {count} more news items in this roundup]');
 
     social_reschedule_cron($output);
 
@@ -1278,11 +1278,11 @@ function social_render_settings_page() {
                                                             <div id="social_excerpt_remaining_fields" style="margin-top: 8px; padding-left: 24px; display: <?php echo (isset($opts['excerpt_append_remaining']) ? !empty($opts['excerpt_append_remaining']) : true) ? 'block' : 'none'; ?>;">
                                                                 <div style="margin-bottom: 6px;">
                                                                     <label style="display:inline-block; width: 130px; font-size:12px; font-weight:600;">Singular (1 item):</label>
-                                                                    <input type="text" name="social_digest_options[excerpt_remaining_singular]" value="<?php echo esc_attr($opts['excerpt_remaining_singular'] ?? '[+{count} more item inside]'); ?>" style="width: 230px; font-size: 12px;" placeholder="[+{count} more item inside]" />
+                                                                    <input type="text" name="social_digest_options[excerpt_remaining_singular]" value="<?php echo esc_attr((!empty($opts['excerpt_remaining_singular']) && strpos($opts['excerpt_remaining_singular'], '[+') === false) ? $opts['excerpt_remaining_singular'] : '[plus {count} more news item in this roundup]'); ?>" style="width: 260px; font-size: 12px;" placeholder="[plus {count} more news item in this roundup]" />
                                                                 </div>
                                                                 <div>
                                                                     <label style="display:inline-block; width: 130px; font-size:12px; font-weight:600;">Plural (2+ items):</label>
-                                                                    <input type="text" name="social_digest_options[excerpt_remaining_plural]" value="<?php echo esc_attr($opts['excerpt_remaining_plural'] ?? '[+{count} more items inside]'); ?>" style="width: 230px; font-size: 12px;" placeholder="[+{count} more items inside]" />
+                                                                    <input type="text" name="social_digest_options[excerpt_remaining_plural]" value="<?php echo esc_attr((!empty($opts['excerpt_remaining_plural']) && strpos($opts['excerpt_remaining_plural'], '[+') === false) ? $opts['excerpt_remaining_plural'] : '[plus {count} more news items in this roundup]'); ?>" style="width: 260px; font-size: 12px;" placeholder="[plus {count} more news items in this roundup]" />
                                                                 </div>
                                                                 <p class="description" style="margin-top: 4px; font-size: 11px;">
                                                                     Appears when more stories exist than the limit above. Hidden when 0 items remain. Uses singular wording for 1 item and plural for multiple items. Use <code>{count}</code> for the remaining number.
@@ -2104,8 +2104,8 @@ function social_render_settings_page() {
                         $wb_max_items = isset($opts['excerpt_max_items']) ? absint($opts['excerpt_max_items']) : 1;
                         $wb_append_ellipsis = !empty($opts['excerpt_append_ellipsis']);
                         $wb_append_remaining = isset($opts['excerpt_append_remaining']) ? !empty($opts['excerpt_append_remaining']) : true;
-                        $wb_singular_tpl = $opts['excerpt_remaining_singular'] ?? '[+{count} more item inside]';
-                        $wb_plural_tpl = $opts['excerpt_remaining_plural'] ?? '[+{count} more items inside]';
+                        $wb_singular_tpl = (!empty($opts['excerpt_remaining_singular']) && strpos($opts['excerpt_remaining_singular'], '[+') === false) ? $opts['excerpt_remaining_singular'] : '[plus {count} more news item in this roundup]';
+                        $wb_plural_tpl = (!empty($opts['excerpt_remaining_plural']) && strpos($opts['excerpt_remaining_plural'], '[+') === false) ? $opts['excerpt_remaining_plural'] : '[plus {count} more news items in this roundup]';
                         $wb_first_lines_excerpt = social_build_first_lines_excerpt($candidates, $wb_delim, $wb_max_items, $wb_append_ellipsis, $wb_append_remaining, $wb_singular_tpl, $wb_plural_tpl);
                         $current_excerpt_val = !empty($state['excerpt_override']) ? $state['excerpt_override'] : $wb_first_lines_excerpt;
                     ?>
