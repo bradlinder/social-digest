@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.31
+Stable tag: 5.8.32
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,12 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.32 =
+* Excerpt Universal URL Stripping & Smart Sentence Detection:
+  1. Universal URL Elimination: Added social_strip_all_urls() to strip standard (http/https/www), bare domain (e.g., domain.com/path), shortlink (bit.ly, t.co, youtu.be), and external HTML link anchor text so URLs never leak into homepage, archive, or RSS excerpts.
+  2. Smart Sentence Boundary Detection: Enhanced sentence detection to recognize sentence endings before domain-style URLs, hashtags, mentions, and emojis, ensuring clean punctuation boundaries even when social posts transition straight into source links.
+  3. Defense-in-Depth & Fallback Protection: Applied multi-pass sanitization across first-lines excerpt generation and the 55-word fallback generator to ensure excerpts remain pristine under all conditions.
 
 = 5.8.31 =
 * Tag Title Override Search Improvements:

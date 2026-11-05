@@ -826,7 +826,11 @@ function social_publish_workbench_run($state, $force_status = null, $schedule_ti
                 if (!empty($c['excluded'])) continue;
                 $excerpt_text .= wp_strip_all_tags($c['full_text'] ?? $c['text'] ?? '') . ' ';
             }
-            $post_excerpt = wp_trim_words(trim($excerpt_text), 55, ' [&hellip;]');
+            $clean_excerpt_text = function_exists(__NAMESPACE__ . '\social_strip_all_urls') ? social_strip_all_urls($excerpt_text) : $excerpt_text;
+            $post_excerpt = wp_trim_words(trim($clean_excerpt_text), 55, ' [&hellip;]');
+            if (function_exists(__NAMESPACE__ . '\social_strip_all_urls')) {
+                $post_excerpt = social_strip_all_urls($post_excerpt);
+            }
         }
 
         $target_tags = array_values(array_map('sanitize_text_field', (array)($state['preview']['tags'] ?? [])));

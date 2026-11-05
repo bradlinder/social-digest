@@ -83,14 +83,45 @@ function social_clean_mastodon_html($html, $has_card = false, $card_url = '') {
     return wp_kses_post(trim($html));
 }
 
+function social_strip_all_urls($text) {
+    if (empty($text) || !is_scalar($text)) return '';
+    $text = (string)$text;
+
+    // 1. Strip external anchor tags entirely (<a href=...>...</a>), preserving @mentions
+    $text = preg_replace('/<a(?![^>]*\bclass=["\'][^"\']*\b(?:mention|u-url)\b)[^>]+href=["\'][^"\']*["\'][^>]*>.*?<\/a>/isu', '', $text);
+
+    // 2. Strip standard http://, https://, and www. URLs
+    $text = preg_replace('/\b(?:https?:\/\/|www\.)[^\s<>"\'()]+[^\s<>"\'().,;:!?]/iu', '', $text);
+    $text = preg_replace('/\b(?:https?:\/\/|www\.)[^\s<>"\'()]+/iu', '', $text);
+
+    // 3. Strip known shortlink domains with paths (bit.ly, t.co, youtu.be, etc.)
+    $text = preg_replace('/\b(?:bit\.ly|t\.co|youtu\.be|is\.gd|tinyurl\.com|bsky\.app)\/[^\s<>"\'()]+[^\s<>"\'().,;:!?]/iu', '', $text);
+    $text = preg_replace('/\b(?:bit\.ly|t\.co|youtu\.be|is\.gd|tinyurl\.com|bsky\.app)\/[^\s<>"\'()]+/iu', '', $text);
+
+    // 4. Strip domain-style URLs with paths (e.g. blogs.windows.com/xyz, linuxgizmos.com/abc, github.com/user/repo)
+    $text = preg_replace('/\b[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?)*\.(?:com|org|net|edu|gov|io|co|ai|app|dev|tech|me|tv|cc|biz|info|[a-z]{2})\/[^\s<>"\'()]+[^\s<>"\'().,;:!?]/iu', '', $text);
+    $text = preg_replace('/\b[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?)*\.(?:com|org|net|edu|gov|io|co|ai|app|dev|tech|me|tv|cc|biz|info|[a-z]{2})\/[^\s<>"\'()]+/iu', '', $text);
+
+    // 5. Strip standalone domain names ending in popular TLDs (e.g. liliputing.com)
+    $text = preg_replace('/\b[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?\.(?:com|org|net|edu|gov|io|app|dev|tech|info|biz)\b/iu', '', $text);
+
+    // 6. Clean up any leftover empty brackets/parentheses from stripped URLs, e.g. () or []
+    $text = preg_replace('/\(\s*\)|\[\s*\]/u', '', $text);
+
+    return $text;
+}
+
 function social_extract_first_line_or_sentence($text) {
     if (empty($text) || !is_scalar($text)) return '';
     $text = (string)$text;
-    $t = wp_strip_all_tags($text);
+
+    // Strip all forms of URLs first before HTML or line processing
+    $t = social_strip_all_urls($text);
+    $t = wp_strip_all_tags($t);
     $t = html_entity_decode($t, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     $t = preg_replace('/(?<![&\w])#(?!\d+;)(?:[\p{L}\p{N}_]*[\p{L}_][\p{L}\p{N}_\-]*)/u', '', $t);
     $t = preg_replace('/(\w)&;(\w)/', "$1'$2", $t);
-    $t = preg_replace('/\b(?:https?:\/\/|www\.)[^\s<"\'\)]+/i', '', $t);
+    $t = social_strip_all_urls($t);
 
     $lines = preg_split('/\r\n|\r|\n/', $t);
     $first_line = '';
@@ -106,10 +137,20 @@ function social_extract_first_line_or_sentence($text) {
     }
     if ($first_line === '') return '';
 
-    // Match first sentence ending with . ! ? or … followed by space and capital/digit/quote or end of line
-    if (preg_match('/^(.+?[.!?…])(?:\s+[A-Z0-9"“‘]|\s*$)/u', $first_line, $m)) {
-        return trim($m[1]);
+    // Match first sentence ending with . ! ? or … (and optional closing quotes/parentheses)
+    // followed by: space + capital/digit/quote, emoji/bullet/dash, a URL boundary, or end of line.
+    // Protects common abbreviations (e.g., i.e., vs., mr., dr., rev., etc.) from premature splitting.
+    $abbrev_pattern = '(?<!\b(?:e\.g|i\.e|vs|mr|dr|ms|mrs|prof|inc|ltd|approx|gen|rep|sen|no|vol|rev|st))';
+    $punct_pattern  = '[.!?…]+[\'"”’\)\]]*';
+    $lookahead      = '(?:\s+[A-Z0-9"“‘\(\[]|\s*(?:[#@•—–\*\-]|[\x{1F300}-\x{1FAD6}]|[\x{1F600}-\x{1F64F}]|[\x{2600}-\x{27BF}])|\s*(?:https?:\/\/|www\.|\b[a-z0-9\-]+\.[a-z]{2,}\/)|\s*$)';
+
+    if (preg_match('/^(.+?' . $abbrev_pattern . $punct_pattern . ')' . $lookahead . '/iu', $first_line, $m)) {
+        $first_line = trim($m[1]);
     }
+
+    // Final safety scrub: ensure no URLs or trailing dangling punctuation remain
+    $first_line = social_strip_all_urls($first_line);
+    $first_line = preg_replace('/\s*[:\-–,]\s*$/u', '', $first_line);
 
     return trim($first_line);
 }
@@ -151,6 +192,10 @@ function social_build_first_lines_excerpt($candidates, $delimiter = ' // ', $max
             $joined = rtrim($joined_trimmed, '.') . '...';
         }
     }
+
+    // Final safety sweep across the entire joined excerpt
+    $joined = social_strip_all_urls($joined);
+    $joined = trim(preg_replace('/\s+/', ' ', $joined));
 
     return $joined;
 }
