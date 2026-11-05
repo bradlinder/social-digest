@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.35
+Stable tag: 5.8.36
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,12 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.36 =
+* Pinned Lead Story Excerpt Prioritization & Live Synchronization:
+  1. Lead Story Excerpt Alignment: Updated excerpt generation (`social_build_first_lines_excerpt` and fallback generators) to prioritize the pinned lead story at the beginning of the candidate sequence, ensuring that selecting "1 Post (Lead Story only)" always extracts the first line from the actually pinned lead story rather than the first story in the raw chronological feed.
+  2. Live Workbench Preview Synchronization: Added real-time excerpt preview updates in the Actions & Preview Workbench that immediately recalculate and reflect the lead story when toggling "Pin as Lead Story", excluding posts, or changing story sequencing.
+  3. Dynamic Custom vs. Auto-Generated Excerpt State: Prevented auto-generated excerpts from inadvertently latching as permanent manual overrides on form submit, ensuring that changes to the pinned lead story dynamically update the excerpt while preserving explicit user edits.
 
 = 5.8.35 =
 * Excerpt Prepopulated Default Language Update:

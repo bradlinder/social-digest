@@ -1933,7 +1933,7 @@ function social_render_settings_page() {
                                     <span style="font-size:12px; color:#50575e;">Select <strong>Pin as Lead Story</strong> to pin an update to top, or <strong>Set as Featured Image</strong> to choose the digest's featured post thumbnail.</span>
                                     <div style="display:flex; gap:12px; font-size:11px; color:#646970; align-items:center; flex-wrap:wrap;">
                                         <label>
-                                            <input type="radio" name="pinned_lead_post" value="" <?php checked(empty(array_filter($candidates, fn($item) => !empty($item['pinned'])))); ?> onchange="document.querySelectorAll('.sd53-item').forEach(el=>el.classList.remove('is-pinned'));"> 
+                                            <input type="radio" name="pinned_lead_post" value="" <?php checked(empty(array_filter($candidates, fn($item) => !empty($item['pinned'])))); ?> onchange="document.querySelectorAll('.sd53-item').forEach(el=>el.classList.remove('is-pinned')); if (typeof sdUpdateExcerptPreview === 'function') sdUpdateExcerptPreview();"> 
                                             <em>No Pinned Lead</em>
                                         </label>
                                         <label>
@@ -1959,8 +1959,9 @@ function social_render_settings_page() {
                                     $c_thumb = esc_url($c['thumb_image'] ?? '');
                                     $active_featured = esc_url($state['preview']['featured_image'] ?? '');
                                     $is_featured_thumb = ($c_thumb !== '' && $active_featured === $c_thumb);
+                                    $c_first_line = social_extract_first_line_or_sentence($c['full_text'] ?? $c['text'] ?? '');
                                 ?>
-                                    <div class="sd53-item <?php echo $excluded ? 'excluded' : ''; ?> <?php echo $pinned ? 'is-pinned' : ''; ?> <?php echo $is_featured_thumb ? 'is-featured-thumb' : ''; ?>" id="sd53_<?php echo esc_attr($key); ?>" style="transition: all 0.2s ease;">
+                                    <div class="sd53-item <?php echo $excluded ? 'excluded' : ''; ?> <?php echo $pinned ? 'is-pinned' : ''; ?> <?php echo $is_featured_thumb ? 'is-featured-thumb' : ''; ?>" id="sd53_<?php echo esc_attr($key); ?>" data-key="<?php echo esc_attr($key); ?>" data-first-line="<?php echo esc_attr($c_first_line); ?>" style="transition: all 0.2s ease;">
                                         <input type="hidden" name="candidate_order[]" value="<?php echo esc_attr($key); ?>" />
                                         <div class="sd53-item-head">
                                             <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
@@ -1977,9 +1978,9 @@ function social_render_settings_page() {
                                                         <span>Drag #<span class="sd53-order-num"><?php echo esc_html($i + 1); ?></span></span>
                                                     </div>
                                                 </div>
-                                                <label style="font-weight:600;"><input type="checkbox" name="candidate[<?php echo esc_attr($key); ?>][excluded]" value="1" <?php checked($excluded); ?> onchange="this.closest('.sd53-item').classList.toggle('excluded', this.checked)"> Exclude from next post</label>
+                                                <label style="font-weight:600;"><input type="checkbox" name="candidate[<?php echo esc_attr($key); ?>][excluded]" value="1" <?php checked($excluded); ?> onchange="this.closest('.sd53-item').classList.toggle('excluded', this.checked); if (typeof sdUpdateExcerptPreview === 'function') sdUpdateExcerptPreview();"> Exclude from next post</label>
                                                 <label style="color:#b45309; font-weight:700; cursor:pointer;">
-                                                    <input type="radio" name="pinned_lead_post" value="<?php echo esc_attr($key); ?>" <?php checked($pinned); ?> onchange="document.querySelectorAll('.sd53-item').forEach(el=>el.classList.remove('is-pinned')); this.closest('.sd53-item').classList.add('is-pinned');"> 
+                                                    <input type="radio" name="pinned_lead_post" value="<?php echo esc_attr($key); ?>" <?php checked($pinned); ?> onchange="document.querySelectorAll('.sd53-item').forEach(el=>el.classList.remove('is-pinned')); this.closest('.sd53-item').classList.add('is-pinned'); if (typeof sdUpdateExcerptPreview === 'function') sdUpdateExcerptPreview();"> 
                                                     📌 Pin as Lead Story
                                                 </label>
                                                 <?php if ($c_thumb): ?>
@@ -2121,18 +2122,29 @@ function social_render_settings_page() {
                             <p style="margin-top:0; font-size:12px; color:#50575e;">
                                 Live preview and editable excerpt distributed to your homepage, search snippets, archives, and RSS feeds. You can edit this text directly before publishing or saving.
                             </p>
+                            <script>
+                            window.sdExcerptConfig = <?php echo json_encode([
+                                'delim'            => $wb_delim,
+                                'max_items'        => $wb_max_items,
+                                'append_ellipsis'  => $wb_append_ellipsis,
+                                'append_remaining' => $wb_append_remaining,
+                                'singular_tpl'     => $wb_singular_tpl,
+                                'plural_tpl'       => $wb_plural_tpl,
+                            ]); ?>;
+                            </script>
                             <div style="margin-bottom:8px;">
+                                <input type="hidden" name="workbench_excerpt_is_custom" id="sd_workbench_excerpt_is_custom" value="<?php echo !empty($state['excerpt_override']) ? '1' : '0'; ?>" />
                                 <textarea name="workbench_excerpt_override" id="sd_workbench_excerpt_override" rows="3" style="width:100%; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size:13px; line-height:1.5; padding:8px 10px; border-radius:4px; border:1px solid #ccd0d4; box-sizing:border-box;"><?php echo esc_textarea($current_excerpt_val); ?></textarea>
                             </div>
                             <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#64748b;">
-                                <span>
+                                <span id="sd_workbench_excerpt_status">
                                     <?php if (!empty($state['excerpt_override'])): ?>
                                         <span style="color:#0284c7; font-weight:600;">Custom excerpt active.</span>
                                     <?php else: ?>
                                         <span>Auto-generated from first lines.</span>
                                     <?php endif; ?>
                                 </span>
-                                <button type="button" class="button button-small" onclick="document.getElementById('sd_workbench_excerpt_override').value = <?php echo json_encode($wb_first_lines_excerpt); ?>;">
+                                <button type="button" class="button button-small" onclick="sdResetExcerptToAuto();">
                                     Reset to Auto-Generated
                                 </button>
                             </div>
@@ -2424,6 +2436,7 @@ function social_render_settings_page() {
                     axis: 'y',
                     update: function() {
                         sdUpdateCandidateOrderNumbers();
+                        if (typeof sdUpdateExcerptPreview === 'function') sdUpdateExcerptPreview();
                     }
                 });
             }
@@ -2466,12 +2479,122 @@ function social_render_settings_page() {
             }
 
             sdUpdateCandidateOrderNumbers();
+            if (typeof sdUpdateExcerptPreview === 'function') sdUpdateExcerptPreview();
 
             // Subtle highlight feedback on moved card
             $card.css('background-color', '#f0f9ff');
             setTimeout(function() {
                 $card.css('background-color', '');
             }, 600);
+        });
+
+        // Live Excerpt synchronization functions
+        window.sdResetExcerptToAuto = function() {
+            var isCustomInput = document.getElementById('sd_workbench_excerpt_is_custom');
+            if (isCustomInput) isCustomInput.value = '0';
+            var statusEl = document.getElementById('sd_workbench_excerpt_status');
+            if (statusEl) statusEl.innerHTML = '<span>Auto-generated from first lines.</span>';
+            sdUpdateExcerptPreview();
+        };
+
+        window.sdUpdateExcerptPreview = function() {
+            var isCustomInput = document.getElementById('sd_workbench_excerpt_is_custom');
+            if (isCustomInput && isCustomInput.value === '1') {
+                return;
+            }
+            var excerptTextarea = document.getElementById('sd_workbench_excerpt_override');
+            if (!excerptTextarea || !window.sdExcerptConfig) return;
+
+            var container = document.getElementById('sd53_candidates_list');
+            if (!container) return;
+
+            var items = container.querySelectorAll('.sd53-item');
+            if (!items.length) return;
+
+            var pinnedRadio = document.querySelector('input[name="pinned_lead_post"]:checked');
+            var pinnedKey = (pinnedRadio && pinnedRadio.value) ? pinnedRadio.value : '';
+
+            var pinnedItem = null;
+            var regularItems = [];
+
+            items.forEach(function(item) {
+                var key = item.getAttribute('data-key');
+                var isExcluded = item.classList.contains('excluded');
+                var exInput = item.querySelector('input[type="checkbox"][name*="[excluded]"]');
+                if (exInput && exInput.checked) {
+                    isExcluded = true;
+                }
+                if (isExcluded) return;
+
+                if (key && key === pinnedKey && !pinnedItem) {
+                    pinnedItem = item;
+                } else {
+                    regularItems.push(item);
+                }
+            });
+
+            var sorted = pinnedItem ? [pinnedItem].concat(regularItems) : regularItems;
+            var totalEligible = sorted.length;
+            var config = window.sdExcerptConfig;
+            var maxItems = parseInt(config.max_items, 10);
+            var lines = [];
+            var count = 0;
+
+            for (var i = 0; i < sorted.length; i++) {
+                var fl = (sorted[i].getAttribute('data-first-line') || '').trim();
+                if (fl !== '') {
+                    lines.push(fl);
+                    count++;
+                    if (maxItems > 0 && count >= maxItems) break;
+                }
+            }
+
+            if (!lines.length) {
+                excerptTextarea.value = '';
+                return;
+            }
+
+            var delim = config.delim || ' // ';
+            var delimClean = delim.replace(/<[^>]*>/g, '').trim();
+            var joined = '';
+
+            if (delimClean === '.' || delimClean === '. ' || delim === '.') {
+                joined = lines.map(function(l) { return l.replace(/[ 	
+.]+$/, '') + '.'; }).join(' ');
+            } else {
+                var glue = ' ' + delim + ' ';
+                joined = lines.map(function(l) { return l.replace(/[ 	
+.]+$/, ''); }).join(glue);
+            }
+
+            if (config.append_ellipsis) {
+                var jTrim = joined.trim();
+                if (jTrim !== '' && !/(?:\.\.\.|…)\s*$/.test(jTrim)) {
+                    joined = jTrim.replace(/\.+$/, '') + '...';
+                }
+            }
+
+            if (config.append_remaining && maxItems > 0) {
+                var remaining = Math.max(0, totalEligible - count);
+                if (remaining > 0) {
+                    var sTpl = (config.singular_tpl && config.singular_tpl.indexOf('[+') === -1) ? config.singular_tpl : '[plus {count} more news item in this roundup]';
+                    var pTpl = (config.plural_tpl && config.plural_tpl.indexOf('[+') === -1) ? config.plural_tpl : '[plus {count} more news items in this roundup]';
+                    var tpl = (remaining === 1) ? sTpl : pTpl;
+                    var remText = tpl.replace(/\{count\}/gi, remaining).trim();
+                    if (remText !== '') {
+                        joined = joined.trim() + ' ' + remText;
+                    }
+                }
+            }
+
+            excerptTextarea.value = joined.replace(/\s+/g, ' ').trim();
+        };
+
+        $('#sd_workbench_excerpt_override').on('input keyup', function() {
+            var isCustomInput = document.getElementById('sd_workbench_excerpt_is_custom');
+            if (isCustomInput) isCustomInput.value = '1';
+            var statusEl = document.getElementById('sd_workbench_excerpt_status');
+            if (statusEl) statusEl.innerHTML = '<span style="color:#0284c7; font-weight:600;">Custom excerpt active.</span>';
         });
 
         // Real-time listener on Footer textarea

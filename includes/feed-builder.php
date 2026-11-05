@@ -509,7 +509,12 @@ function social_sanitize_next_run($input) {
 
     // Process custom WordPress Post Excerpt override from Workbench
     if (isset($input['workbench_excerpt_override'])) {
-        $out['excerpt_override'] = sanitize_textarea_field(trim($input['workbench_excerpt_override']));
+        $submitted_excerpt = sanitize_textarea_field(trim($input['workbench_excerpt_override']));
+        if (isset($input['workbench_excerpt_is_custom'])) {
+            $out['excerpt_override'] = !empty($input['workbench_excerpt_is_custom']) ? $submitted_excerpt : '';
+        } else {
+            $out['excerpt_override'] = $submitted_excerpt;
+        }
     }
 
     // Preserve custom scheduled publication datetime if submitted
@@ -833,8 +838,18 @@ function social_publish_workbench_run($state, $force_status = null, $schedule_ti
             $use_override = !empty($state['framing_override_enabled']);
             $header = $use_override ? trim($state['header_override'] ?? '') : trim($opts['header_text'] ?? '');
             $excerpt_text = wp_strip_all_tags($header) . ' ';
+            $pinned_c = null;
+            $regular_c = [];
             foreach ((array)($state['candidates'] ?? []) as $c) {
                 if (!empty($c['excluded'])) continue;
+                if (!empty($c['pinned']) && $pinned_c === null) {
+                    $pinned_c = $c;
+                } else {
+                    $regular_c[] = $c;
+                }
+            }
+            $fallback_cands = $pinned_c !== null ? array_merge([$pinned_c], $regular_c) : $regular_c;
+            foreach ($fallback_cands as $c) {
                 $excerpt_text .= wp_strip_all_tags($c['full_text'] ?? $c['text'] ?? '') . ' ';
             }
             $clean_excerpt_text = function_exists(__NAMESPACE__ . '\social_strip_all_urls') ? social_strip_all_urls($excerpt_text) : $excerpt_text;

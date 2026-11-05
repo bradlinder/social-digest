@@ -156,17 +156,23 @@ function social_extract_first_line_or_sentence($text) {
 }
 
 function social_build_first_lines_excerpt($candidates, $delimiter = ' // ', $max_items = 1, $append_ellipsis = false, $append_remaining = false, $singular_tpl = '', $plural_tpl = '') {
-    $total_eligible = 0;
+    $pinned_item = null;
+    $regular_items = [];
     foreach ((array)$candidates as $c) {
-        if (empty($c['excluded'])) {
-            $total_eligible++;
+        if (!empty($c['excluded'])) continue;
+        if (!empty($c['pinned']) && $pinned_item === null) {
+            $pinned_item = $c;
+        } else {
+            $regular_items[] = $c;
         }
     }
+    $sorted_candidates = $pinned_item !== null ? array_merge([$pinned_item], $regular_items) : $regular_items;
+
+    $total_eligible = count($sorted_candidates);
 
     $lines = [];
     $count = 0;
-    foreach ((array)$candidates as $c) {
-        if (!empty($c['excluded'])) continue;
+    foreach ($sorted_candidates as $c) {
         $raw = $c['full_text'] ?? $c['text'] ?? '';
         $first = social_extract_first_line_or_sentence($raw);
         if ($first !== '') {
