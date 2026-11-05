@@ -481,6 +481,7 @@ function social_fetch_workbench_candidates() {
         'framing_override_enabled' => false,
         'header_override' => '',
         'footer_override' => '',
+        'excerpt_override' => '',
         'cutoffs' => [
             'bsky'  => $new_bsky,
             'masto' => $new_masto,
@@ -504,6 +505,11 @@ function social_sanitize_next_run($input) {
         $custom_title = sanitize_text_field($input['custom_title']);
         $out['title_override'] = $custom_title;
         $out['preview']['title'] = $custom_title;
+    }
+
+    // Process custom WordPress Post Excerpt override from Workbench
+    if (isset($input['workbench_excerpt_override'])) {
+        $out['excerpt_override'] = sanitize_textarea_field(trim($input['workbench_excerpt_override']));
     }
 
     // Preserve custom scheduled publication datetime if submitted
@@ -800,7 +806,9 @@ function social_publish_workbench_run($state, $force_status = null, $schedule_ti
 
         // Generate post excerpt
         $post_excerpt = '';
-        if (!empty($opts['excerpt_first_lines'])) {
+        if (!empty($state['excerpt_override'])) {
+            $post_excerpt = function_exists(__NAMESPACE__ . '\social_strip_all_urls') ? social_strip_all_urls(trim($state['excerpt_override'])) : trim($state['excerpt_override']);
+        } elseif (!empty($opts['excerpt_first_lines'])) {
             $delim_key = $opts['excerpt_delimiter'] ?? 'slash';
             $custom_delim = $opts['excerpt_custom_delimiter'] ?? ' // ';
             $delim_map = [
@@ -812,9 +820,12 @@ function social_publish_workbench_run($state, $force_status = null, $schedule_ti
                 'custom'   => $custom_delim,
             ];
             $delim = $delim_map[$delim_key] ?? ' // ';
-            $max_items = absint($opts['excerpt_max_items'] ?? 0);
+            $max_items = isset($opts['excerpt_max_items']) ? absint($opts['excerpt_max_items']) : 1;
             $append_ellipsis = !empty($opts['excerpt_append_ellipsis']);
-            $post_excerpt = social_build_first_lines_excerpt($state['candidates'] ?? [], $delim, $max_items, $append_ellipsis);
+            $append_remaining = !empty($opts['excerpt_append_remaining']);
+            $singular_tpl = $opts['excerpt_remaining_singular'] ?? '[+{count} more item inside]';
+            $plural_tpl = $opts['excerpt_remaining_plural'] ?? '[+{count} more items inside]';
+            $post_excerpt = social_build_first_lines_excerpt($state['candidates'] ?? [], $delim, $max_items, $append_ellipsis, $append_remaining, $singular_tpl, $plural_tpl);
         }
 
         if (empty($post_excerpt)) {

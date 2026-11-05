@@ -110,11 +110,14 @@ add_action('admin_init', function() {
             'excluded_words'         => '#ad, sponsored',
             'header_text'            => '<p>Here is what we shared across social channels today:</p>',
             'footer_text'            => '<hr><p>Follow us directly on social media for real-time updates!</p>',
-            'excerpt_first_lines'    => 0,
-            'excerpt_delimiter'      => 'slash',
-            'excerpt_custom_delimiter' => ' // ',
-            'excerpt_max_items'      => 0,
-            'excerpt_append_ellipsis'=> 0,
+            'excerpt_first_lines'          => 1,
+            'excerpt_delimiter'            => 'slash',
+            'excerpt_custom_delimiter'     => ' // ',
+            'excerpt_max_items'            => 1,
+            'excerpt_append_ellipsis'      => 1,
+            'excerpt_append_remaining'     => 1,
+            'excerpt_remaining_singular'   => '[+{count} more item inside]',
+            'excerpt_remaining_plural'     => '[+{count} more items inside]',
             'nosnippet_header'               => 1,
             'nosnippet_footer'               => 1,
             'allow_snippet_on_custom_header' => 0,
@@ -443,12 +446,15 @@ function social_sanitize_settings($input) {
     $output['allow_snippet_on_custom_footer'] = !empty($input['allow_snippet_on_custom_footer']) ? 1 : 0;
     $output['wipe_data_on_uninstall']         = !empty($input['wipe_data_on_uninstall']) ? 1 : 0;
 
-    $output['excerpt_first_lines']      = !empty($input['excerpt_first_lines']) ? 1 : 0;
-    $output['excerpt_append_ellipsis']  = !empty($input['excerpt_append_ellipsis']) ? 1 : 0;
-    $allowed_excerpt_delims             = ['slash', 'ellipsis', 'period', 'dash', 'bullet', 'custom'];
-    $output['excerpt_delimiter']        = in_array($input['excerpt_delimiter'] ?? '', $allowed_excerpt_delims, true) ? $input['excerpt_delimiter'] : 'slash';
-    $output['excerpt_custom_delimiter'] = sanitize_text_field($input['excerpt_custom_delimiter'] ?? ' // ');
-    $output['excerpt_max_items']        = absint($input['excerpt_max_items'] ?? 0);
+    $output['excerpt_first_lines']          = !empty($input['excerpt_first_lines']) ? 1 : 0;
+    $output['excerpt_append_ellipsis']      = !empty($input['excerpt_append_ellipsis']) ? 1 : 0;
+    $output['excerpt_append_remaining']     = !empty($input['excerpt_append_remaining']) ? 1 : 0;
+    $allowed_excerpt_delims                 = ['slash', 'ellipsis', 'period', 'dash', 'bullet', 'custom'];
+    $output['excerpt_delimiter']            = in_array($input['excerpt_delimiter'] ?? '', $allowed_excerpt_delims, true) ? $input['excerpt_delimiter'] : 'slash';
+    $output['excerpt_custom_delimiter']     = sanitize_text_field($input['excerpt_custom_delimiter'] ?? ' // ');
+    $output['excerpt_max_items']            = isset($input['excerpt_max_items']) ? absint($input['excerpt_max_items']) : 1;
+    $output['excerpt_remaining_singular']   = sanitize_text_field($input['excerpt_remaining_singular'] ?? '[+{count} more item inside]');
+    $output['excerpt_remaining_plural']     = sanitize_text_field($input['excerpt_remaining_plural'] ?? '[+{count} more items inside]');
 
     social_reschedule_cron($output);
 
@@ -1250,12 +1256,12 @@ function social_render_settings_page() {
                                                         <div>
                                                             <label style="display:inline-block; width: 140px; font-weight:600;">Entries in Excerpt:</label>
                                                             <select name="social_digest_options[excerpt_max_items]">
-                                                                <option value="0" <?php selected($opts['excerpt_max_items'] ?? '0', '0'); ?>>All Included Posts</option>
-                                                                <option value="1" <?php selected($opts['excerpt_max_items'] ?? '', '1'); ?>>1 Post (Lead Story only)</option>
+                                                                <option value="1" <?php selected($opts['excerpt_max_items'] ?? '1', '1'); ?>>1 Post (Lead Story only) [Default]</option>
                                                                 <option value="2" <?php selected($opts['excerpt_max_items'] ?? '', '2'); ?>>First 2 Posts</option>
                                                                 <option value="3" <?php selected($opts['excerpt_max_items'] ?? '', '3'); ?>>First 3 Posts</option>
                                                                 <option value="4" <?php selected($opts['excerpt_max_items'] ?? '', '4'); ?>>First 4 Posts</option>
                                                                 <option value="5" <?php selected($opts['excerpt_max_items'] ?? '', '5'); ?>>First 5 Posts</option>
+                                                                <option value="0" <?php selected($opts['excerpt_max_items'] ?? '', '0'); ?>>All Included Posts</option>
                                                             </select>
                                                         </div>
                                                         <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #dcdcde;">
@@ -1263,6 +1269,25 @@ function social_render_settings_page() {
                                                                 <input type="checkbox" name="social_digest_options[excerpt_append_ellipsis]" id="social_excerpt_append_ellipsis" value="1" <?php checked(!empty($opts['excerpt_append_ellipsis'])); ?> />
                                                                 Append trailing ellipsis ( ... ) to end of excerpt
                                                             </label>
+                                                        </div>
+                                                        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #dcdcde;">
+                                                            <label style="font-weight: 500; cursor: pointer;">
+                                                                <input type="checkbox" name="social_digest_options[excerpt_append_remaining]" id="social_excerpt_append_remaining" value="1" <?php checked(isset($opts['excerpt_append_remaining']) ? !empty($opts['excerpt_append_remaining']) : true); ?> onchange="document.getElementById('social_excerpt_remaining_fields').style.display = this.checked ? 'block' : 'none';" />
+                                                                Append remaining stories teaser when posts exceed limit
+                                                            </label>
+                                                            <div id="social_excerpt_remaining_fields" style="margin-top: 8px; padding-left: 24px; display: <?php echo (isset($opts['excerpt_append_remaining']) ? !empty($opts['excerpt_append_remaining']) : true) ? 'block' : 'none'; ?>;">
+                                                                <div style="margin-bottom: 6px;">
+                                                                    <label style="display:inline-block; width: 130px; font-size:12px; font-weight:600;">Singular (1 item):</label>
+                                                                    <input type="text" name="social_digest_options[excerpt_remaining_singular]" value="<?php echo esc_attr($opts['excerpt_remaining_singular'] ?? '[+{count} more item inside]'); ?>" style="width: 230px; font-size: 12px;" placeholder="[+{count} more item inside]" />
+                                                                </div>
+                                                                <div>
+                                                                    <label style="display:inline-block; width: 130px; font-size:12px; font-weight:600;">Plural (2+ items):</label>
+                                                                    <input type="text" name="social_digest_options[excerpt_remaining_plural]" value="<?php echo esc_attr($opts['excerpt_remaining_plural'] ?? '[+{count} more items inside]'); ?>" style="width: 230px; font-size: 12px;" placeholder="[+{count} more items inside]" />
+                                                                </div>
+                                                                <p class="description" style="margin-top: 4px; font-size: 11px;">
+                                                                    Appears when more stories exist than the limit above. Hidden when 0 items remain. Uses singular wording for 1 item and plural for multiple items. Use <code>{count}</code> for the remaining number.
+                                                                </p>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -2076,38 +2101,40 @@ function social_render_settings_page() {
                             'custom'   => $wb_custom_delim,
                         ];
                         $wb_delim = $wb_delim_map[$wb_delim_key] ?? ' // ';
-                        $wb_max_items = absint($opts['excerpt_max_items'] ?? 0);
+                        $wb_max_items = isset($opts['excerpt_max_items']) ? absint($opts['excerpt_max_items']) : 1;
                         $wb_append_ellipsis = !empty($opts['excerpt_append_ellipsis']);
-                        $wb_first_lines_excerpt = social_build_first_lines_excerpt($candidates, $wb_delim, $wb_max_items, $wb_append_ellipsis);
+                        $wb_append_remaining = isset($opts['excerpt_append_remaining']) ? !empty($opts['excerpt_append_remaining']) : true;
+                        $wb_singular_tpl = $opts['excerpt_remaining_singular'] ?? '[+{count} more item inside]';
+                        $wb_plural_tpl = $opts['excerpt_remaining_plural'] ?? '[+{count} more items inside]';
+                        $wb_first_lines_excerpt = social_build_first_lines_excerpt($candidates, $wb_delim, $wb_max_items, $wb_append_ellipsis, $wb_append_remaining, $wb_singular_tpl, $wb_plural_tpl);
+                        $current_excerpt_val = !empty($state['excerpt_override']) ? $state['excerpt_override'] : $wb_first_lines_excerpt;
                     ?>
                     <div class="postbox" id="social_wb_box_excerpt_preview" style="border-left: 5px solid #10b981;">
                         <div class="postbox-header">
                             <h2 class="hndle">
                                 <span class="dashicons dashicons-excerpt-view" style="color:#10b981; margin-right:4px;"></span>
-                                Digest Excerpt Inspection
+                                Digest Excerpt Inspection &amp; Editor
                             </h2>
                             <button type="button" class="handlediv" aria-expanded="true"><span class="toggle-indicator" aria-hidden="true"></span></button>
                         </div>
                         <div class="inside">
                             <p style="margin-top:0; font-size:12px; color:#50575e;">
-                                Live preview of the WordPress post excerpt that will be distributed to your homepage, search snippets, archives, and RSS feeds.
+                                Live preview and editable excerpt distributed to your homepage, search snippets, archives, and RSS feeds. You can edit this text directly before publishing or saving.
                             </p>
-                            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px 14px; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size:14px; line-height:1.6; color:#1e293b;">
-                                <?php if (!empty($opts['excerpt_first_lines'])): ?>
-                                    <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#059669; letter-spacing:0.5px; margin-bottom:6px;">
-                                        Generated First-Lines Excerpt (Active Divider: <code><?php echo esc_html(trim($wb_delim)); ?></code>)
-                                    </div>
-                                    <div style="font-style:italic; color:#0f172a;">
-                                        &ldquo;<?php echo esc_html($wb_first_lines_excerpt ?: 'No excerpt lines available.'); ?>&rdquo;
-                                    </div>
-                                <?php else: ?>
-                                    <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#64748b; letter-spacing:0.5px; margin-bottom:6px;">
-                                        Standard Excerpt (Auto-generated from post content)
-                                    </div>
-                                    <div style="color:#475569;">
-                                        First-lines excerpt is currently disabled. Enable it under <a href="<?php echo esc_url(admin_url('edit.php?page=social-digest-settings&tab=settings#social_box_framing_templates')); ?>" style="color:#0284c7;">Settings &rarr; Article Framing &amp; Lead-In / Footer Templates</a>.
-                                    </div>
-                                <?php endif; ?>
+                            <div style="margin-bottom:8px;">
+                                <textarea name="workbench_excerpt_override" id="sd_workbench_excerpt_override" rows="3" style="width:100%; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size:13px; line-height:1.5; padding:8px 10px; border-radius:4px; border:1px solid #ccd0d4; box-sizing:border-box;"><?php echo esc_textarea($current_excerpt_val); ?></textarea>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#64748b;">
+                                <span>
+                                    <?php if (!empty($state['excerpt_override'])): ?>
+                                        <span style="color:#0284c7; font-weight:600;">Custom excerpt active.</span>
+                                    <?php else: ?>
+                                        <span>Auto-generated from first lines.</span>
+                                    <?php endif; ?>
+                                </span>
+                                <button type="button" class="button button-small" onclick="document.getElementById('sd_workbench_excerpt_override').value = <?php echo json_encode($wb_first_lines_excerpt); ?>;">
+                                    Reset to Auto-Generated
+                                </button>
                             </div>
                         </div>
                     </div>

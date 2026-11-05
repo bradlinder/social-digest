@@ -155,7 +155,14 @@ function social_extract_first_line_or_sentence($text) {
     return trim($first_line);
 }
 
-function social_build_first_lines_excerpt($candidates, $delimiter = ' // ', $max_items = 0, $append_ellipsis = false) {
+function social_build_first_lines_excerpt($candidates, $delimiter = ' // ', $max_items = 1, $append_ellipsis = false, $append_remaining = false, $singular_tpl = '', $plural_tpl = '') {
+    $total_eligible = 0;
+    foreach ((array)$candidates as $c) {
+        if (empty($c['excluded'])) {
+            $total_eligible++;
+        }
+    }
+
     $lines = [];
     $count = 0;
     foreach ((array)$candidates as $c) {
@@ -190,6 +197,21 @@ function social_build_first_lines_excerpt($candidates, $delimiter = ' // ', $max
         $joined_trimmed = trim($joined);
         if ($joined_trimmed !== '' && !preg_match('/(?:\.\.\.|…)\s*$/u', $joined_trimmed)) {
             $joined = rtrim($joined_trimmed, '.') . '...';
+        }
+    }
+
+    // Append remaining stories teaser when items remain beyond the max limit
+    if ($append_remaining && $max_items > 0) {
+        $remaining = max(0, $total_eligible - $count);
+        if ($remaining > 0) {
+            $s_tpl = ($singular_tpl !== '') ? $singular_tpl : '[+{count} more item inside]';
+            $p_tpl = ($plural_tpl !== '') ? $plural_tpl : '[+{count} more items inside]';
+            $tpl   = ($remaining === 1) ? $s_tpl : $p_tpl;
+            $rem_text = str_ireplace('{count}', (string)$remaining, $tpl);
+            $rem_text = trim($rem_text);
+            if ($rem_text !== '') {
+                $joined = rtrim($joined) . ' ' . $rem_text;
+            }
         }
     }
 
