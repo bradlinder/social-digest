@@ -234,7 +234,7 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
         $post_uri = $post['uri'];
         $rkey     = substr($post_uri, strrpos($post_uri, '/') + 1);
         $author_handle = $post['author']['handle'] ?? $handle;
-        $author_name   = esc_html($post['author']['displayName'] ?? $author_handle);
+        $author_name   = (string)($post['author']['displayName'] ?? $author_handle);
         $author_avatar = esc_url_raw($post['author']['avatar'] ?? '');
         $author_profile_url = 'https://bsky.app/profile/' . $author_handle;
         $web_url       = 'https://bsky.app/profile/' . $author_handle . '/post/' . $rkey;
@@ -268,7 +268,7 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
                 $alt_txt  = esc_attr($alt_raw ?: 'Bluesky image');
                 $alt_badge = '';
                 if ($alt_raw !== '' && strtolower($alt_raw) !== 'bluesky image') {
-                    $alt_badge = '<span data-nosnippet class="social-alt-badge" onclick="event.preventDefault(); event.stopPropagation(); alert(this.getAttribute(\'title\'));" style="position:absolute; bottom:6px; left:6px; background:rgba(15,23,42,0.85); color:#ffffff; font-size:10px; font-weight:700; padding:2px 5px; border-radius:4px; letter-spacing:0.5px; backdrop-filter:blur(4px); box-shadow:0 1px 3px rgba(0,0,0,0.3); z-index:3; pointer-events:auto; cursor:help;" title="ALT: ' . $alt_txt . '">ALT</span>';
+                    $alt_badge = '<span data-nosnippet class="social-alt-badge" style="position:absolute; bottom:6px; left:6px; background:rgba(15,23,42,0.85); color:#ffffff; font-size:10px; font-weight:700; padding:2px 5px; border-radius:4px; letter-spacing:0.5px; backdrop-filter:blur(4px); box-shadow:0 1px 3px rgba(0,0,0,0.3); z-index:3; pointer-events:auto; cursor:help;" title="ALT: ' . $alt_txt . '">ALT</span>';
                 }
                 if ($img_url) {
                     if (!$first_image_url) $first_image_url = $img_url;
@@ -295,11 +295,10 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
             $gallery_html .= '</div>';
         }
 
-        // Bluesky Video Embed Support (app.bsky.embed.video)
+        // Bluesky Video Embed Support (app.bsky.embed.video / app.bsky.embed.video#view)
         if (
-            (isset($embed['$type']) && $embed['$type'] === 'app.bsky.embed.video') ||
-            isset($embed['playlist']) ||
-            !empty($embed['thumbnail'])
+            (isset($embed['$type']) && strpos((string)$embed['$type'], 'app.bsky.embed.video') === 0) ||
+            isset($embed['playlist'])
         ) {
             $video_thumb = esc_url($embed['thumbnail'] ?? '');
             $alt_raw = trim($embed['alt'] ?? '');
@@ -339,9 +338,11 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
                             if (isset($facet['index']['byteStart'], $facet['index']['byteEnd'])) {
                                 $start = (int)$facet['index']['byteStart'];
                                 $end   = (int)$facet['index']['byteEnd'];
-                                $disp_text = substr($text, $start, $end - $start);
-                                if ($disp_text) {
-                                    $links_map[$disp_text] = $u;
+                                if ($start >= 0 && $end > $start && $end <= strlen($text)) {
+                                    $disp_text = substr($text, $start, $end - $start);
+                                    if ($disp_text) {
+                                        $links_map[$disp_text] = $u;
+                                    }
                                 }
                             }
                         } elseif ($f_type === 'app.bsky.richtext.facet#tag' && !empty($feat['tag'])) {
@@ -355,7 +356,10 @@ function social_fetch_bluesky($handle, $last_check, $keep_threads, $include_repo
         if (isset($embed['external']['uri'])) $extracted_urls[] = esc_url_raw($embed['external']['uri']);
         if (preg_match_all('/\b(?:https?:\/\/|www\.)[^\s<"\'\)]+/i', $text, $u_m)) {
             foreach ($u_m[0] as $match_url) {
-                $extracted_urls[] = esc_url_raw($match_url);
+                $clean_match = rtrim($match_url, '.,;:!?');
+                if ($clean_match !== '') {
+                    $extracted_urls[] = esc_url_raw($clean_match);
+                }
             }
         }
         $extracted_urls = array_values(array_unique(array_filter($extracted_urls)));
@@ -514,8 +518,8 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
         $full_acct    = (strpos($author_acct, '@') === false && !empty($instance)) ? "{$author_acct}@{$instance}" : $author_acct;
         $author_avatar = esc_url_raw($post_data['account']['avatar'] ?? $post_data['account']['avatar_static'] ?? '');
         $author_profile_url = esc_url_raw($post_data['account']['url'] ?? "https://{$instance}/@{$username}");
-        $author_name = esc_html(!empty($post_data['account']['display_name']) ? $post_data['account']['display_name'] : $post_data['account']['username']);
-        $post_url    = esc_url($post_data['url'] ?? "https://{$instance}/@{$username}/{$post_data['id']}");
+        $author_name = (string)(!empty($post_data['account']['display_name']) ? $post_data['account']['display_name'] : $post_data['account']['username']);
+        $post_url    = esc_url_raw($post_data['url'] ?? "https://{$instance}/@{$username}/{$post_data['id']}");
         $first_image_url = null;
         $gallery_html = '';
         $card_html = '';
@@ -525,7 +529,14 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
 
         $extracted_urls = [];
         if (!empty($post_data['card']['url'])) $extracted_urls[] = $post_data['card']['url'];
-        if (preg_match_all('/\b(?:https?:\/\/|www\.)[^\s<"\'\)]+/i', $clean_text, $u_m)) $extracted_urls = array_merge($extracted_urls, $u_m[0]);
+        if (preg_match_all('/\b(?:https?:\/\/|www\.)[^\s<"\'\)]+/i', $clean_text, $u_m)) {
+            foreach ($u_m[0] as $match_url) {
+                $clean_match = rtrim($match_url, '.,;:!?');
+                if ($clean_match !== '') {
+                    $extracted_urls[] = $clean_match;
+                }
+            }
+        }
         $extracted_urls = array_values(array_unique($extracted_urls));
 
         if (!empty($post_data['media_attachments']) && is_array($post_data['media_attachments'])) {
@@ -559,7 +570,7 @@ function social_fetch_mastodon($handle_raw, $last_check, $keep_threads, $include
                     $alt_txt  = esc_attr($alt_raw ?: 'Mastodon image');
                     $alt_badge = '';
                     if ($alt_raw !== '' && strtolower($alt_raw) !== 'mastodon image') {
-                        $alt_badge = '<span data-nosnippet class="social-alt-badge" onclick="event.preventDefault(); event.stopPropagation(); alert(this.getAttribute(\'title\'));" style="position:absolute; bottom:6px; left:6px; background:rgba(15,23,42,0.85); color:#ffffff; font-size:10px; font-weight:700; padding:2px 5px; border-radius:4px; letter-spacing:0.5px; backdrop-filter:blur(4px); box-shadow:0 1px 3px rgba(0,0,0,0.3); z-index:3; pointer-events:auto; cursor:help;" title="ALT: ' . $alt_txt . '">ALT</span>';
+                        $alt_badge = '<span data-nosnippet class="social-alt-badge" style="position:absolute; bottom:6px; left:6px; background:rgba(15,23,42,0.85); color:#ffffff; font-size:10px; font-weight:700; padding:2px 5px; border-radius:4px; letter-spacing:0.5px; backdrop-filter:blur(4px); box-shadow:0 1px 3px rgba(0,0,0,0.3); z-index:3; pointer-events:auto; cursor:help;" title="ALT: ' . $alt_txt . '">ALT</span>';
                     }
                     if ($img_url) {
                         if (!$first_image_url) $first_image_url = $img_url;

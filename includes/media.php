@@ -52,9 +52,13 @@ function social_sideload_image_by_mime($url, $post_id, $desc = '', $slug = '') {
     $image_data = wp_remote_retrieve_body($response);
     if (empty($image_data) || strlen($image_data) > 12 * 1024 * 1024) return false;
 
-    $content_type = strtolower((string)($headers['content-type'] ?? ''));
-    $ext = '.jpg';
-    $mime_type = 'image/jpeg';
+    $content_type = strtolower(trim((string)($headers['content-type'] ?? '')));
+    if (preg_match('/^(?:text\/|application\/(?:json|xml|javascript|xhtml)|image\/svg\+xml)/i', $content_type)) {
+        return false;
+    }
+
+    $ext = '';
+    $mime_type = '';
     if (strpos($content_type, 'png') !== false) {
         $ext = '.png';
         $mime_type = 'image/png';
@@ -67,6 +71,23 @@ function social_sideload_image_by_mime($url, $post_id, $desc = '', $slug = '') {
     } elseif (strpos($content_type, 'avif') !== false) {
         $ext = '.avif';
         $mime_type = 'image/avif';
+    } elseif (strpos($content_type, 'jpeg') !== false || strpos($content_type, 'jpg') !== false) {
+        $ext = '.jpg';
+        $mime_type = 'image/jpeg';
+    } else {
+        $img_info = function_exists('getimagesizefromstring') ? @getimagesizefromstring($image_data) : false;
+        if (!$img_info || empty($img_info['mime']) || strpos($img_info['mime'], 'image/') !== 0 || $img_info['mime'] === 'image/svg+xml') {
+            return false;
+        }
+        $mime_type = $img_info['mime'];
+        $ext_map = [
+            'image/jpeg' => '.jpg',
+            'image/png'  => '.png',
+            'image/gif'  => '.gif',
+            'image/webp' => '.webp',
+            'image/avif' => '.avif',
+        ];
+        $ext = $ext_map[$mime_type] ?? '.jpg';
     }
 
     // Determine clean, descriptive base file name slug

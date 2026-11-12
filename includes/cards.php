@@ -113,8 +113,10 @@ function social_get_og_card_cached($url) {
             $img_url = $scheme . ':' . $img_url;
         } elseif (strpos($img_url, '/') === 0) {
             $host = parse_url($url, PHP_URL_HOST);
-            $scheme = parse_url($url, PHP_URL_SCHEME) ?: 'https';
-            $img_url = $scheme . '://' . $host . $img_url;
+            if (!empty($host)) {
+                $scheme = parse_url($url, PHP_URL_SCHEME) ?: 'https';
+                $img_url = $scheme . '://' . $host . $img_url;
+            }
         }
         $img_url = esc_url_raw($img_url);
     }
@@ -152,7 +154,8 @@ function social_render_link_card_html($card_url, $card_title, $card_desc, $card_
     $card_thumb = esc_url($card_thumb);
     $display_title = esc_html($card_title ?: ($card_domain ?: $card_url));
     $display_desc  = esc_html($card_desc ? wp_trim_words($card_desc, 25) : '');
-    $display_domain = esc_html(strtolower(preg_replace('/^www\./i', '', $card_domain ?: parse_url($card_url, PHP_URL_HOST))));
+    $raw_domain = $card_domain ?: parse_url($card_url, PHP_URL_HOST);
+    $display_domain = esc_html(strtolower(preg_replace('/^www\./i', '', (string)($raw_domain ?: ''))));
 
     $html = '<a href="' . $card_url . '" target="_blank" rel="noopener" class="social-link-card" style="display:block; text-decoration:none; color:inherit; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin:12px 0; max-width:500px; background:#f8fafc; box-shadow:0 1px 3px rgba(0,0,0,0.04); cursor:pointer;">';
     if ($card_thumb) {

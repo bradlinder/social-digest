@@ -21,35 +21,40 @@ function social_clean_body_text($raw_text, $has_card = false, $card_url = '', $l
         $text = preg_replace('/\s*[:\-–]\s*$/u', '.', $text);
     }
 
-    // Now escape the text before inserting clickable HTML links
-    $escaped = esc_html(trim($text));
-
-    // Convert mapped URLs (from Bluesky facets or parsed URLs) to placeholders first
+    // Tokenize mapped URLs and bare URLs before escaping so quotes/ampersands stay intact
+    $raw_clean = trim($text);
     $placeholders = [];
+    $idx = 0;
+
     if (!empty($links_map) && is_array($links_map)) {
-        $idx = 0;
+        uksort($links_map, function($a, $b) {
+            return strlen((string)$b) <=> strlen((string)$a);
+        });
         foreach ($links_map as $disp => $full_url) {
             if (empty($disp) || empty($full_url)) continue;
-            $disp_esc = esc_html($disp);
-            if (stripos($escaped, $disp_esc) !== false) {
+            if (stripos($raw_clean, $disp) !== false) {
                 $ph = "___SD_LINK_PH_{$idx}___";
-                $placeholders[$ph] = '<a href="' . esc_url($full_url) . '" target="_blank" rel="noopener">' . $disp_esc . '</a>';
-                $escaped = str_replace($disp_esc, $ph, $escaped);
+                $placeholders[$ph] = '<a href="' . esc_url($full_url) . '" target="_blank" rel="noopener">' . esc_html($disp) . '</a>';
+                $raw_clean = str_ireplace($disp, $ph, $raw_clean);
                 $idx++;
             }
         }
     }
 
     // Link any remaining bare http(s):// or www. URLs that weren't converted yet
-    $escaped = preg_replace_callback('/\b(https?:\/\/[^\s<"\'\)]+|www\.[^\s<"\'\)]+)/i', function($m) {
+    $raw_clean = preg_replace_callback('/\b(https?:\/\/[^\s<"\'\)]+|www\.[^\s<"\'\)]+)/i', function($m) use (&$placeholders, &$idx) {
         $raw_u = $m[1];
         $u = rtrim($raw_u, '.,;:!?');
         $trailing = substr($raw_u, strlen($u));
         $href = (strpos($u, 'www.') === 0) ? 'https://' . $u : $u;
-        return '<a href="' . esc_url($href) . '" target="_blank" rel="noopener">' . $u . '</a>' . $trailing;
-    }, $escaped);
+        $ph = "___SD_LINK_PH_{$idx}___";
+        $placeholders[$ph] = '<a href="' . esc_url($href) . '" target="_blank" rel="noopener">' . esc_html($u) . '</a>';
+        $idx++;
+        return $ph . $trailing;
+    }, $raw_clean);
 
-    // Restore placeholders
+    // Escape the surrounding text, then restore link placeholders
+    $escaped = esc_html($raw_clean);
     if (!empty($placeholders)) {
         $escaped = str_replace(array_keys($placeholders), array_values($placeholders), $escaped);
     }
@@ -102,8 +107,8 @@ function social_strip_all_urls($text) {
     $text = preg_replace('/\b[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?)*\.(?:com|org|net|edu|gov|io|co|ai|app|dev|tech|me|tv|cc|biz|info|[a-z]{2})\/[^\s<>"\'()]+[^\s<>"\'().,;:!?]/iu', '', $text);
     $text = preg_replace('/\b[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?)*\.(?:com|org|net|edu|gov|io|co|ai|app|dev|tech|me|tv|cc|biz|info|[a-z]{2})\/[^\s<>"\'()]+/iu', '', $text);
 
-    // 5. Strip standalone domain names ending in popular TLDs (e.g. liliputing.com)
-    $text = preg_replace('/\b[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?\.(?:com|org|net|edu|gov|io|app|dev|tech|info|biz)\b/iu', '', $text);
+    // 5. Strip standalone domain names ending in popular TLDs (e.g. liliputing.com), preserving uppercase .NET terms (e.g. ASP.NET, Paint.NET)
+    $text = preg_replace('/\b[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.(?!NET\b)(?i:com|org|net|edu|gov|io|app|dev|tech|info|biz)\b/u', '', $text);
 
     // 6. Clean up any leftover empty brackets/parentheses from stripped URLs, e.g. () or []
     $text = preg_replace('/\(\s*\)|\[\s*\]/u', '', $text);
@@ -140,11 +145,11 @@ function social_extract_first_line_or_sentence($text) {
     // Match first sentence ending with . ! ? or … (and optional closing quotes/parentheses)
     // followed by: space + capital/digit/quote, emoji/bullet/dash, a URL boundary, or end of line.
     // Protects common abbreviations (e.g., i.e., vs., mr., dr., rev., etc.) from premature splitting.
-    $abbrev_pattern = '(?<!\b(?:e\.g|i\.e|vs|mr|dr|ms|mrs|prof|inc|ltd|approx|gen|rep|sen|no|vol|rev|st))';
+    $abbrev_pattern = '(?<!\b(?i:e\.g|i\.e|vs|mr|dr|ms|mrs|prof|inc|ltd|approx|gen|rep|sen|no|vol|rev|st))';
     $punct_pattern  = '[.!?…]+[\'"”’\)\]]*';
-    $lookahead      = '(?:\s+[A-Z0-9"“‘\(\[]|\s*(?:[#@•—–\*\-]|[\x{1F300}-\x{1FAD6}]|[\x{1F600}-\x{1F64F}]|[\x{2600}-\x{27BF}])|\s*(?:https?:\/\/|www\.|\b[a-z0-9\-]+\.[a-z]{2,}\/)|\s*$)';
+    $lookahead      = '(?:\s+[A-Z0-9"“‘\(\[]|\s*(?:[#@•—–\*\-]|[\x{1F300}-\x{1FAD6}]|[\x{1F600}-\x{1F64F}]|[\x{2600}-\x{27BF}])|\s*(?i:https?:\/\/|www\.|\b[a-z0-9\-]+\.[a-z]{2,}\/)|\s*$)';
 
-    if (preg_match('/^(.+?' . $abbrev_pattern . $punct_pattern . ')' . $lookahead . '/iu', $first_line, $m)) {
+    if (preg_match('/^(.+?' . $abbrev_pattern . $punct_pattern . ')' . $lookahead . '/u', $first_line, $m)) {
         $first_line = trim($m[1]);
     }
 
@@ -192,7 +197,8 @@ function social_build_first_lines_excerpt($candidates, $delimiter = ' // ', $max
         }, $lines);
         $joined = implode(' ', $formatted);
     } else {
-        $glue = ' ' . $delimiter . ' ';
+        $plain_delim = wp_strip_all_tags($delimiter);
+        $glue = ' ' . $plain_delim . ' ';
         $formatted = array_map(function($line) {
             return rtrim($line, " \t\n\r\0\x0B.");
         }, $lines);

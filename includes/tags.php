@@ -211,11 +211,10 @@ function social_split_camelcase_tag($tag, $custom_overrides_str = '') {
                 $current_tag = $t_no_space;
                 foreach ($vocab_rules as $rule) {
                     if ($current_tag === '') break;
-                    $norm_curr = mb_strtolower($current_tag);
-                    $pos = strpos($norm_curr, $rule['key']);
+                    $pos = mb_stripos($current_tag, $rule['key'], 0, 'UTF-8');
                     if ($pos !== false) {
-                        $before = substr($current_tag, 0, $pos);
-                        $after = substr($current_tag, $pos + strlen($rule['key']));
+                        $before = mb_substr($current_tag, 0, $pos, 'UTF-8');
+                        $after = mb_substr($current_tag, $pos + mb_strlen($rule['key'], 'UTF-8'), null, 'UTF-8');
                         $segs = [];
                         if ($before !== '') $segs[] = $before;
                         $segs[] = ' ' . $rule['val'] . ' ';

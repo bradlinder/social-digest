@@ -112,4 +112,16 @@
             observer.observe(document.body, { attributes: true, attributeFilter: ['class', 'data-theme', 'data-bs-theme', 'data-color-scheme', 'style'] });
         }
     }
+
+    // Delegated click handler for ALT badges (avoids inline onclick attributes)
+    document.addEventListener('click', function(e) {
+        var badge = e.target && e.target.closest ? e.target.closest('.social-alt-badge') : null;
+        if (!badge || badge.hasAttribute('onclick')) return;
+        var altText = badge.getAttribute('data-alt') || badge.getAttribute('title');
+        if (altText) {
+            e.preventDefault();
+            e.stopPropagation();
+            alert(altText);
+        }
+    });
 })();

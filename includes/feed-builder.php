@@ -821,13 +821,13 @@ function social_publish_workbench_run($state, $force_status = null, $schedule_ti
                 'ellipsis' => ' ... ',
                 'period'   => '. ',
                 'dash'     => ' — ',
-                'bullet'   => ' <b>•</b> ',
+                'bullet'   => ' • ',
                 'custom'   => $custom_delim,
             ];
             $delim = $delim_map[$delim_key] ?? ' // ';
             $max_items = isset($opts['excerpt_max_items']) ? absint($opts['excerpt_max_items']) : 1;
             $append_ellipsis = !empty($opts['excerpt_append_ellipsis']);
-            $append_remaining = !empty($opts['excerpt_append_remaining']);
+            $append_remaining = isset($opts['excerpt_append_remaining']) ? !empty($opts['excerpt_append_remaining']) : true;
             $singular_tpl = (!empty($opts['excerpt_remaining_singular']) && strpos($opts['excerpt_remaining_singular'], '[+') === false) ? $opts['excerpt_remaining_singular'] : '[plus {count} more news item in this roundup]';
             $plural_tpl = (!empty($opts['excerpt_remaining_plural']) && strpos($opts['excerpt_remaining_plural'], '[+') === false) ? $opts['excerpt_remaining_plural'] : '[plus {count} more news items in this roundup]';
             $post_excerpt = social_build_first_lines_excerpt($state['candidates'] ?? [], $delim, $max_items, $append_ellipsis, $append_remaining, $singular_tpl, $plural_tpl);
@@ -914,7 +914,7 @@ function social_publish_workbench_run($state, $force_status = null, $schedule_ti
             $post_args['post_category'] = array_map('absint', $opts['categories']);
         }
 
-        $post_id = wp_insert_post($post_args, true);
+        $post_id = wp_insert_post(wp_slash($post_args), true);
         if (is_wp_error($post_id)) {
             return ['success' => false, 'message' => 'Post creation failed: ' . $post_id->get_error_message()];
         }
@@ -970,10 +970,10 @@ function social_publish_workbench_run($state, $force_status = null, $schedule_ti
             if ($updated_content !== $built['content']) {
                 $built['content'] = $updated_content;
                 if ($status_to_use !== 'publish') {
-                    wp_update_post([
+                    wp_update_post(wp_slash([
                         'ID'           => $post_id,
                         'post_content' => $built['content'],
-                    ]);
+                    ]));
                 }
             }
         }
@@ -1042,20 +1042,20 @@ function social_publish_workbench_run($state, $force_status = null, $schedule_ti
         // Transition from draft to publish ONLY after all media assets and the featured image are fully attached!
         // This guarantees that feed readers and RSS subscribers receive a complete post with featured image and local media on the initial publish event.
         if ($status_to_use === 'publish') {
-            wp_update_post([
+            wp_update_post(wp_slash([
                 'ID'           => $post_id,
                 'post_status'  => 'publish',
                 'post_content' => $built['content'],
-            ]);
+            ]));
         } elseif ($status_to_use === 'future') {
-            wp_update_post([
+            wp_update_post(wp_slash([
                 'ID'            => $post_id,
                 'post_status'   => 'future',
                 'post_date'     => $post_date_local,
                 'post_date_gmt' => $post_date_gmt,
                 'edit_date'     => true,
                 'post_content'  => $built['content'],
-            ]);
+            ]));
         }
 
         // Purge W3 Total Cache and active page/object caches for the newly published digest

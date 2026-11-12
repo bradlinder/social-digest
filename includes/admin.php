@@ -128,11 +128,12 @@ add_action('admin_init', function() {
 
     // Direct Settings Form Handler (Eliminates core options.php "Link expired" errors)
     if (isset($_POST['social_digest_options']) && isset($_POST['social_digest_settings_nonce'])) {
-        if (!wp_verify_nonce($_POST['social_digest_settings_nonce'], 'social_digest_settings_save')) {
+        if (!current_user_can('manage_options')) {
+            add_settings_error('sd53', 'capability', 'You do not have permission to modify Social Digest settings.', 'error');
+        } elseif (!wp_verify_nonce(wp_unslash($_POST['social_digest_settings_nonce']), 'social_digest_settings_save')) {
             add_settings_error('sd53', 'nonce', 'Your WordPress security session has expired. Please refresh the page and try again.', 'error');
         } else {
-            $sanitized = social_sanitize_settings($_POST['social_digest_options']);
-            update_option('social_digest_options', $sanitized);
+            update_option('social_digest_options', wp_unslash($_POST['social_digest_options']));
             add_settings_error('sd53', 'settings_saved', 'Settings saved successfully!', 'updated');
         }
     }
@@ -148,14 +149,22 @@ add_action('admin_init', function() {
     }
 
     if ($has_workbench_action) {
-        if (!isset($_POST['sd53_nonce']) || !wp_verify_nonce($_POST['sd53_nonce'], 'sd53_workbench_action')) {
+        if (!current_user_can('manage_options')) {
+            add_settings_error('sd53', 'capability', 'You do not have permission to perform Social Digest workbench actions.', 'error');
+            return;
+        }
+        if (!isset($_POST['sd53_nonce']) || !wp_verify_nonce(wp_unslash($_POST['sd53_nonce']), 'sd53_workbench_action')) {
             add_settings_error('sd53', 'nonce', 'Your WordPress security session has expired. Please refresh the page and try again.', 'error');
             return;
         }
     }
 
     if (isset($_POST['sd53_cleanup_avatars'])) {
-        if (!isset($_POST['sd53_cleanup_nonce']) || !wp_verify_nonce($_POST['sd53_cleanup_nonce'], 'sd53_cleanup_avatars_action')) {
+        if (!current_user_can('manage_options')) {
+            add_settings_error('sd53', 'capability', 'You do not have permission to clean up avatars.', 'error');
+            return;
+        }
+        if (!isset($_POST['sd53_cleanup_nonce']) || !wp_verify_nonce(wp_unslash($_POST['sd53_cleanup_nonce']), 'sd53_cleanup_avatars_action')) {
             add_settings_error('sd53', 'cleanup_nonce', 'Your WordPress security session has expired. Please refresh the page and try again.', 'error');
             return;
         }
@@ -169,7 +178,7 @@ add_action('admin_init', function() {
     }
 
     if (isset($_POST['sd53_save'])) {
-        social_save_workbench_state(social_sanitize_next_run($_POST));
+        social_save_workbench_state(social_sanitize_next_run(wp_unslash($_POST)));
         add_settings_error('sd53', 'save', 'Next-run editorial changes saved.', 'updated');
     }
 
@@ -179,7 +188,7 @@ add_action('admin_init', function() {
     }
 
     if (isset($_POST['sd53_publish'])) {
-        $state = social_sanitize_next_run($_POST);
+        $state = social_sanitize_next_run(wp_unslash($_POST));
         social_save_workbench_state($state);
         $result = social_publish_workbench_run($state, 'publish');
         if (!empty($result['success'])) {
@@ -193,7 +202,7 @@ add_action('admin_init', function() {
     }
 
     if (isset($_POST['sd53_save_draft'])) {
-        $state = social_sanitize_next_run($_POST);
+        $state = social_sanitize_next_run(wp_unslash($_POST));
         social_save_workbench_state($state);
         $result = social_publish_workbench_run($state, 'draft');
         if (!empty($result['success'])) {
@@ -207,10 +216,11 @@ add_action('admin_init', function() {
     }
 
     if (isset($_POST['sd53_schedule'])) {
-        $state = social_sanitize_next_run($_POST);
+        $unslashed_post = wp_unslash($_POST);
+        $state = social_sanitize_next_run($unslashed_post);
         social_save_workbench_state($state);
 
-        $sched_dt_str = sanitize_text_field($_POST['sd53_schedule_datetime'] ?? '');
+        $sched_dt_str = sanitize_text_field($unslashed_post['sd53_schedule_datetime'] ?? '');
         $tz = wp_timezone();
         $dt = null;
         if (!empty($sched_dt_str)) {
@@ -260,7 +270,7 @@ add_action('admin_init', function() {
     }
 
     if (isset($_POST['sd53_set_cutoff_custom'])) {
-        $custom_dt = sanitize_text_field($_POST['sd53_custom_cutoff_datetime'] ?? '');
+        $custom_dt = sanitize_text_field(wp_unslash($_POST['sd53_custom_cutoff_datetime'] ?? ''));
         if (!empty($custom_dt)) {
             $tz = wp_timezone();
             $dt = date_create_immutable($custom_dt, $tz);
@@ -285,7 +295,7 @@ add_action('wp_ajax_sd_save_snapshot', function() {
         wp_send_json_error(['message' => 'Unauthorized']);
     }
 
-    $raw_content = isset($_POST['content']) ? (string)$_POST['content'] : '';
+    $raw_content = isset($_POST['content']) ? (string)wp_unslash($_POST['content']) : '';
     $clean_content = sanitize_textarea_field($raw_content);
 
     $lines = array_filter(array_map('trim', explode("\n", $clean_content)), function($l) {
@@ -405,7 +415,9 @@ function social_sanitize_settings($input) {
     }
 
     if (isset($input['overrides_snapshot'])) {
-        $decoded = json_decode(stripslashes((string)$input['overrides_snapshot']), true);
+        $decoded = is_array($input['overrides_snapshot'])
+            ? $input['overrides_snapshot']
+            : json_decode((string)$input['overrides_snapshot'], true);
         if (is_array($decoded) && isset($decoded['content']) && $decoded['content'] !== '') {
             $output['overrides_snapshot'] = [
                 'content'   => sanitize_textarea_field($decoded['content']),
@@ -1299,8 +1311,8 @@ function social_render_settings_page() {
                                 var sdSearchMatches = [];
                                 var sdCurrentMatchIdx = -1;
                                 var sdLastSearchQuery = '';
-                                var sdSnapshot = <?php echo json_encode(!empty($snap['content']) ? $snap : null); ?>;
-                                var sdSnapshotNonce = <?php echo json_encode(wp_create_nonce('sd_snapshot_action')); ?>;
+                                var sdSnapshot = <?php echo wp_json_encode(!empty($snap['content']) ? $snap : null, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+                                var sdSnapshotNonce = <?php echo wp_json_encode(wp_create_nonce('sd_snapshot_action'), JSON_HEX_TAG | JSON_HEX_AMP); ?>;
 
                                 function sdClearSearch() {
                                     sdSearchMatches = [];
@@ -1398,7 +1410,7 @@ function social_render_settings_page() {
                                                     }
                                                     var indicator = document.getElementById('sd_snapshot_indicator');
                                                     if (indicator && !indicator.textContent.trim()) {
-                                                        indicator.innerHTML = '(Saved: ' + (parsedLocal.time_str || 'backup') + ' &bull; ' + (parsedLocal.count || 0) + ' rules)';
+                                                        indicator.textContent = '(Saved: ' + (parsedLocal.time_str || 'backup') + ' \u2022 ' + (parsedLocal.count || 0) + ' rules)';
                                                     }
                                                     var hiddenField = document.getElementById('sd_overrides_snapshot_field');
                                                     if (hiddenField) {
@@ -1593,7 +1605,7 @@ function social_render_settings_page() {
 
                                     var indicator = document.getElementById('sd_snapshot_indicator');
                                     if (indicator) {
-                                        indicator.innerHTML = '(Saved: ' + timeStr + ' &bull; ' + ruleCount + ' rules)';
+                                        indicator.textContent = '(Saved: ' + timeStr + ' \u2022 ' + ruleCount + ' rules)';
                                     }
 
                                     var statusEl = document.getElementById('sd_import_status');
@@ -1622,7 +1634,7 @@ function social_render_settings_page() {
                                                 sdSnapshot = data.data.snapshot;
                                                 if (hiddenField) hiddenField.value = JSON.stringify(sdSnapshot);
                                                 if (indicator) {
-                                                    indicator.innerHTML = '(Saved: ' + (sdSnapshot.time_str || timeStr) + ' &bull; ' + (sdSnapshot.count || ruleCount) + ' rules)';
+                                                    indicator.textContent = '(Saved: ' + (sdSnapshot.time_str || timeStr) + ' \u2022 ' + (sdSnapshot.count || ruleCount) + ' rules)';
                                                 }
                                             }
                                             if (statusEl) {
@@ -2098,7 +2110,7 @@ function social_render_settings_page() {
                             'ellipsis' => ' ... ',
                             'period'   => '. ',
                             'dash'     => ' — ',
-                            'bullet'   => ' <b>•</b> ',
+                            'bullet'   => ' • ',
                             'custom'   => $wb_custom_delim,
                         ];
                         $wb_delim = $wb_delim_map[$wb_delim_key] ?? ' // ';
@@ -2123,14 +2135,14 @@ function social_render_settings_page() {
                                 Live preview and editable excerpt distributed to your homepage, search snippets, archives, and RSS feeds. You can edit this text directly before publishing or saving.
                             </p>
                             <script>
-                            window.sdExcerptConfig = <?php echo json_encode([
+                            window.sdExcerptConfig = <?php echo wp_json_encode([
                                 'delim'            => $wb_delim,
                                 'max_items'        => $wb_max_items,
                                 'append_ellipsis'  => $wb_append_ellipsis,
                                 'append_remaining' => $wb_append_remaining,
                                 'singular_tpl'     => $wb_singular_tpl,
                                 'plural_tpl'       => $wb_plural_tpl,
-                            ]); ?>;
+                            ], JSON_HEX_TAG | JSON_HEX_AMP); ?>;
                             </script>
                             <div style="margin-bottom:8px;">
                                 <input type="hidden" name="workbench_excerpt_is_custom" id="sd_workbench_excerpt_is_custom" value="<?php echo !empty($state['excerpt_override']) ? '1' : '0'; ?>" />
@@ -2222,7 +2234,13 @@ function social_render_settings_page() {
         } else if (tag === 'link') {
             var url = prompt('Enter link URL (e.g. https://example.com):', 'https://');
             if (url) {
-                replacement = '<a href="' + url + '">' + (selected || 'Link text') + '</a>';
+                url = url.trim();
+                if (!/^(?:https?:\/\/|mailto:|\/)/i.test(url)) {
+                    alert('Please enter a valid http://, https://, mailto:, or site-relative URL.');
+                    return;
+                }
+                var safeUrl = url.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                replacement = '<a href="' + safeUrl + '">' + (selected || 'Link text') + '</a>';
             } else {
                 return;
             }
@@ -2559,12 +2577,10 @@ function social_render_settings_page() {
             var joined = '';
 
             if (delimClean === '.' || delimClean === '. ' || delim === '.') {
-                joined = lines.map(function(l) { return l.replace(/[ 	
-.]+$/, '') + '.'; }).join(' ');
+                joined = lines.map(function(l) { return l.replace(/[ \t\r\n.]+$/, '') + '.'; }).join(' ');
             } else {
-                var glue = ' ' + delim + ' ';
-                joined = lines.map(function(l) { return l.replace(/[ 	
-.]+$/, ''); }).join(glue);
+                var glue = ' ' + delimClean + ' ';
+                joined = lines.map(function(l) { return l.replace(/[ \t\r\n.]+$/, ''); }).join(glue);
             }
 
             if (config.append_ellipsis) {

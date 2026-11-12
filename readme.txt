@@ -4,7 +4,7 @@ Tags: bluesky, mastodon, digest, social media, curation, automation, staging, we
 Requires at least: 6.0
 Tested up to: 7.1.1
 Requires PHP: 7.4
-Stable tag: 5.8.36
+Stable tag: 5.8.37
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,14 @@ Automated digest builder for Bluesky and Mastodon with tabbed admin workflows, i
 Social Digest is a WordPress plugin that automates the aggregation and publication of your decentralized social updates from Bluesky (AT Protocol) and Mastodon (ActivityPub) into publication-ready WordPress digest articles.
 
 == Changelog ==
+
+= 5.8.37 =
+* Security Hardening & Bugfixes:
+  1. Workbench JS Syntax Fix: Replaced literal line breaks inside the regex in `sdUpdateExcerptPreview()` that prevented Workbench controls (scheduling drawer, card reordering, drag-and-drop, and live excerpt preview) from running.
+  2. Admin Capability & Unslashing Hardening: Added `current_user_can('manage_options')` checks across all `admin_init` handlers, applied `wp_unslash()` to `$_POST`/AJAX inputs and `wp_slash()` to post insert/update payloads, and eliminated double execution of `social_sanitize_settings()`.
+  3. KSES & Inline Script Security: Removed the global `onclick` attribute whitelist from `wp_kses_allowed_html` (`post` context), added a delegated click handler for `.social-alt-badge` in `smart-theme.js`, switched inline `<script>` JSON output to `wp_json_encode()` with `JSON_HEX_TAG | JSON_HEX_AMP`, and replaced unsafe `.innerHTML` and link prompt concatenations.
+  4. Media & Excerpt Accuracy Fixes: Validated image MIME/magic bytes in media sideloading so non-image payloads cannot save as `.jpg`, fixed URL-before-escaping in `social_clean_body_text()`, scoped `/i` in sentence detection, protected uppercase `.NET` terms, aligned `excerpt_append_remaining` defaults, and stripped HTML tags from plain-text bullet dividers.
+  5. API Client & Tag Engine Fixes: Fixed double escaping of author names and Mastodon URLs, removed overly broad `thumbnail` video matching on Bluesky embeds, guarded facet byte ranges, trimmed trailing punctuation on fallback URLs, fixed multibyte UTF-8 offsets in Pass 1.5 glossary matching, and guarded `parse_url()` `null` values in `cards.php`.
 
 = 5.8.36 =
 * Pinned Lead Story Excerpt Prioritization & Live Synchronization:
